@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Heart,
   Droplet,
@@ -12,6 +13,7 @@ import {
   Flame,
   Repeat,
   Trophy,
+  Wand2,
 } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
@@ -24,6 +26,10 @@ import {
   makeCombatant,
   onTurnStart,
   performAttack,
+  recoverBenchMp,
+  MP_BENCH_RECOVER_PCT,
+  MP_SKILL_COST_PCT,
+  MP_SKILL_THRESHOLD_PCT,
 } from "./battleLogic";
 
 /** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
@@ -62,18 +68,24 @@ function autoAdvance(t: Team): { team: Team; advancedTo: number | null } {
   return { team: { ...t, activeIdx: nextIdx }, advancedTo: nextIdx };
 }
 
-/** 진영의 벤치(=필드 외) MP +5씩 회복. */
-function tickBenchMp(t: Team): Team {
-  return {
-    ...t,
-    members: t.members.map((m, i) => {
-      if (i === t.activeIdx) return m;
-      if (m.engineHp <= 0) return m;
-      const next = Math.min(m.maxMp, m.mp + 5);
-      if (next === m.mp) return m;
-      return { ...m, mp: next, exhausted: next > 0 ? false : m.exhausted };
-    }),
-  };
+/**
+ * 진영의 벤치(=필드 외) MP를 MaxMp의 15%씩 회복.
+ * 회복 발생 시 로그 항목도 함께 반환한다.
+ */
+function tickBenchMp(t: Team): { team: Team; logs: Omit<LogEntry, "id">[] } {
+  const logs: Omit<LogEntry, "id">[] = [];
+  const members = t.members.map((m, i) => {
+    if (i === t.activeIdx) return m;
+    const { next, recovered } = recoverBenchMp(m);
+    if (recovered > 0) {
+      logs.push({
+        text: `[벤치 회복] ${m.base.name} MP +${recovered} (MaxMp ${Math.round(MP_BENCH_RECOVER_PCT * 100)}%)`,
+        tone: "system",
+      });
+    }
+    return next;
+  });
+  return { team: { ...t, members }, logs };
 }
 
 function setActive(t: Team, idx: number, value: Combatant): Team {
@@ -127,7 +139,20 @@ function MiniBenchCard({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11px] font-bold text-slate-100">{c.base.name}</p>
         <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-slate-700">
-          <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+          <motion.div
+            className="h-full bg-emerald-500"
+            initial={false}
+            animate={{ width: `${pct}%` }}
+            transition={{ type: "spring", stiffness: 180, damping: 24 }}
+          />
+        </div>
+        <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-slate-700">
+          <motion.div
+            className={`h-full ${c.exhausted ? "bg-rose-500" : "bg-sky-500"}`}
+            initial={false}
+            animate={{ width: `${Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100))}%` }}
+            transition={{ type: "spring", stiffness: 180, damping: 24 }}
+          />
         </div>
         <p className="mt-0.5 font-mono text-[9px] text-slate-400">
           HP {uiHp(c)} · MP {Math.max(0, c.mp)}
@@ -176,7 +201,12 @@ function ActivePanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
             <span className="font-mono text-slate-200">{uiHp(c)}/{c.base.maxHp}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
-            <div className="h-full bg-emerald-500 transition-all" style={{ width: `${hpPct}%` }} />
+            <motion.div
+              className="h-full bg-emerald-500"
+              initial={false}
+              animate={{ width: `${hpPct}%` }}
+              transition={{ type: "spring", stiffness: 180, damping: 24 }}
+            />
           </div>
         </div>
         <div>
@@ -185,7 +215,12 @@ function ActivePanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
             <span className="font-mono text-slate-200">{Math.max(0, c.mp)}/{c.maxMp}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
-            <div className="h-full bg-sky-500 transition-all" style={{ width: `${mpPct}%` }} />
+            <motion.div
+              className={`h-full ${c.exhausted ? "bg-rose-500" : "bg-sky-500"}`}
+              initial={false}
+              animate={{ width: `${mpPct}%` }}
+              transition={{ type: "spring", stiffness: 180, damping: 24 }}
+            />
           </div>
         </div>
       </div>
@@ -372,8 +407,14 @@ export function TagBattleEngine({
     nextSelfTeam = advanceIfDead(nextSelfTeam, actor === "player" ? "내" : "적");
     nextOppTeam = advanceIfDead(nextOppTeam, actor === "player" ? "적" : "내");
 
-    nextSelfTeam = tickBenchMp(nextSelfTeam);
-    nextOppTeam = tickBenchMp(nextOppTeam);
+    {
+      const r1 = tickBenchMp(nextSelfTeam);
+      nextSelfTeam = r1.team;
+      pushLogs(r1.logs);
+      const r2 = tickBenchMp(nextOppTeam);
+      nextOppTeam = r2.team;
+      pushLogs(r2.logs);
+    }
 
     const finalP = actor === "player" ? nextSelfTeam : nextOppTeam;
     const finalE = actor === "player" ? nextOppTeam : nextSelfTeam;
@@ -405,6 +446,21 @@ export function TagBattleEngine({
   const handlePass = () => {
     if (winner || turn !== "player" || pickingSwap) return;
     finishTurn("player");
+  };
+
+  const handleSkill = () => {
+    if (winner || turn !== "player" || pickingSwap) return;
+    const curP = pTeamRef.current;
+    const curE = eTeamRef.current;
+    const a = curP.members[curP.activeIdx];
+    const d = curE.members[curE.activeIdx];
+    if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
+    if (a.mp < a.maxMp * MP_SKILL_THRESHOLD_PCT) return;
+    const r = performAttack(a, d, { turnNumber, skill: true });
+    pushLogs(r.logs);
+    const nextP = setActive(curP, curP.activeIdx, r.attacker);
+    const nextE = setActive(curE, curE.activeIdx, r.defender);
+    finishTurn("player", nextP, nextE);
   };
 
   const handleSwapTo = (idx: number) => {
@@ -553,35 +609,57 @@ export function TagBattleEngine({
         </div>
       </div>
 
-      {!winner && (
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={handleAttack}
-            disabled={turn !== "player" || pickingSwap}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-3 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
-          >
-            <Sword className="h-4 w-4" /> 공격
-          </button>
-          <button
-            onClick={() => setPickingSwap((v) => !v)}
-            disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
-            className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 ${
-              pickingSwap
-                ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                : "bg-sky-600 text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500"
-            }`}
-          >
-            <Repeat className="h-4 w-4" /> 교체
-          </button>
-          <button
-            onClick={handlePass}
-            disabled={turn !== "player" || pickingSwap}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-700 px-3 py-3 text-sm font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
-          >
-            <Zap className="h-4 w-4" /> 턴 넘기기
-          </button>
-        </div>
-      )}
+      {!winner && (() => {
+        const skillCost = pActive ? Math.floor(pActive.maxMp * MP_SKILL_COST_PCT) : 0;
+        const canSkill =
+          !!pActive &&
+          pActive.engineHp > 0 &&
+          pActive.mp >= pActive.maxMp * MP_SKILL_THRESHOLD_PCT &&
+          turn === "player" &&
+          !pickingSwap;
+        return (
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              onClick={handleAttack}
+              disabled={turn !== "player" || pickingSwap}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-rose-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+            >
+              <Sword className="h-4 w-4" />
+              <span>공격</span>
+            </button>
+            <button
+              onClick={handleSkill}
+              disabled={!canSkill}
+              title={`MP ${skillCost} 소모, RawDamage x1.5 (하드캡 유지)`}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-violet-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+            >
+              <Wand2 className="h-4 w-4" />
+              <span>스킬</span>
+              <span className="font-mono text-[9px] opacity-90">-{skillCost} MP</span>
+            </button>
+            <button
+              onClick={() => setPickingSwap((v) => !v)}
+              disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 ${
+                pickingSwap
+                  ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                  : "bg-sky-600 text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500"
+              }`}
+            >
+              <Repeat className="h-4 w-4" />
+              <span>교체</span>
+            </button>
+            <button
+              onClick={handlePass}
+              disabled={turn !== "player" || pickingSwap}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-700 px-2 py-2.5 text-xs font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+            >
+              <Zap className="h-4 w-4" />
+              <span>넘기기</span>
+            </button>
+          </div>
+        );
+      })()}
 
       {winner && (
         <div

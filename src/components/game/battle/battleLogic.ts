@@ -44,6 +44,24 @@ export interface LogEntry {
   tone: LogTone;
 }
 
+/** 정률 MP 경제 상수 */
+export const MP_TURN_END_PCT = 0.10;   // 턴 종료 시 MaxMp의 10% 차감
+export const MP_PASSIVE_PCT = 0.05;    // 패시브/상성 발동 시 MaxMp의 5% 추가 차감
+export const MP_SKILL_COST_PCT = 0.20; // 특수 스킬 발동 비용 MaxMp의 20%
+export const MP_SKILL_THRESHOLD_PCT = 0.20; // 스킬 사용 가능 최소 MP 비율
+export const MP_BENCH_RECOVER_PCT = 0.15;   // 벤치 턴 종료 시 MaxMp의 15% 회복
+export const SKILL_RAW_MULT = 1.5;          // 특수 스킬 RawDamage 배수
+
+/** 자신의 MaxMp의 N% 만큼 정수 차감하고 새 Combatant + 설명 텍스트 반환 */
+function spendPctMp(c: Combatant, pct: number): { next: Combatant; spent: number } {
+  const spent = Math.floor(c.maxMp * pct);
+  if (spent <= 0) return { next: c, spent: 0 };
+  const nextMp = c.mp - spent;
+  let next: Combatant = { ...c, mp: nextMp };
+  if (nextMp <= 0 && !next.exhausted) next.exhausted = true;
+  return { next, spent };
+}
+
 // Wood > Soil > Water > Fire > Metal > Wood
 const STRONG_AGAINST: Record<BattleElement, BattleElement> = {
   Wood: "Soil",
@@ -116,11 +134,27 @@ export interface AttackResult {
 export function performAttack(
   attackerIn: Combatant,
   defenderIn: Combatant,
-  ctx: { turnNumber: number },
+  ctx: { turnNumber: number; skill?: boolean },
 ): AttackResult {
   let attacker: Combatant = { ...attackerIn };
   let defender: Combatant = { ...defenderIn };
   const logs: Omit<LogEntry, "id">[] = [];
+
+  // ----- 특수 스킬 비용 선차감 (MaxMp 20%) -----
+  if (ctx.skill) {
+    const { next, spent } = spendPctMp(attacker, MP_SKILL_COST_PCT);
+    attacker = next;
+    logs.push({
+      text: `[특수 스킬] ${attacker.base.name}이(가) MP ${spent} 소모하여 스킬 발동! (MaxMp 20%)`,
+      tone: "info",
+    });
+    if (attacker.exhausted) {
+      logs.push({
+        text: `[탈진] ${attacker.base.name}의 MP 고갈 — ATK/DEF 50% 감소`,
+        tone: "penalty",
+      });
+    }
+  }
 
   // ----- Snowy: 짝수 턴 회피율 30% 부여 (방어자가 Snowy일 때) -----
   if (defender.base.name === "Snowy" && ctx.turnNumber % 2 === 0) {
@@ -138,6 +172,13 @@ export function performAttack(
   // 최소 데미지 보장: engineAtk의 10%
   const minDmg = Math.max(1, Math.round(attacker.engineAtk * 0.1));
   if (raw < minDmg) raw = minDmg;
+
+  // 특수 스킬: RawDamage 1.5배 증폭 (하드캡은 이후 적용)
+  if (ctx.skill) {
+    const before = raw;
+    raw = Math.round(raw * SKILL_RAW_MULT);
+    logs.push({ text: `[스킬 증폭] RawDamage ${before} → ${raw} (x1.5)`, tone: "info" });
+  }
 
   // Snowy: 짝수 턴 자신이 가하는 데미지 20% 감소
   if (attacker.base.name === "Snowy" && ctx.turnNumber % 2 === 0) {
@@ -167,6 +208,17 @@ export function performAttack(
       text: `[상성 반사] 데미지 50% 삭감, 공격자에게 ${reflect} 반사`,
       tone: "penalty",
     });
+    // 패시브 발동 비용 (MaxMp 5%)
+    {
+      const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
+      attacker = next;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
+    }
     if (attacker.defDebuffStacks < 3) {
       attacker = { ...attacker, defDebuffStacks: attacker.defDebuffStacks + 1 };
       logs.push({
@@ -176,6 +228,17 @@ export function performAttack(
       attacker.engineDef = Math.max(0, Math.round(attacker.base.def * 2 * (1 - attacker.defDebuffStacks * 0.1)));
     }
   } else if (adv) {
+    // 원소 각성 발동 비용 (MaxMp 5%)
+    {
+      const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
+      attacker = next;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
+    }
     if (attacker.atkBuffStacks < 3) {
       attacker = { ...attacker, atkBuffStacks: attacker.atkBuffStacks + 1 };
       logs.push({
@@ -195,6 +258,15 @@ export function performAttack(
       text: `[금속 보호막] Comi가 피해를 10% 경감 (${before}→${dmg})`,
       tone: "system",
     });
+    // 패시브 발동 비용 (방어자, MaxMp 5%)
+    const { next, spent } = spendPctMp(defender, MP_PASSIVE_PCT);
+    defender = next;
+    if (spent > 0) {
+      logs.push({
+        text: `[패시브 소모] ${defender.base.name} MP -${spent} (MaxMp 5%)`,
+        tone: "system",
+      });
+    }
   }
 
   defender.engineHp = Math.max(0, defender.engineHp - dmg);
@@ -212,6 +284,15 @@ export function performAttack(
     if (Math.random() < 0.5) {
       defender = { ...defender, poisoned: true };
       logs.push({ text: `[중독] ${defender.base.name}이(가) 독에 걸렸습니다`, tone: "penalty" });
+      // 패시브 발동 비용 (공격자, MaxMp 5%)
+      const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
+      attacker = next;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
     }
   }
 
@@ -228,6 +309,14 @@ export function onTurnStart(c: Combatant): { next: Combatant; logs: Omit<LogEntr
     const heal = Math.round(next.engineMaxHp * 0.05);
     next.engineHp = Math.min(next.engineMaxHp, next.engineHp + heal);
     logs.push({ text: `[가호의 물결] Bella가 ${heal} HP 회복`, tone: "system" });
+    const { next: afterCost, spent } = spendPctMp(next, MP_PASSIVE_PCT);
+    next = afterCost;
+    if (spent > 0) {
+      logs.push({
+        text: `[패시브 소모] ${next.base.name} MP -${spent} (MaxMp 5%)`,
+        tone: "system",
+      });
+    }
   }
   return { next, logs };
 }
@@ -242,10 +331,15 @@ export function endTurnDrain(
   ctx: { turnNumber: number },
 ): { self: Combatant; opponent: Combatant; logs: Omit<LogEntry, "id">[] } {
   const logs: Omit<LogEntry, "id">[] = [];
-  let self: Combatant = { ...selfIn, mp: selfIn.mp - 10 };
+  // 정률 기반 턴 종료 MP 소모 (MaxMp의 10%)
+  const turnDrain = Math.floor(selfIn.maxMp * MP_TURN_END_PCT);
+  let self: Combatant = { ...selfIn, mp: selfIn.mp - turnDrain };
   let opponent: Combatant = { ...opponentIn };
 
-  logs.push({ text: `${self.base.name}의 MP -10 (${Math.max(0, self.mp)})`, tone: "system" });
+  logs.push({
+    text: `${self.base.name}의 MP -${turnDrain} (MaxMp 10%, 잔량 ${Math.max(0, self.mp)}/${self.maxMp})`,
+    tone: "system",
+  });
   if (self.mp <= 0 && !self.exhausted) {
     self.exhausted = true;
     logs.push({
@@ -271,6 +365,14 @@ export function endTurnDrain(
         text: `[수류 흡수] Elia가 ${opponent.base.name}의 MP ${drained}을 흡수`,
         tone: "system",
       });
+      const { next: afterCost, spent } = spendPctMp(self, MP_PASSIVE_PCT);
+      self = afterCost;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${self.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
     }
   }
 
@@ -279,7 +381,32 @@ export function endTurnDrain(
     self.rageUsed = true;
     self.engineAtk = Math.round(self.engineAtk * 1.5);
     logs.push({ text: `[화염 격노] Younigon의 공격력이 1.5배로 증폭!`, tone: "penalty" });
+    const { next: afterCost, spent } = spendPctMp(self, MP_PASSIVE_PCT);
+    self = afterCost;
+    if (spent > 0) {
+      logs.push({
+        text: `[패시브 소모] ${self.base.name} MP -${spent} (MaxMp 5%)`,
+        tone: "system",
+      });
+    }
   }
 
   return { self, opponent, logs };
+}
+
+/**
+ * 벤치(대기석) 1마리 턴 종료 회복: MaxMp의 15%만큼 MP 회복.
+ * 회복으로 MP가 1 이상 되면 탈진 상태도 해제한다.
+ */
+export function recoverBenchMp(c: Combatant): { next: Combatant; recovered: number } {
+  if (c.engineHp <= 0) return { next: c, recovered: 0 };
+  const amount = Math.floor(c.maxMp * MP_BENCH_RECOVER_PCT);
+  if (amount <= 0) return { next: c, recovered: 0 };
+  const nextMp = Math.min(c.maxMp, c.mp + amount);
+  const recovered = nextMp - c.mp;
+  if (recovered <= 0) return { next: c, recovered: 0 };
+  return {
+    next: { ...c, mp: nextMp, exhausted: nextMp > 0 ? false : c.exhausted },
+    recovered,
+  };
 }
