@@ -25,6 +25,10 @@ export interface Dragon {
   def: number;
   /** Public Storage URL (Supabase). Optional — falls back to gradient placeholder. */
   imageUrl?: string;
+  /** Training progression — server-managed via RPC. */
+  level?: number;
+  exp?: number;
+  statPoints?: number;
 }
 
 export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "admin" | "debug";
@@ -127,6 +131,9 @@ type DragonRow = {
   lore: string | null;
   is_seed: boolean;
   created_by: string | null;
+  level: number;
+  exp: number;
+  stat_points: number;
 };
 
 function rowToDragon(row: DragonRow, numericId: number): Dragon {
@@ -146,6 +153,9 @@ function rowToDragon(row: DragonRow, numericId: number): Dragon {
     isSeed: row.is_seed,
     isCustom: !row.is_seed,
     createdBy: row.created_by,
+    level: row.level,
+    exp: row.exp,
+    statPoints: row.stat_points,
   };
 }
 
