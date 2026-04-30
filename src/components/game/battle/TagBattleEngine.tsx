@@ -702,9 +702,43 @@ export function TagBattleEngine({
 
       {/* 필드 */}
       <div className="flex gap-2">
-        {pActive ? <ActivePanel c={pActive} side="player" /> : <div className="flex-1" />}
+        {pActive ? (
+          <motion.div
+            key={`pwrap-${pShakeKey}`}
+            className="flex-1"
+            animate={pShakeKey > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <ActivePanel
+              c={pActive}
+              side="player"
+              attacking={attackingSide === "player"}
+              hitFlashKey={pHitKey}
+              damagePops={pPops}
+            />
+          </motion.div>
+        ) : (
+          <div className="flex-1" />
+        )}
         <div className="flex items-center text-xs font-bold text-slate-500">VS</div>
-        {eActive ? <ActivePanel c={eActive} side="enemy" /> : <div className="flex-1" />}
+        {eActive ? (
+          <motion.div
+            key={`ewrap-${eShakeKey}`}
+            className="flex-1"
+            animate={eShakeKey > 0 ? { x: [0, 6, -6, 4, -4, 0] } : { x: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <ActivePanel
+              c={eActive}
+              side="enemy"
+              attacking={attackingSide === "enemy"}
+              hitFlashKey={eHitKey}
+              damagePops={ePops}
+            />
+          </motion.div>
+        ) : (
+          <div className="flex-1" />
+        )}
       </div>
 
       {/* 내 벤치 */}
