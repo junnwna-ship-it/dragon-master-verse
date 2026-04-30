@@ -31,7 +31,13 @@ import {
   MP_SKILL_COST_PCT,
   MP_SKILL_THRESHOLD_PCT,
 } from "./battleLogic";
-import { EffectOverlay, elementToEffect, type ActiveEffect, type EffectType } from "./EffectOverlay";
+import {
+  EffectOverlay,
+  StatusOverlay,
+  elementToEffect,
+  type ActiveEffect,
+  type EffectType,
+} from "./EffectOverlay";
 
 /** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
 function uiHp(c: Combatant): number {
@@ -184,6 +190,7 @@ function ActivePanel({
   hitFlashKey = 0,
   damagePops = [],
   effects = [],
+  cinematic = false,
 }: {
   c: Combatant;
   side: "player" | "enemy";
@@ -191,6 +198,8 @@ function ActivePanel({
   hitFlashKey?: number;
   damagePops?: DamagePop[];
   effects?: ActiveEffect[];
+  /** 스킬 시전 중인 공격자: 화면 중앙으로 zoom + 확대 */
+  cinematic?: boolean;
 }) {
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
@@ -199,10 +208,12 @@ function ActivePanel({
   // player는 위쪽으로 돌진(-), enemy는 아래쪽으로 돌진(+)
   const lungeY = side === "player" ? -28 : 28;
   return (
-    <div
+    <motion.div
       className={`relative flex-1 overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-2.5 backdrop-blur-md ${
         side === "enemy" ? "text-right" : ""
-      }`}
+      } ${cinematic ? "z-40" : ""}`}
+      animate={cinematic ? { scale: 1.2 } : { scale: 1 }}
+      transition={{ type: "spring", stiffness: 260, damping: 18 }}
     >
       {/* 이미지 캔버스 — 핵심 시각 요소 */}
       <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-slate-950/80">
@@ -237,11 +248,21 @@ function ActivePanel({
           )}
         </AnimatePresence>
 
+        {/* 상태 이상 상시 오버레이 (poison/burn/fear/stun) */}
+        <StatusOverlay
+          flags={{
+            poisoned: c.poisoned,
+            burning: c.base.name === "Younigon" && c.rageUsed,
+            feared: c.defDebuffStacks >= 3,
+            stunned: c.exhausted,
+          }}
+        />
+
         {/* VFX 이펙트 오버레이 — 이미지 위에 덮임 */}
         <EffectOverlay effects={effects} target={side} />
 
-        {/* 데미지 파티클 텍스트 */}
-        <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-2">
+        {/* 데미지 파티클 텍스트 — 항상 최상단 */}
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-start justify-center pt-2">
           <AnimatePresence>
             {damagePops.map((p) => (
               <motion.span
@@ -268,13 +289,13 @@ function ActivePanel({
 
         {/* 좌상단 원소 배지 / 우상단 슬롯 */}
         <span
-          className={`absolute left-2 top-2 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}
+          className={`absolute left-2 top-2 z-20 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}
         >
           {c.base.element}
         </span>
       </div>
 
-      <div className={`flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
+      <div className={`relative z-20 flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
         <h3 className="text-sm font-extrabold text-slate-100">{c.base.name}</h3>
         {c.exhausted && (
           <span className="flex items-center gap-0.5 rounded-full border border-rose-500/50 bg-rose-500/15 px-1 py-0 text-[9px] font-bold text-rose-300">
@@ -292,7 +313,7 @@ function ActivePanel({
           </span>
         )}
       </div>
-      <div className="mt-2 space-y-1.5">
+      <div className="relative z-20 mt-2 space-y-1.5">
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
             <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
@@ -322,7 +343,7 @@ function ActivePanel({
           </div>
         </div>
       </div>
-      <div className={`mt-1.5 flex flex-wrap gap-2 text-[10px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
+      <div className={`relative z-20 mt-1.5 flex flex-wrap gap-2 text-[10px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
           <Sword className="h-3 w-3" /> {stats.atk}
         </span>
@@ -352,7 +373,7 @@ function ActivePanel({
           </span>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
