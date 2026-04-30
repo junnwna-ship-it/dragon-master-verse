@@ -55,66 +55,119 @@ export function LobbyView() {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
 
-  // Observe each card's intersection ratio inside the horizontal scroller and
-  // mark the one closest to the viewport center as "centered" — this drives
-  // the smooth hover-style scale/glow as the user swipes.
+  // Unified scroll/snap engine.
+  //
+  // Why one effect (not two): the previous split between an
+  // IntersectionObserver-driven `centeredId` and a `scroll`-event-driven
+  // settle timer caused velocity-dependent jitter — at fast flick speeds the
+  // observer's coarse 0.25/0.5/0.75 thresholds would flip between two
+  // adjacent cards, and the fixed 140ms idle could fire mid-inertia before
+  // the browser's snap point was reached, locking onto the wrong card.
+  //
+  // The new approach picks `centeredId` from a precise center-distance
+  // measurement on every scroll frame (cheap: only the card centers and the
+  // viewport center), and the idle timeout adapts to scroll velocity so we
+  // wait longer after a fast flick than after a gentle drag.
   useEffect(() => {
     const root = scrollerRef.current;
     if (!root) return;
-    const ratios = new Map<number, number>();
-    const recomputeCentered = () => {
+
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
+    let lastScrollLeft = root.scrollLeft;
+    let lastScrollAt = performance.now();
+    // Rolling estimate of |dx/dt| in px/ms, smoothed so a single fast frame
+    // doesn't dominate the idle wait calculation.
+    let velocityPxPerMs = 0;
+
+    const pickCentered = () => {
+      const rootRect = root.getBoundingClientRect();
+      const viewportCenter = rootRect.left + rootRect.width / 2;
       let bestId: number | null = null;
-      let bestRatio = 0;
-      ratios.forEach((r, id) => {
-        if (r > bestRatio) {
-          bestRatio = r;
+      let bestDist = Infinity;
+      cardRefs.current.forEach((el, id) => {
+        const r = el.getBoundingClientRect();
+        const center = r.left + r.width / 2;
+        const dist = Math.abs(center - viewportCenter);
+        if (dist < bestDist) {
+          bestDist = dist;
           bestId = id;
         }
       });
-      setCenteredId(bestRatio > 0.55 ? bestId : null);
-    };
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          const idAttr = (e.target as HTMLElement).dataset.dragonId;
-          if (!idAttr) continue;
-          ratios.set(Number(idAttr), e.intersectionRatio);
+      // Hysteresis band: only consider a card "centered" if it's well within
+      // the viewport. Half a viewport width is a wide tolerance because the
+      // closest card always wins, but this guards the empty-scroller case.
+      if (bestId !== null && bestDist < rootRect.width * 0.5) {
+        if (centeredIdRef.current !== bestId) {
+          centeredIdRef.current = bestId;
+          setCenteredId(bestId);
         }
-        recomputeCentered();
-      },
-      { root, threshold: [0.25, 0.5, 0.75, 1] },
-    );
-    cardRefs.current.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, [dragons]);
+      }
+    };
 
-  // Track active scrolling so we can split visual treatment into two
-  // distinct phases:
-  //   • during scroll → the centered card gets a live "micro-hover"
-  //     (subtle lift + brightness boost) that follows the snap point.
-  //   • after scroll  → the highlight settles on the snapped card and
-  //     stays put even after the user lifts their finger.
-  useEffect(() => {
-    const root = scrollerRef.current;
-    if (!root) return;
-    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    // Adaptive idle: faster scrolls need longer settle waits because the
+    // browser is still animating snap-back inertia after the user lifts.
+    //   • <0.3 px/ms (slow drag)        → 110ms
+    //   • 0.3–1.2 px/ms (normal swipe)  → 160ms
+    //   • >1.2 px/ms (hard flick)       → 240ms
+    const computeIdleDelay = () => {
+      if (velocityPxPerMs < 0.3) return 110;
+      if (velocityPxPerMs < 1.2) return 160;
+      return 240;
+    };
+
     const onScroll = () => {
+      const now = performance.now();
+      const dx = Math.abs(root.scrollLeft - lastScrollLeft);
+      const dt = Math.max(1, now - lastScrollAt);
+      // Exponential smoothing — alpha 0.4 keeps reactivity but kills jitter.
+      velocityPxPerMs = velocityPxPerMs * 0.6 + (dx / dt) * 0.4;
+      lastScrollLeft = root.scrollLeft;
+      lastScrollAt = now;
+
       if (!isScrollingRef.current) {
         isScrollingRef.current = true;
         setIsScrolling(true);
       }
+
+      // Recompute centered card on the next animation frame so we sample at
+      // a stable rAF cadence (rather than once per scroll event, which can
+      // fire dozens of times per frame on trackpads).
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          pickCentered();
+        });
+      }
+
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
+        // Final pick after motion stops, in case the last rAF was throttled.
+        pickCentered();
         isScrollingRef.current = false;
         setIsScrolling(false);
-        // Lock the snapped card to whatever was centered when motion stopped.
+        velocityPxPerMs = 0;
+        // Lock onto whatever card the snap engine actually settled at.
         setSnappedId(centeredIdRef.current);
-      }, 140);
+      }, computeIdleDelay());
     };
+
+    // Initial pick (also handles the case where the scroller is already
+    // positioned on a card before any user interaction).
+    pickCentered();
+    setSnappedId(centeredIdRef.current);
+
     root.addEventListener("scroll", onScroll, { passive: true });
+    // Re-measure on resize so center-distance stays accurate when the
+    // viewport changes mid-session (rotation, devtools, etc.).
+    const ro = new ResizeObserver(() => pickCentered());
+    ro.observe(root);
+
     return () => {
       root.removeEventListener("scroll", onScroll);
+      ro.disconnect();
       if (idleTimer) clearTimeout(idleTimer);
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [dragons]);
 
@@ -237,7 +290,12 @@ export function LobbyView() {
               // Transition timing differs by phase:
               //  • live swipe → short 180ms ease-out (springy follow)
               //  • settled    → calmer 300ms ease-out (locks in place)
-              className={`group block cursor-pointer rounded-3xl list-none will-change-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+              // snap-always = `scroll-snap-stop: always`. Without this, a
+              // single fast flick can blow past 2-3 cards before the snap
+              // engine engages, making the resulting "centered" selection
+              // feel random. With it, every card becomes a hard stop so
+              // slow drags and fast flicks both land on the next card.
+              className={`group block cursor-pointer snap-always rounded-3xl list-none will-change-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                 isScrolling ? "transition-all duration-[180ms] ease-out" : "transition-all duration-300 ease-out"
               } ${
                 isSelected
