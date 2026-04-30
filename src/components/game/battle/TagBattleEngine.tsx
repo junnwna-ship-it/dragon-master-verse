@@ -321,7 +321,15 @@ function ActivePanel({
           <Sword className="h-3 w-3" /> {stats.atk}
         </span>
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
-          <Shield className="h-3 w-3" /> {stats.def}
+          <Shield className="h-3 w-3" />
+          {c.defDebuffStacks > 0 ? (
+            <span title={`기본 DEF ${c.base.def} → 현재 ${c.engineDef} (디버프 ${c.defDebuffStacks * 10}%)`}>
+              <span className="line-through text-slate-500 mr-1">{c.base.def}</span>
+              <span className="text-rose-300 font-semibold">{stats.def}</span>
+            </span>
+          ) : (
+            <span>{stats.def}</span>
+          )}
         </span>
         {c.atkBuffStacks > 0 && (
           <span className="flex items-center gap-1 text-emerald-300">
@@ -329,8 +337,12 @@ function ActivePanel({
           </span>
         )}
         {c.defDebuffStacks > 0 && (
-          <span className="flex items-center gap-1 text-rose-300">
-            <Sparkles className="h-3 w-3" /> DEF -{c.defDebuffStacks}
+          <span
+            className="flex items-center gap-1 rounded-full border border-rose-400/40 bg-rose-500/10 px-1.5 py-0.5 text-rose-200"
+            title={`방어 디버프 스택 ${c.defDebuffStacks}/3 — 남은 ${3 - c.defDebuffStacks}회 적용 가능`}
+          >
+            <Shield className="h-3 w-3" />
+            DEF -{c.defDebuffStacks * 10}% ({c.defDebuffStacks}/3)
           </span>
         )}
       </div>

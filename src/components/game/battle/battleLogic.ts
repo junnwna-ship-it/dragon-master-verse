@@ -220,12 +220,20 @@ export function performAttack(
       }
     }
     if (attacker.defDebuffStacks < 3) {
-      attacker = { ...attacker, defDebuffStacks: attacker.defDebuffStacks + 1 };
+      const prevDef = attacker.engineDef;
+      const newStacks = attacker.defDebuffStacks + 1;
+      const newDef = Math.max(0, Math.round(attacker.base.def * (1 - newStacks * 0.1)));
+      attacker = { ...attacker, defDebuffStacks: newStacks, engineDef: newDef };
+      const remaining = 3 - newStacks;
       logs.push({
-        text: `[원소 공포] ${attacker.base.name}의 방어력이 하락했습니다! (스택 ${attacker.defDebuffStacks}/3)`,
+        text: `[원소 공포] ${attacker.base.name} DEF ${prevDef} → ${newDef} (-${prevDef - newDef}, -${newStacks * 10}%) | 스택 ${newStacks}/3 (남은 ${remaining}회)`,
         tone: "penalty",
       });
-      attacker.engineDef = Math.max(0, Math.round(attacker.base.def * (1 - attacker.defDebuffStacks * 0.1)));
+    } else {
+      logs.push({
+        text: `[원소 공포] ${attacker.base.name}의 방어 디버프 최대치 도달 (3/3) — 추가 적용 없음`,
+        tone: "system",
+      });
     }
   } else if (adv) {
     // 원소 각성 발동 비용 (MaxMp 5%)
