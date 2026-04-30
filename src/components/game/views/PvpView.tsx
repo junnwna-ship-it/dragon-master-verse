@@ -80,6 +80,12 @@ export function PvpView() {
   const pvpWins = useGameStore((s) => s.pvpWins);
   const pvpLosses = useGameStore((s) => s.pvpLosses);
   const pvpDraws = useGameStore((s) => s.pvpDraws);
+  // Globally selected PvP dragon — single source of truth shared with
+  // LobbyView and any future surface (battle handoff, share cards, etc.).
+  // The local `player` value below is derived from this id + `dragons`,
+  // so any external mutation (e.g. another view, devtools) flows through.
+  const pvpSelectedDragonId = useGameStore((s) => s.pvpSelectedDragonId);
+  const setPvpSelectedDragonId = useGameStore((s) => s.setPvpSelectedDragonId);
 
   const [rp, setRp] = useState<number>(() => loadRp());
   useEffect(() => {
@@ -89,7 +95,21 @@ export function PvpView() {
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [opponent, setOpponent] = useState<GhostOpponent | null>(null);
-  const [player, setPlayer] = useState<Dragon | null>(null);
+  // Derived: the currently chosen dragon for this match. Always reflects the
+  // global store, so the picker stays in lock-step with LobbyView.
+  const player: Dragon | null = useMemo(
+    () => dragons.find((d) => d.id === pvpSelectedDragonId) ?? null,
+    [dragons, pvpSelectedDragonId],
+  );
+  // Defensive: if the globally selected dragon disappears from the roster
+  // (deleted, replaced via re-sync), clear the global selection too. We do
+  // NOT clear when `pvpSelectedDragonId` is null and dragons are simply
+  // empty — that's a valid "nothing picked yet" state.
+  useEffect(() => {
+    if (pvpSelectedDragonId !== null && !dragons.some((d) => d.id === pvpSelectedDragonId)) {
+      setPvpSelectedDragonId(null);
+    }
+  }, [dragons, pvpSelectedDragonId, setPvpSelectedDragonId]);
   // Confirm modal shown after the user taps "전투 시작"; cancelling closes the
   // modal but preserves the selected player so the picker state is intact.
   const [confirmStart, setConfirmStart] = useState(false);
@@ -137,7 +157,9 @@ export function PvpView() {
         );
       }
     }
-    setPlayer(next);
+    // Funnel ALL selection mutations through the global store so every view
+    // and future subscriber observes a consistent value.
+    setPvpSelectedDragonId(next ? next.id : null);
   };
   const [lastResult, setLastResult] = useState<{
     outcome: "win" | "lose" | "draw";
