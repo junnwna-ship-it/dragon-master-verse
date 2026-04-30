@@ -114,6 +114,10 @@ export function StoryView() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(BANNER_DURATION_KEY, String(bannerDuration));
   }, [bannerDuration]);
+
+  // (shake-effect hook is declared below, after activeNodeId is computed)
+  const [shakeKey, setShakeKey] = useState(0);
+  const prevActiveIdRef = useRef<number | null>(null);
   // Pulse the HP/MP gauges briefly when state changes after a battle/event.
   const [gaugePulseKey, setGaugePulseKey] = useState(0);
   const prevStateRef = useRef<{ hp: number; mp: number } | null>(null);
@@ -143,6 +147,17 @@ export function StoryView() {
 
   // Helper: which node id is the player currently allowed to enter?
   const activeNodeId = run?.currentNodeId ?? FIRST_NODE_ID;
+
+  // Trigger a brief shake on the newly-active node whenever activeNodeId changes
+  // (e.g. right after onResolved auto-advances the run). Bumping shakeKey
+  // re-runs the CSS animation reliably.
+  useEffect(() => {
+    const prevId = prevActiveIdRef.current;
+    if (prevId !== null && prevId !== activeNodeId) {
+      setShakeKey((k) => k + 1);
+    }
+    prevActiveIdRef.current = activeNodeId;
+  }, [activeNodeId]);
 
   /**
    * Single state-update pipeline used by BOTH battle resolution and event nodes.
@@ -523,6 +538,22 @@ export function StoryView() {
                 .story-connector-next {
                   animation: story-connector-flow 1.2s linear infinite;
                 }
+                @keyframes story-node-shake {
+                  0%, 100% { transform: translate(-50%, -50%); }
+                  15% { transform: translate(calc(-50% - 3px), calc(-50% - 1px)); }
+                  30% { transform: translate(calc(-50% + 3px), calc(-50% + 1px)); }
+                  45% { transform: translate(calc(-50% - 2px), calc(-50% + 1px)); }
+                  60% { transform: translate(calc(-50% + 2px), calc(-50% - 1px)); }
+                  75% { transform: translate(calc(-50% - 1px), calc(-50% + 0px)); }
+                }
+                .story-node-shake { animation: story-node-shake 0.55s ease-in-out 1; }
+                @keyframes story-progress-ring {
+                  0% { stroke-dashoffset: 138; opacity: 0.95; }
+                  100% { stroke-dashoffset: 0; opacity: 0.6; }
+                }
+                .story-progress-ring {
+                  animation: story-progress-ring 1.6s ease-out infinite;
+                }
               `}</style>
             </defs>
             {EDGES.map(([fromId, toId]) => {
@@ -602,13 +633,16 @@ export function StoryView() {
 
             return (
               <button
-                key={node.id}
+                // When this node is the active one, include shakeKey so the
+                // element re-mounts on each activeNodeId change and the CSS
+                // shake animation reliably re-runs.
+                key={isActive ? `${node.id}-shake-${shakeKey}` : node.id}
                 onClick={handleClick}
                 disabled={locked && !cleared}
                 title={locked ? lockReason : cleared ? lockReason : node.title}
                 className={`group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 ${
                   locked && !cleared ? "cursor-not-allowed" : "cursor-pointer"
-                }`}
+                } ${isActive ? "story-node-shake" : ""}`}
                 style={{ left: `${node.x}%`, top: `${node.y}%` }}
                 aria-label={
                   locked
@@ -625,6 +659,26 @@ export function StoryView() {
                   }`}
                 >
                   {nodeIcon(node.kind, cleared)}
+                  {/* Subtle progress ring on the active (next) node */}
+                  {isActive && !cleared && (
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 50 50"
+                      className="pointer-events-none absolute inset-0 h-full w-full -rotate-90"
+                    >
+                      <circle
+                        cx="25"
+                        cy="25"
+                        r="22"
+                        fill="none"
+                        stroke="rgb(252 211 77)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeDasharray="138"
+                        className="story-progress-ring"
+                      />
+                    </svg>
+                  )}
                   {/* Lock badge for locked nodes */}
                   {locked && !cleared && (
                     <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 bg-slate-900 text-slate-300 shadow">
