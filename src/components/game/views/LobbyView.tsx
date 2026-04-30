@@ -3,8 +3,8 @@ import { Package, Sparkles, ScanLine, LogOut } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonCard } from "../DragonCard";
 import { useAuth } from "@/hooks/useAuth";
-import { AuthDialog } from "../auth/AuthDialog";
-import { CardScanner } from "../scan/CardScanner";
+import { AuthDialog } from "@/components/game/auth/AuthDialog";
+import { CardScanner } from "@/components/game/scan/CardScanner";
 import { supabase } from "@/integrations/supabase/client";
 
 export function LobbyView() {
