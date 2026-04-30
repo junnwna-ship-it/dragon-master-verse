@@ -79,6 +79,7 @@ export function StoryView() {
   const [activeBattleNode, setActiveBattleNode] = useState<MapNode | null>(null);
   const [eventMessage, setEventMessage] = useState<string | null>(null);
   const [defeated, setDefeated] = useState(false);
+  const [defeatStats, setDefeatStats] = useState<{ hp: number; mp: number } | null>(null);
   // Pulse the HP/MP gauges briefly when state changes after a battle/event.
   const [gaugePulseKey, setGaugePulseKey] = useState(0);
   const prevStateRef = useRef<{ hp: number; mp: number } | null>(null);
@@ -140,6 +141,7 @@ export function StoryView() {
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
           if (outcome === "lose") {
+            setDefeatStats({ hp: finalState.playerHp, mp: finalState.playerMp });
             setDefeated(true);
             return;
           }
@@ -163,6 +165,8 @@ export function StoryView() {
 
   // ----- Defeat modal -----
   if (defeated && selectedDragon) {
+    const finalHp = Math.max(0, defeatStats?.hp ?? 0);
+    const finalMp = Math.max(0, defeatStats?.mp ?? run?.playerMp ?? 0);
     return (
       <div className="space-y-4">
         <div className="rounded-2xl border border-rose-500/40 bg-gradient-to-b from-rose-500/15 to-rose-500/5 p-6 text-center">
@@ -173,10 +177,29 @@ export function StoryView() {
           <p className="mt-1 text-xs text-slate-400">
             {selectedDragon.name}이(가) 쓰러졌습니다. 처음부터 다시 도전하세요.
           </p>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-left">
+            <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2">
+              <div className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-slate-500">
+                <Heart className="h-3 w-3 text-emerald-400" /> HP
+              </div>
+              <p className="mt-0.5 font-mono text-sm text-slate-100">
+                {finalHp}<span className="text-slate-500">/{selectedDragon.maxHp}</span>
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2">
+              <div className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-slate-500">
+                <Droplet className="h-3 w-3 text-sky-400" /> MP
+              </div>
+              <p className="mt-0.5 font-mono text-sm text-slate-100">
+                {finalMp}<span className="text-slate-500">/{selectedDragon.mp}</span>
+              </p>
+            </div>
+          </div>
         </div>
         <button
           onClick={() => {
             setDefeated(false);
+            setDefeatStats(null);
             setActiveBattleNode(null);
             setRun({
               currentNodeId: FIRST_NODE_ID,
@@ -188,17 +211,6 @@ export function StoryView() {
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-rose-400"
         >
           <RotateCcw className="h-4 w-4" /> 1단계부터 다시 시작
-        </button>
-        <button
-          onClick={() => {
-            setDefeated(false);
-            setActiveBattleNode(null);
-            setRun(null);
-            setSelectedDragon(null);
-          }}
-          className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
-        >
-          드래곤 다시 선택
         </button>
       </div>
     );
