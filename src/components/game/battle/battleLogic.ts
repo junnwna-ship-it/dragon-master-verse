@@ -117,6 +117,29 @@ export function hpPercent(c: Combatant): number {
   return Math.max(0, Math.min(100, (c.engineHp / Math.max(1, c.engineMaxHp)) * 100));
 }
 
+/**
+ * 모든 DEF 디버프 이벤트(공격/피격/턴종료/캡)에서 동일한 포맷으로 출력하는 헬퍼.
+ * 형식: `[<이벤트>] <이름> DEF <prev>→<next> (<±delta>, <±pct>%) | 스택 <prev>/3 → <next>/3 (남은 <N>회)`
+ */
+export function formatDefChangeLog(
+  event: "원소 공포" | "디버프 감쇠" | "디버프 캡",
+  c: Combatant,
+  prevStacks: number,
+  prevDef: number,
+  newStacks: number,
+  newDef: number,
+): string {
+  const deltaDef = newDef - prevDef;
+  const deltaPct = (newStacks - prevStacks) * 10; // 스택 +1 = -10%, -1 = +10%
+  const sign = deltaDef >= 0 ? "+" : "";
+  const pctSign = deltaPct >= 0 ? "+" : ""; // 스택이 줄면 양수(=DEF 회복)
+  // 스택 표기 방향을 통일하기 위해 부호 반전: 스택 증가는 -%, 감소는 +%
+  const dispPct = -deltaPct;
+  const dispSign = dispPct >= 0 ? "+" : "";
+  const remaining = Math.max(0, 3 - newStacks);
+  return `[${event}] ${c.base.name} DEF ${prevDef}→${newDef} (${sign}${deltaDef}, ${dispSign}${dispPct}%) | 스택 ${prevStacks}/3 → ${newStacks}/3 (남은 ${remaining}회)`;
+}
+
 export interface AttackResult {
   attacker: Combatant;
   defender: Combatant;
@@ -222,18 +245,19 @@ export function performAttack(
       }
     }
     if (attacker.defDebuffStacks < 3) {
+      const prevStacks = attacker.defDebuffStacks;
       const prevDef = attacker.engineDef;
-      const newStacks = attacker.defDebuffStacks + 1;
+      const newStacks = prevStacks + 1;
       const newDef = Math.max(0, Math.round(attacker.base.def * (1 - newStacks * 0.1)));
       attacker = { ...attacker, defDebuffStacks: newStacks, engineDef: newDef };
-      const remaining = 3 - newStacks;
       logs.push({
-        text: `[원소 공포] ${attacker.base.name} DEF ${prevDef} → ${newDef} (-${prevDef - newDef}, -${newStacks * 10}%) | 스택 ${newStacks}/3 (남은 ${remaining}회)`,
+        text: formatDefChangeLog("원소 공포", attacker, prevStacks, prevDef, newStacks, newDef),
         tone: "penalty",
       });
     } else {
+      // 캡 도달 — 변화 없음을 동일 포맷으로 표기
       logs.push({
-        text: `[원소 공포] ${attacker.base.name}의 방어 디버프 최대치 도달 (3/3) — 추가 적용 없음`,
+        text: formatDefChangeLog("디버프 캡", attacker, 3, attacker.engineDef, 3, attacker.engineDef),
         tone: "system",
       });
     }
@@ -358,11 +382,12 @@ export function endTurnDrain(
     const prevDef = c.engineDef;
     const newStacks = prevStacks - 1;
     const newDef = Math.max(0, Math.round(c.base.def * (1 - newStacks * 0.1)));
+    const next = { ...c, defDebuffStacks: newStacks, engineDef: newDef };
     logs.push({
-      text: `[디버프 감쇠] ${c.base.name} DEF ${prevDef} → ${newDef} (+${newDef - prevDef}) | 스택 ${prevStacks}/3 → ${newStacks}/3`,
+      text: formatDefChangeLog("디버프 감쇠", next, prevStacks, prevDef, newStacks, newDef),
       tone: "system",
     });
-    return { ...c, defDebuffStacks: newStacks, engineDef: newDef };
+    return next;
   };
   self = decay(self);
   opponent = decay(opponent);
