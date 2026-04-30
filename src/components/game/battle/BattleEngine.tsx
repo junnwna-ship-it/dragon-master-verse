@@ -113,6 +113,9 @@ export function BattleEngine({
   });
   const [eState, setEState] = useState<Combatant>(() => makeCombatant(enemy));
   const [turn, setTurn] = useState<"player" | "enemy">("player");
+  // Turn counter (1-based). Useful for debugging and prevents stale-effect
+  // bugs where an enemy turn fires twice for the same logical turn.
+  const [turnNumber, setTurnNumber] = useState(1);
   const [logs, setLogs] = useState<LogEntry[]>([
     { id: 0, text: `${context === "pvp" ? "PvP" : "Story"} 전투 개시!`, tone: "system" },
   ]);
@@ -172,40 +175,78 @@ export function BattleEngine({
     setPState(result.attacker);
     setEState(result.defender);
     pushLogs(result.logs);
+    // After attacking, the player's action is consumed — drain MP and pass
+    // the turn to the enemy. This is the single source of truth for "what
+    // happens at end of player turn" so a player can no longer spam-attack
+    // in a single turn.
+    const drained = endTurnDrain(result.attacker);
+    setPState(drained.next);
+    pushLogs(drained.logs);
+    setTurn("enemy");
   };
 
-  const handleEndTurn = () => {
-    if (winner) return;
-    if (turn === "player") {
-      const { next, logs: dl } = endTurnDrain(pState);
-      setPState(next);
-      pushLogs(dl);
-      setTurn("enemy");
-      // Enemy auto-acts
-      setTimeout(() => {
-        setEState((curEnemy) => {
-          setPState((curPlayer) => {
-            if (curEnemy.hp <= 0 || curPlayer.hp <= 0) return curPlayer;
-            const r = performAttack(curEnemy, curPlayer);
-            pushLogs(r.logs);
-            // r.attacker is enemy, r.defender is player
-            queueMicrotask(() => setEState(r.attacker));
-            return r.defender;
-          });
-          return curEnemy;
-        });
-        // Drain enemy MP at end of its turn
-        setTimeout(() => {
-          setEState((cur) => {
-            const { next: en, logs: el } = endTurnDrain(cur);
-            pushLogs(el);
-            return en;
-          });
-          setTurn("player");
-        }, 600);
-      }, 500);
-    }
+  // "Pass turn" — player chooses not to attack. Still drains MP and ends turn.
+  const handlePassTurn = () => {
+    if (winner || turn !== "player") return;
+    const drained = endTurnDrain(pState);
+    setPState(drained.next);
+    pushLogs(drained.logs);
+    setTurn("enemy");
   };
+
+  // Enemy AI runs as an effect on turn change. Putting it here (rather than
+  // inside the player's button handler with nested setState callbacks) makes
+  // the turn flow strictly serial and idempotent: each enemy turn fires
+  // exactly once per (turnNumber, turn==="enemy") tuple.
+  const enemyTurnRanRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (turn !== "enemy" || winner) return;
+    // Guard: don't run the same enemy turn twice (Strict Mode double-invoke).
+    if (enemyTurnRanRef.current === turnNumber) return;
+    enemyTurnRanRef.current = turnNumber;
+
+    // Small delay so the player can read the log of their own action first.
+    const attackTimer = setTimeout(() => {
+      // Read fresh state via functional updates so we never act on stale
+      // values from the closure captured at effect-mount time.
+      setEState((curEnemy) => {
+        if (curEnemy.hp <= 0) return curEnemy;
+        let attackerAfter = curEnemy;
+        setPState((curPlayer) => {
+          if (curPlayer.hp <= 0) return curPlayer;
+          const r = performAttack(curEnemy, curPlayer);
+          pushLogs(r.logs);
+          attackerAfter = r.attacker;
+          return r.defender;
+        });
+        return attackerAfter;
+      });
+
+      // Then drain enemy MP and hand control back to the player.
+      const drainTimer = setTimeout(() => {
+        setEState((cur) => {
+          if (cur.hp <= 0) return cur;
+          const { next, logs: el } = endTurnDrain(cur);
+          pushLogs(el);
+          return next;
+        });
+        setTurn("player");
+        setTurnNumber((n) => n + 1);
+      }, 500);
+
+      // Stash so we can clear if unmounted mid-turn.
+      enemyDrainTimerRef.current = drainTimer;
+    }, 500);
+
+    enemyAttackTimerRef.current = attackTimer;
+    return () => {
+      clearTimeout(attackTimer);
+      if (enemyDrainTimerRef.current) clearTimeout(enemyDrainTimerRef.current);
+    };
+  }, [turn, turnNumber, winner]);
+
+  const enemyAttackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enemyDrainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   return (
     <div className="flex h-full flex-col gap-3">
@@ -292,11 +333,11 @@ export function BattleEngine({
             <Sword className="h-4 w-4" /> 공격
           </button>
           <button
-            onClick={handleEndTurn}
+            onClick={handlePassTurn}
             disabled={turn !== "player"}
             className="flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-3 text-sm font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
           >
-            <Zap className="h-4 w-4" /> 턴 종료
+            <Zap className="h-4 w-4" /> 턴 넘기기
           </button>
         </div>
       )}
