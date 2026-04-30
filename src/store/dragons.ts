@@ -100,6 +100,7 @@ interface GameState {
   customDragons: (Dragon & { lore?: string; isCustom: true })[];
   addCustomDragon: (d: Omit<Dragon, "id"> & { lore?: string }) => void;
   removeCustomDragon: (id: number) => void;
+  updateCustomDragon: (id: number, patch: Partial<Omit<Dragon, "id">> & { lore?: string }) => void;
 }
 
 const CUSTOM_KEY = "customDragons";
@@ -166,6 +167,18 @@ export const useGameStore = create<GameState>((set) => ({
         ownedDragonIds: state.ownedDragonIds.filter((x) => x !== id),
         selectedDeck: state.selectedDeck.filter((x) => x !== id),
       };
+    }),
+  updateCustomDragon: (id, patch) =>
+    set((state) => {
+      if (!state.customDragons.some((d) => d.id === id)) return {};
+      const customs = state.customDragons.map((d) =>
+        d.id === id ? { ...d, ...patch, id: d.id, isCustom: true as const } : d,
+      );
+      persistCustomDragons(customs);
+      const dragons = state.dragons.map((d) =>
+        d.id === id ? { ...d, ...patch, id: d.id } : d,
+      );
+      return { customDragons: customs, dragons };
     }),
   addDragon: (d) =>
     set((state) => {
