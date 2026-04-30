@@ -971,6 +971,7 @@ jobs:
             reports/cache-history-debug.json
             reports/lint-time-history-debug.json
             reports/history-debug-diff.json
+            reports/chart-render-config.json
           retention-days: 14
           if-no-files-found: warn
 
