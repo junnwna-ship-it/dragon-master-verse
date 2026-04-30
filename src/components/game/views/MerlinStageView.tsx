@@ -6,6 +6,7 @@ import { useGameStore, type Dragon } from "@/store/dragons";
 import { supabase } from "@/integrations/supabase/client";
 import { DragonImage } from "../DragonImage";
 import { QuizModal } from "../quiz/QuizModal";
+import { useInventory } from "@/hooks/useInventory";
 
 type Phase = "intro" | "items" | "quiz" | "contract" | "done";
 
@@ -25,6 +26,8 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
   const dragons = useGameStore((s) => s.dragons);
   const [phase, setPhase] = useState<Phase>("intro");
   const [contracting, setContracting] = useState(false);
+  const { qty: invQty, loading: invLoading } = useInventory();
+  const bondingTokens = invQty("bonding_token");
 
   // 후보 3마리 (시드 우선, 부족하면 전체에서 보충)
   const [candidates] = useState<Dragon[]>(() => {
@@ -87,6 +90,7 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
               <ItemCard icon={<Egg className="h-10 w-10 text-amber-300" />} name="신비한 알" />
               <ItemCard icon={<Wand2 className="h-10 w-10 text-purple-300" />} name="마법 지팡이" />
             </div>
+            <InventoryBadge label="교감의 증표" count={invLoading ? null : bondingTokens} />
             <Bubble>"이 도구들이 그대의 여정을 도울 걸세. 이제 <b>지혜의 시련</b>을 시작하지!"</Bubble>
             <button onClick={() => setPhase("quiz")}
               className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-extrabold text-slate-950 hover:bg-amber-400">
@@ -118,6 +122,7 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
               <Sparkles className="mx-auto h-10 w-10 text-amber-300" />
               <h3 className="mt-2 text-lg font-extrabold text-amber-200">첫 드래곤을 선택하라</h3>
               <p className="mt-1 text-xs text-slate-400">한 마리만 선택할 수 있다네. 신중히 고르게...</p>
+              <InventoryBadge label="교감의 증표" count={invLoading ? null : bondingTokens} className="mx-auto mt-2" />
             </div>
             <div className="grid grid-cols-3 gap-2">
               {candidates.map((d) => (
@@ -188,5 +193,36 @@ function ItemCard({ icon, name }: { icon: React.ReactNode; name: string }) {
       {icon}
       <p className="text-xs font-bold text-amber-200">{name}</p>
     </motion.div>
+  );
+}
+
+/**
+ * 인벤토리 동기화 배지 — useInventory 훅 값을 실시간으로 표시.
+ * count === null 이면 로딩 상태(…), 0이면 회색, 1+ 이면 강조 색상.
+ */
+function InventoryBadge({
+  label,
+  count,
+  className = "",
+}: {
+  label: string;
+  count: number | null;
+  className?: string;
+}) {
+  const has = (count ?? 0) > 0;
+  return (
+    <motion.span
+      key={count ?? "loading"}
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${
+        has
+          ? "border-pink-400/50 bg-pink-500/15 text-pink-100"
+          : "border-slate-700 bg-slate-800/60 text-slate-400"
+      } ${className}`}
+    >
+      <Sparkles className={`h-3 w-3 ${has ? "text-pink-300" : "text-slate-500"}`} />
+      {label} × {count === null ? "…" : count}
+    </motion.span>
   );
 }
