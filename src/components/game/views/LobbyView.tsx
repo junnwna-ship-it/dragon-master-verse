@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Package, Sparkles, ScanLine, LogOut } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonCard } from "../DragonCard";
@@ -14,6 +14,45 @@ export function LobbyView() {
   const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  // Tracks which dragon card is currently centered in the snap-scroll row
+  // (driven by IntersectionObserver) and which one is user-selected via tap.
+  const [centeredId, setCenteredId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // Observe each card's intersection ratio inside the horizontal scroller and
+  // mark the one closest to the viewport center as "centered" — this drives
+  // the smooth hover-style scale/glow as the user swipes.
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root) return;
+    const ratios = new Map<number, number>();
+    const recomputeCentered = () => {
+      let bestId: number | null = null;
+      let bestRatio = 0;
+      ratios.forEach((r, id) => {
+        if (r > bestRatio) {
+          bestRatio = r;
+          bestId = id;
+        }
+      });
+      setCenteredId(bestRatio > 0.55 ? bestId : null);
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const idAttr = (e.target as HTMLElement).dataset.dragonId;
+          if (!idAttr) continue;
+          ratios.set(Number(idAttr), e.intersectionRatio);
+        }
+        recomputeCentered();
+      },
+      { root, threshold: [0.25, 0.5, 0.75, 1] },
+    );
+    cardRefs.current.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [dragons]);
 
   useEffect(() => {
     if (!user) return;
@@ -71,11 +110,49 @@ export function LobbyView() {
         <ScanLine className="h-4 w-4" />
         {user ? "카드 스캔으로 등록" : "로그인하고 카드 스캔하기"}
       </button>
-      <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {dragons.map((d) => (
-          <DragonCard key={d.id} dragon={d} />
-        ))}
+      <div
+        ref={scrollerRef}
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {dragons.map((d) => {
+          const isCentered = centeredId === d.id;
+          const isSelected = selectedId === d.id;
+          return (
+            <div
+              key={d.id}
+              data-dragon-id={d.id}
+              ref={(el) => {
+                if (el) cardRefs.current.set(d.id, el);
+                else cardRefs.current.delete(d.id);
+              }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={isSelected}
+              onClick={() => setSelectedId((cur) => (cur === d.id ? null : d.id))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedId((cur) => (cur === d.id ? null : d.id));
+                }
+              }}
+              className={`group cursor-pointer rounded-3xl transition-all duration-300 ease-out will-change-transform ${
+                isSelected
+                  ? "scale-[1.04] ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30"
+                  : isCentered
+                    ? "scale-[1.02] shadow-xl shadow-black/40"
+                    : "scale-95 opacity-80 hover:scale-100 hover:opacity-100"
+              }`}
+            >
+              <DragonCard dragon={d} />
+            </div>
+          );
+        })}
       </div>
+      {selectedId !== null && (
+        <p className="-mt-2 px-1 text-[11px] text-amber-300/80 animate-in fade-in duration-200">
+          선택됨: {dragons.find((d) => d.id === selectedId)?.name}
+        </p>
+      )}
       <div className="space-y-2 pt-2">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-lg font-bold text-slate-100">Inventory</h2>
