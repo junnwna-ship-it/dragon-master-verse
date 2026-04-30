@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      scanned_cards: {
+        Row: {
+          atk: number
+          confidence: number | null
+          created_at: string
+          def: number
+          element: string
+          hp: number
+          id: string
+          image_url: string | null
+          max_hp: number
+          mp: number
+          name: string
+          user_id: string
+        }
+        Insert: {
+          atk?: number
+          confidence?: number | null
+          created_at?: string
+          def?: number
+          element: string
+          hp?: number
+          id?: string
+          image_url?: string | null
+          max_hp?: number
+          mp?: number
+          name: string
+          user_id: string
+        }
+        Update: {
+          atk?: number
+          confidence?: number | null
+          created_at?: string
+          def?: number
+          element?: string
+          hp?: number
+          id?: string
+          image_url?: string | null
+          max_hp?: number
+          mp?: number
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
