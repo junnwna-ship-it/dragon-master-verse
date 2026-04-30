@@ -335,6 +335,8 @@ export function DragonDetailModal({
               </div>
             </div>
           </section>
+
+          <TrainingSection dragon={dragon} />
         </div>
 
         <div className="border-t border-slate-800 px-5 py-3">
