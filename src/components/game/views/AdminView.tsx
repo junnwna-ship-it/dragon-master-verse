@@ -93,6 +93,51 @@ interface BulkRow {
   lore: string;
 }
 
+/**
+ * Inline toggle row that flips a single feature flag in `app_settings`.
+ * Optimistic + realtime — every connected client reflects the change instantly.
+ */
+function FeatureToggle({
+  flagKey,
+  label,
+  description,
+  value,
+  onChange,
+  disabled,
+}: {
+  flagKey: keyof AppSettings;
+  label: string;
+  description: string;
+  value: boolean;
+  onChange: (key: keyof AppSettings, next: boolean) => Promise<void>;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-slate-100">{label}</p>
+        <p className="truncate text-[11px] text-slate-400">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        disabled={disabled}
+        onClick={() => onChange(flagKey, !value)}
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition ${
+          value ? "bg-emerald-500" : "bg-slate-700"
+        } disabled:cursor-not-allowed disabled:opacity-50`}
+      >
+        <span
+          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+            value ? "translate-x-6" : "translate-x-1"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
 export function AdminView() {
   const dragons = useGameStore((s) => s.dragons);
   const customDragons = useGameStore((s) => s.customDragons);
