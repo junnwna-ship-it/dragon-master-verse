@@ -28,6 +28,11 @@ export interface Dragon {
   image?: string;
   /** ~800px wide WebP — used by the detail modal hero. */
   imageLarge?: string;
+  /**
+   * 사용자 업로드 이미지(절대경로, 예: "/Ain.jpg"). 지정 시 모든 곳에서
+   * 우선적으로 사용된다. 누락/로드 실패 시 기존 webp/그라디언트 폴백.
+   */
+  imageUrl?: string;
 }
 
 export type View = "lobby" | "story" | "pvp" | "vault";
@@ -97,12 +102,15 @@ export const useGameStore = create<GameState>((set) => ({
     // 원본 카드 스탯 — HP + MP + ATK + DEF = 5000 (총합 보장).
     // 카드의 비율을 유지하며 스케일 업한 값. 전투 엔진은 별도의
     // Engine_HP/ATK/DEF 변환 룰을 따른다 (battleLogic 참조).
-    { id: 1, name: "Elia",     element: "Water", maxHp: 1300, hp: 1300, mp: 1300, atk: 1200, def: 1200, image: elia480,     imageLarge: elia800 },
-    { id: 2, name: "Bella",    element: "Water", maxHp: 1000, hp: 1000, mp: 1000, atk: 2000, def: 1000, image: bella480,    imageLarge: bella800 },
-    { id: 3, name: "Comi",     element: "Light", maxHp: 1500, hp: 1500, mp: 1000, atk: 1500, def: 1000, image: comi480,     imageLarge: comi800 },
-    { id: 4, name: "Snowy",    element: "Water", maxHp: 2000, hp: 2000, mp: 1100, atk: 1100, def: 800,  image: snowy480,    imageLarge: snowy800 },
-    { id: 5, name: "Caminont", element: "Dark",  maxHp: 770,  hp: 770,  mp: 190,  atk: 3850, def: 190,  image: caminont480, imageLarge: caminont800 },
-    { id: 6, name: "Younigon", element: "Fire",  maxHp: 2000, hp: 2000, mp: 400,  atk: 1600, def: 1000, image: younigon480, imageLarge: younigon800 },
+    { id: 1, name: "Elia",     element: "Water", maxHp: 1300, hp: 1300, mp: 1300, atk: 1200, def: 1200, image: elia480,     imageLarge: elia800,     imageUrl: "/Ain.jpg" },
+    { id: 2, name: "Bella",    element: "Water", maxHp: 1000, hp: 1000, mp: 1000, atk: 2000, def: 1000, image: bella480,    imageLarge: bella800,    imageUrl: "/Ajin.jpg" },
+    { id: 3, name: "Comi",     element: "Light", maxHp: 1500, hp: 1500, mp: 1000, atk: 1500, def: 1000, image: comi480,     imageLarge: comi800,     imageUrl: "/Comi.jpg" },
+    { id: 4, name: "Snowy",    element: "Water", maxHp: 2000, hp: 2000, mp: 1100, atk: 1100, def: 800,  image: snowy480,    imageLarge: snowy800,    imageUrl: "/Sua.jpg" },
+    { id: 5, name: "Caminont", element: "Dark",  maxHp: 770,  hp: 770,  mp: 190,  atk: 3850, def: 190,  image: caminont480, imageLarge: caminont800, imageUrl: "/Yisul.jpg" },
+    { id: 6, name: "Younigon", element: "Fire",  maxHp: 2000, hp: 2000, mp: 400,  atk: 1600, def: 1000, image: younigon480, imageLarge: younigon800, imageUrl: "/Younigon.jpg" },
+    // 추가 드래곤 — 외부 이미지 자산 기반 (총합 5000 유지)
+    { id: 7, name: "Puri",     element: "Wood",  maxHp: 1500, hp: 1500, mp: 1000, atk: 1300, def: 1200, imageUrl: "/image_9b1c9b.png" },
+    { id: 8, name: "Spike",    element: "Water", maxHp: 1400, hp: 1400, mp: 900,  atk: 1500, def: 1200, imageUrl: "/image_9b19b0.png" },
   ],
   addDragon: (d) =>
     set((state) => {
@@ -155,7 +163,7 @@ export const useGameStore = create<GameState>((set) => ({
   pvpDraws: 0,
   pvpSelectedDragonId: null,
   setPvpSelectedDragonId: (id) => set({ pvpSelectedDragonId: id }),
-  ownedDragonIds: [1, 2, 3, 4, 5, 6],
+  ownedDragonIds: [1, 2, 3, 4, 5, 6, 7, 8],
   selectedDeck: [],
   enemyDeck: [],
   toggleDeckMember: (id) =>
