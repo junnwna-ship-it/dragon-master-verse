@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight, Lock, Check, Trophy } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
@@ -23,9 +23,12 @@ const stages: { id: number; name: string; enemy: Dragon }[] = [
 
 export function StoryView() {
   const dragons = useGameStore((s) => s.dragons);
+  const storyProgress = useGameStore((s) => s.storyProgress);
+  const clearStage = useGameStore((s) => s.clearStage);
   const [stage, setStage] = useState<(typeof stages)[number] | null>(null);
   const [picker, setPicker] = useState<(typeof stages)[number] | null>(null);
   const [player, setPlayer] = useState<Dragon | null>(null);
+  const [lastResult, setLastResult] = useState<"win" | "lose" | "draw" | null>(null);
 
   if (stage && player) {
     return (
@@ -33,9 +36,17 @@ export function StoryView() {
         player={player}
         enemy={stage.enemy}
         context="story"
+        onResolved={(outcome) => {
+          setLastResult(outcome);
+          if (outcome === "win") clearStage(stage.id);
+        }}
         onExit={() => {
+          const cleared = lastResult === "win";
+          const nextStage = cleared ? stages.find((s) => s.id === stage.id + 1) ?? null : null;
           setStage(null);
           setPlayer(null);
+          setLastResult(null);
+          if (nextStage) setPicker(nextStage);
         }}
       />
     );
@@ -77,28 +88,65 @@ export function StoryView() {
     );
   }
 
+  const allCleared = storyProgress >= stages[stages.length - 1].id;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <BookOpen className="h-5 w-5 text-amber-400" />
         <h2 className="text-xl font-bold text-slate-100">Story Mode</h2>
       </div>
+      <div className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/40 px-3 py-2 text-xs">
+        <span className="text-slate-400">진행도</span>
+        <span className="font-mono font-bold text-amber-300">
+          {storyProgress} / {stages.length}
+        </span>
+      </div>
+      {allCleared && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300">
+          <Trophy className="h-4 w-4" /> 모든 스테이지를 클리어했습니다!
+        </div>
+      )}
       <div className="grid gap-2">
-        {stages.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setPicker(s)}
-            className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/70 px-3 py-3 text-left hover:border-amber-500/50"
-          >
-            <div>
-              <p className="text-sm font-bold text-slate-100">{s.name}</p>
-              <p className="text-[11px] text-slate-400">
-                vs {s.enemy.name} ({s.enemy.element})
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-500" />
-          </button>
-        ))}
+        {stages.map((s) => {
+          const cleared = storyProgress >= s.id;
+          const locked = s.id > storyProgress + 1;
+          return (
+            <button
+              key={s.id}
+              onClick={() => !locked && setPicker(s)}
+              disabled={locked}
+              className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left transition ${
+                locked
+                  ? "cursor-not-allowed border-slate-800 bg-slate-900/40 opacity-60"
+                  : "border-slate-700/60 bg-slate-800/70 hover:border-amber-500/50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {cleared ? (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                    <Check className="h-4 w-4" />
+                  </span>
+                ) : locked ? (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-slate-500">
+                    <Lock className="h-4 w-4" />
+                  </span>
+                ) : (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
+                    {s.id}
+                  </span>
+                )}
+                <div>
+                  <p className="text-sm font-bold text-slate-100">{s.name}</p>
+                  <p className="text-[11px] text-slate-400">
+                    vs {s.enemy.name} ({s.enemy.element})
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-500" />
+            </button>
+          );
+        })}
       </div>
     </div>
   );

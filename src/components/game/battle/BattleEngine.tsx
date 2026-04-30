@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, Droplet, Sword, Shield, Zap, BatteryWarning, Flag } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 import {
@@ -15,6 +15,7 @@ interface BattleEngineProps {
   enemy: Dragon;
   context?: "story" | "pvp";
   onExit?: () => void;
+  onResolved?: (outcome: "win" | "lose" | "draw") => void;
 }
 
 const elementTone: Record<string, string> = {
@@ -79,7 +80,7 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
   );
 }
 
-export function BattleEngine({ player, enemy, context = "story", onExit }: BattleEngineProps) {
+export function BattleEngine({ player, enemy, context = "story", onExit, onResolved }: BattleEngineProps) {
   const [pState, setPState] = useState<Combatant>(() => makeCombatant(player));
   const [eState, setEState] = useState<Combatant>(() => makeCombatant(enemy));
   const [turn, setTurn] = useState<"player" | "enemy">("player");
@@ -87,6 +88,7 @@ export function BattleEngine({ player, enemy, context = "story", onExit }: Battl
     { id: 0, text: `${context === "pvp" ? "PvP" : "Story"} 전투 개시!`, tone: "system" },
   ]);
   const logIdRef = useRef(1);
+  const reportedRef = useRef(false);
 
   const winner = useMemo(() => {
     if (pState.hp <= 0 && eState.hp <= 0) return "draw" as const;
@@ -94,6 +96,13 @@ export function BattleEngine({ player, enemy, context = "story", onExit }: Battl
     if (pState.hp <= 0) return "enemy" as const;
     return null;
   }, [pState.hp, eState.hp]);
+
+  useEffect(() => {
+    if (!winner || reportedRef.current) return;
+    reportedRef.current = true;
+    const outcome = winner === "draw" ? "draw" : winner === "player" ? "win" : "lose";
+    onResolved?.(outcome);
+  }, [winner, onResolved]);
 
   const pushLogs = (entries: Omit<LogEntry, "id">[]) => {
     setLogs((prev) => {
