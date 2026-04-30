@@ -172,7 +172,7 @@ export function PvpView() {
           (async () => {
             const { data, error } = await supabase.rpc("award_battle_reward", {
               _outcome: outcome,
-              _dragon_uuid: lead.uuid ?? null,
+              _dragon_uuid: lead.uuid as string,
             });
             if (error) {
               console.error("[pvp] award failed:", error);
