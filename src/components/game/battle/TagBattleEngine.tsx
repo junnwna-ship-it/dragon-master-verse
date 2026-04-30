@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
   Droplet,
@@ -162,22 +162,114 @@ function MiniBenchCard({
   );
 }
 
-function ActivePanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
+interface DamagePop {
+  id: number;
+  value: number;
+  /** "damage" → 빨강, "skill" → 보라+크게, "heal" → 초록 */
+  variant?: "damage" | "skill" | "heal";
+}
+
+/**
+ * 필드 액티브 패널 — 이미지를 메인으로 보여주는 글래스 카드.
+ * - idle: y축 둥둥 floating
+ * - attacking: 적 방향으로 lunge 후 복귀 (player는 위쪽, enemy는 아래쪽)
+ * - hitFlashKey가 바뀌면 빨간 필터 + 좌우 흔들림
+ * - damagePops 큐를 받아 -N 텍스트가 떠오르며 사라짐
+ */
+function ActivePanel({
+  c,
+  side,
+  attacking = false,
+  hitFlashKey = 0,
+  damagePops = [],
+}: {
+  c: Combatant;
+  side: "player" | "enemy";
+  attacking?: boolean;
+  hitFlashKey?: number;
+  damagePops?: DamagePop[];
+}) {
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
   const mpPct = Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100));
   const tone = elementTone[c.base.element] ?? elementTone.Wood;
+  // player는 위쪽으로 돌진(-), enemy는 아래쪽으로 돌진(+)
+  const lungeY = side === "player" ? -28 : 28;
   return (
     <div
-      className={`flex-1 rounded-2xl border border-slate-700/60 bg-slate-800/70 p-2.5 ${
+      className={`relative flex-1 overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-2.5 backdrop-blur-md ${
         side === "enemy" ? "text-right" : ""
       }`}
     >
-      <div className={`flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
-        <span className={`rounded-full border px-1.5 py-0 text-[9px] font-bold uppercase ${tone}`}>
+      {/* 이미지 캔버스 — 핵심 시각 요소 */}
+      <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-slate-950/80">
+        <motion.div
+          className="absolute inset-0"
+          // Idle: 둥둥 floating; Attacking: 돌진 후 복귀
+          animate={
+            attacking
+              ? { y: [0, lungeY, 0] }
+              : { y: [0, -10, 0] }
+          }
+          transition={
+            attacking
+              ? { duration: 0.45, ease: "easeOut" }
+              : { repeat: Infinity, duration: 2, ease: "easeInOut" }
+          }
+        >
+          <DragonImage dragon={c.base} className="h-full w-full" />
+        </motion.div>
+
+        {/* Hit flash (빨간 오버레이 + 좌우 흔들림은 부모에서 적용) */}
+        <AnimatePresence>
+          {hitFlashKey > 0 && (
+            <motion.div
+              key={hitFlashKey}
+              className="pointer-events-none absolute inset-0 bg-rose-500/45 mix-blend-multiply"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* 데미지 파티클 텍스트 */}
+        <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-2">
+          <AnimatePresence>
+            {damagePops.map((p) => (
+              <motion.span
+                key={p.id}
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: -40, scale: 1 }}
+                exit={{ opacity: 0, y: -60 }}
+                transition={{ duration: 1.0, ease: "easeOut" }}
+                className={`absolute font-mono text-2xl font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${
+                  p.variant === "skill"
+                    ? "text-violet-300 text-3xl"
+                    : p.variant === "heal"
+                      ? "text-emerald-300"
+                      : "text-rose-400"
+                }`}
+                style={{ textShadow: "0 0 8px rgba(0,0,0,0.7)" }}
+              >
+                {p.variant === "heal" ? "+" : "-"}
+                {Math.abs(p.value)}
+              </motion.span>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        {/* 좌상단 원소 배지 / 우상단 슬롯 */}
+        <span
+          className={`absolute left-2 top-2 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}
+        >
           {c.base.element}
         </span>
-        <h3 className="text-xs font-bold text-slate-100">{c.base.name}</h3>
+      </div>
+
+      <div className={`flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
+        <h3 className="text-sm font-extrabold text-slate-100">{c.base.name}</h3>
         {c.exhausted && (
           <span className="flex items-center gap-0.5 rounded-full border border-rose-500/50 bg-rose-500/15 px-1 py-0 text-[9px] font-bold text-rose-300">
             <BatteryWarning className="h-2.5 w-2.5" /> 탈진
