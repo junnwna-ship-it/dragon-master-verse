@@ -10,6 +10,11 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    env:
+      # Render scale for the cache-level chart (1, 2, 3 …).
+      # Affects both the SVG `width`/`height` attributes and the PNG raster width.
+      # Override per-run via repo/workflow env if you need denser PNGs.
+      CHART_RENDER_SCALE: "2"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -653,6 +658,16 @@ jobs:
           mkdir -p reports
           # Pass bucket data into the node script via env
           export L0_DATA="$L0" L1_DATA="$L1" L2_DATA="$L2" L3_DATA="$L3" MS_DATA="$MS"
+          # Sanitize render scale (positive integer, default 2, cap at 6)
+          RAW_SCALE="${CHART_RENDER_SCALE:-2}"
+          case "$RAW_SCALE" in
+            ''|*[!0-9]*) SCALE=2 ;;
+            *) SCALE=$RAW_SCALE ;;
+          esac
+          if [ "$SCALE" -lt 1 ]; then SCALE=1; fi
+          if [ "$SCALE" -gt 6 ]; then SCALE=6; fi
+          export CHART_SCALE="$SCALE"
+          echo "Chart render scale: ${SCALE}x"
           node -e "
             const fs = require('fs');
             const parseAvg = (d) => {
@@ -661,6 +676,7 @@ jobs:
               return isFinite(n) ? n : 0;
             };
             const parseN = (d) => parseInt(((d || '').split('|')[0] || '0'), 10) || 0;
+            const SCALE = Math.max(1, parseInt(process.env.CHART_SCALE || '2', 10) || 2);
             const data = [
               { label: 'L0 exact',      avg: parseAvg(process.env.L0_DATA), n: parseN(process.env.L0_DATA), color: '#2da44e' },
               { label: 'L1 sources',    avg: parseAvg(process.env.L1_DATA), n: parseN(process.env.L1_DATA), color: '#46954a' },
@@ -697,7 +713,9 @@ jobs:
                 <text x='\${x}' y='\${pad.t + chartH + 18}' text-anchor='middle' font-size='11' fill='#57606a'>\${v}s</text>\`;
             }).join('');
 
-            const svg = \`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 \${W} \${H}' width='\${W}' height='\${H}' role='img' aria-label='Average lint time by cache level'>
+            // Apply render scale to width/height while keeping viewBox at logical units
+            // — crisper rendering on HiDPI and in raster conversion without changing layout.
+            const svg = \`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 \${W} \${H}' width='\${W * SCALE}' height='\${H * SCALE}' role='img' aria-label='Average lint time by cache level'>
               <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }</style>
               <rect width='100%' height='100%' fill='#ffffff'/>
               <text x='\${W/2}' y='20' text-anchor='middle' font-size='14' font-weight='700' fill='#24292f'>Average lint time by cache level</text>
@@ -707,7 +725,7 @@ jobs:
               <line x1='\${pad.l}' y1='\${pad.t + chartH}' x2='\${pad.l + chartW}' y2='\${pad.t + chartH}' stroke='#24292f' stroke-width='1'/>
             </svg>\`;
             fs.writeFileSync('reports/lint-time-by-cache.svg', svg);
-            console.log('Wrote reports/lint-time-by-cache.svg');
+            console.log('Wrote reports/lint-time-by-cache.svg (scale=' + SCALE + 'x)');
           " || echo "Chart generation skipped (node error)"
 
           # Inline the SVG directly into the summary as a base64 data URI so it
@@ -730,21 +748,154 @@ jobs:
             echo "No SVG to convert."
             exit 0
           fi
+          # Match the SVG render scale so PNG resolution stays consistent.
+          RAW_SCALE="${CHART_RENDER_SCALE:-2}"
+          case "$RAW_SCALE" in
+            ''|*[!0-9]*) SCALE=2 ;;
+            *) SCALE=$RAW_SCALE ;;
+          esac
+          if [ "$SCALE" -lt 1 ]; then SCALE=1; fi
+          if [ "$SCALE" -gt 6 ]; then SCALE=6; fi
+          BASE_W=720
+          PNG_W=$((BASE_W * SCALE))
+          # ImageMagick density: 96 DPI baseline × scale
+          IM_DENSITY=$((96 * SCALE))
+          echo "PNG render: width=${PNG_W}px (scale=${SCALE}x)"
           # rsvg-convert is preinstalled on ubuntu-latest runners (librsvg2-bin).
           # Fall back to apt install on stripped images, then ImageMagick as a last resort.
           if ! command -v rsvg-convert >/dev/null 2>&1; then
             sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin || true
           fi
           if command -v rsvg-convert >/dev/null 2>&1; then
-            # 2× pixel density for crisp rendering in GitHub UI
-            rsvg-convert -w 1440 reports/lint-time-by-cache.svg -o reports/lint-time-by-cache.png
+            rsvg-convert -w "$PNG_W" reports/lint-time-by-cache.svg -o reports/lint-time-by-cache.png
             echo "Converted via rsvg-convert: $(du -h reports/lint-time-by-cache.png | cut -f1)"
           elif command -v convert >/dev/null 2>&1; then
-            convert -density 200 -background white reports/lint-time-by-cache.svg reports/lint-time-by-cache.png
+            convert -density "$IM_DENSITY" -background white reports/lint-time-by-cache.svg reports/lint-time-by-cache.png
             echo "Converted via ImageMagick: $(du -h reports/lint-time-by-cache.png | cut -f1)"
           else
             echo "::warning::No SVG→PNG converter available (rsvg-convert / convert); skipping PNG."
           fi
+
+      - name: Compare matched_runs between history debug files
+        if: always()
+        continue-on-error: true
+        run: |
+          A=reports/cache-history-debug.json
+          B=reports/lint-time-history-debug.json
+          OUT=reports/history-debug-diff.json
+          if [ ! -s "$A" ] || [ ! -s "$B" ]; then
+            echo "One or both history debug files missing — skipping diff."
+            echo "  cache-history: $([ -s "$A" ] && echo present || echo missing)"
+            echo "  lint-time-history: $([ -s "$B" ] && echo present || echo missing)"
+            {
+              echo ""
+              echo "## History debug diff"
+              echo ""
+              echo "_Skipped — one or both debug files are missing._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Compare the matched_runs arrays from both files.
+          # Identity = run id. Report:
+          #   - same workflow_file_sha pinning (sanity check)
+          #   - ids only in A, ids only in B, ids in both
+          #   - per-run field mismatches for shared ids (created_at/event/url)
+          jq -n \
+            --slurpfile a "$A" \
+            --slurpfile b "$B" \
+            '
+              ($a[0]) as $A | ($b[0]) as $B
+              | ($A.matched_runs // []) as $ar
+              | ($B.matched_runs // []) as $br
+              | ($ar | map(.id)) as $aids
+              | ($br | map(.id)) as $bids
+              | ($aids - $bids) as $only_in_a
+              | ($bids - $aids) as $only_in_b
+              | ($aids - ($aids - $bids)) as $shared
+              | {
+                  source_a: $A.source,
+                  source_b: $B.source,
+                  workflow_sha_match: ($A.current_workflow_file_sha == $B.current_workflow_file_sha),
+                  workflow_sha_a: $A.current_workflow_file_sha,
+                  workflow_sha_b: $B.current_workflow_file_sha,
+                  branch_a: $A.branch,
+                  branch_b: $B.branch,
+                  matched_count_a: ($ar | length),
+                  matched_count_b: ($br | length),
+                  identical_id_sets: (($only_in_a | length) == 0 and ($only_in_b | length) == 0),
+                  only_in_a: $only_in_a,
+                  only_in_b: $only_in_b,
+                  shared_ids: $shared,
+                  field_mismatches: [
+                    $shared[] as $id
+                    | ($ar[] | select(.id == $id)) as $ra
+                    | ($br[] | select(.id == $id)) as $rb
+                    | {
+                        id: $id,
+                        diffs: (
+                          [["head_sha", $ra.head_sha, $rb.head_sha],
+                           ["created_at", $ra.created_at, $rb.created_at],
+                           ["event", $ra.event, $rb.event],
+                           ["workflow_file_sha", $ra.workflow_file_sha, $rb.workflow_file_sha],
+                           ["html_url", $ra.html_url, $rb.html_url]]
+                          | map(select(.[1] != .[2]) | {field: .[0], a: .[1], b: .[2]})
+                        )
+                      }
+                    | select(.diffs | length > 0)
+                  ]
+                }
+            ' > "$OUT"
+
+          echo "Wrote $OUT"
+          cat "$OUT"
+
+          IDENTICAL=$(jq -r '.identical_id_sets' "$OUT")
+          SHA_OK=$(jq -r '.workflow_sha_match' "$OUT")
+          A_CNT=$(jq -r '.matched_count_a' "$OUT")
+          B_CNT=$(jq -r '.matched_count_b' "$OUT")
+          ONLY_A=$(jq -r '.only_in_a | length' "$OUT")
+          ONLY_B=$(jq -r '.only_in_b | length' "$OUT")
+          SHARED=$(jq -r '.shared_ids | length' "$OUT")
+          MISMATCHES=$(jq -r '.field_mismatches | length' "$OUT")
+
+          if [ "$IDENTICAL" = "true" ] && [ "$SHA_OK" = "true" ] && [ "$MISMATCHES" = "0" ]; then
+            VERDICT="✅ Identical"
+          elif [ "$IDENTICAL" = "true" ] && [ "$SHA_OK" = "true" ]; then
+            VERDICT="⚠️ Same id set, $MISMATCHES field mismatch(es)"
+          else
+            VERDICT="❌ Differ"
+          fi
+
+          {
+            echo ""
+            echo "## History debug diff"
+            echo ""
+            echo "Compares \`matched_runs\` between the two debug artifacts to confirm both"
+            echo "history queries (cache hit-rate vs lint-time-by-cache) saw the same runs."
+            echo ""
+            echo "| Field | cache-history | lint-time-history |"
+            echo "| --- | --- | --- |"
+            echo "| matched_count | $A_CNT | $B_CNT |"
+            echo "| workflow_file_sha | \`$(jq -r '.workflow_sha_a[0:7]' "$OUT") \` | \`$(jq -r '.workflow_sha_b[0:7]' "$OUT") \` |"
+            echo "| branch | $(jq -r '.branch_a' "$OUT") | $(jq -r '.branch_b' "$OUT") |"
+            echo ""
+            echo "**Verdict:** $VERDICT"
+            echo ""
+            echo "- Shared run ids: **$SHARED**"
+            echo "- Only in cache-history: **$ONLY_A**"
+            echo "- Only in lint-time-history: **$ONLY_B**"
+            echo "- Field mismatches on shared ids: **$MISMATCHES**"
+            if [ "$ONLY_A" != "0" ] || [ "$ONLY_B" != "0" ] || [ "$MISMATCHES" != "0" ]; then
+              echo ""
+              echo "<details><summary>Diff details</summary>"
+              echo ""
+              echo '```json'
+              jq '{only_in_a, only_in_b, field_mismatches}' "$OUT"
+              echo '```'
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload ESLint reports
         if: always()
@@ -761,6 +912,7 @@ jobs:
             reports/lint-time-by-cache.png
             reports/cache-history-debug.json
             reports/lint-time-history-debug.json
+            reports/history-debug-diff.json
           retention-days: 14
           if-no-files-found: warn
 
