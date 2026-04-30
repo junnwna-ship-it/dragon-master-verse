@@ -134,11 +134,27 @@ export interface AttackResult {
 export function performAttack(
   attackerIn: Combatant,
   defenderIn: Combatant,
-  ctx: { turnNumber: number },
+  ctx: { turnNumber: number; skill?: boolean },
 ): AttackResult {
   let attacker: Combatant = { ...attackerIn };
   let defender: Combatant = { ...defenderIn };
   const logs: Omit<LogEntry, "id">[] = [];
+
+  // ----- 특수 스킬 비용 선차감 (MaxMp 20%) -----
+  if (ctx.skill) {
+    const { next, spent } = spendPctMp(attacker, MP_SKILL_COST_PCT);
+    attacker = next;
+    logs.push({
+      text: `[특수 스킬] ${attacker.base.name}이(가) MP ${spent} 소모하여 스킬 발동! (MaxMp 20%)`,
+      tone: "info",
+    });
+    if (attacker.exhausted) {
+      logs.push({
+        text: `[탈진] ${attacker.base.name}의 MP 고갈 — ATK/DEF 50% 감소`,
+        tone: "penalty",
+      });
+    }
+  }
 
   // ----- Snowy: 짝수 턴 회피율 30% 부여 (방어자가 Snowy일 때) -----
   if (defender.base.name === "Snowy" && ctx.turnNumber % 2 === 0) {
@@ -156,6 +172,13 @@ export function performAttack(
   // 최소 데미지 보장: engineAtk의 10%
   const minDmg = Math.max(1, Math.round(attacker.engineAtk * 0.1));
   if (raw < minDmg) raw = minDmg;
+
+  // 특수 스킬: RawDamage 1.5배 증폭 (하드캡은 이후 적용)
+  if (ctx.skill) {
+    const before = raw;
+    raw = Math.round(raw * SKILL_RAW_MULT);
+    logs.push({ text: `[스킬 증폭] RawDamage ${before} → ${raw} (x1.5)`, tone: "info" });
+  }
 
   // Snowy: 짝수 턴 자신이 가하는 데미지 20% 감소
   if (attacker.base.name === "Snowy" && ctx.turnNumber % 2 === 0) {
@@ -185,6 +208,17 @@ export function performAttack(
       text: `[상성 반사] 데미지 50% 삭감, 공격자에게 ${reflect} 반사`,
       tone: "penalty",
     });
+    // 패시브 발동 비용 (MaxMp 5%)
+    {
+      const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
+      attacker = next;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
+    }
     if (attacker.defDebuffStacks < 3) {
       attacker = { ...attacker, defDebuffStacks: attacker.defDebuffStacks + 1 };
       logs.push({
@@ -194,6 +228,17 @@ export function performAttack(
       attacker.engineDef = Math.max(0, Math.round(attacker.base.def * 2 * (1 - attacker.defDebuffStacks * 0.1)));
     }
   } else if (adv) {
+    // 원소 각성 발동 비용 (MaxMp 5%)
+    {
+      const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
+      attacker = next;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
+    }
     if (attacker.atkBuffStacks < 3) {
       attacker = { ...attacker, atkBuffStacks: attacker.atkBuffStacks + 1 };
       logs.push({
@@ -213,6 +258,15 @@ export function performAttack(
       text: `[금속 보호막] Comi가 피해를 10% 경감 (${before}→${dmg})`,
       tone: "system",
     });
+    // 패시브 발동 비용 (방어자, MaxMp 5%)
+    const { next, spent } = spendPctMp(defender, MP_PASSIVE_PCT);
+    defender = next;
+    if (spent > 0) {
+      logs.push({
+        text: `[패시브 소모] ${defender.base.name} MP -${spent} (MaxMp 5%)`,
+        tone: "system",
+      });
+    }
   }
 
   defender.engineHp = Math.max(0, defender.engineHp - dmg);
@@ -230,6 +284,15 @@ export function performAttack(
     if (Math.random() < 0.5) {
       defender = { ...defender, poisoned: true };
       logs.push({ text: `[중독] ${defender.base.name}이(가) 독에 걸렸습니다`, tone: "penalty" });
+      // 패시브 발동 비용 (공격자, MaxMp 5%)
+      const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
+      attacker = next;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
     }
   }
 
