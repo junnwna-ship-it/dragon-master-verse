@@ -103,10 +103,12 @@ export function PvpView() {
   } | null>(null);
 
   // Centralized reset so cancel / 다시 매칭 / 확인 always land in the same
-  // clean idle state (no leftover opponent, player, or selection highlight).
+  // clean idle state — no leftover opponent, player selection, highlight,
+  // or open confirm modal.
   const resetMatchUi = () => {
     setOpponent(null);
     setPlayer(null);
+    setConfirmStart(false);
   };
 
   // Async matchmaking — show spinner for EXACTLY MATCH_SEARCH_MS (2000ms).
@@ -124,6 +126,10 @@ export function PvpView() {
     // fixed 2s window unaffected by extra clicks.
     if (matchTimerRef.current !== null) return;
     if (phase === "searching") return;
+    // Each new matchmaking attempt starts from a fully clean slate so the
+    // resulting picker can never inherit stale selection / opponent / modal
+    // state from a previous match.
+    resetMatchUi();
     setPhase("searching");
     matchStartedAtRef.current = Date.now();
     matchTimerRef.current = setTimeout(() => {
@@ -154,6 +160,21 @@ export function PvpView() {
       }
     };
   }, []);
+
+  // Defensive guarantee: any time the opponent identity changes (new match
+  // result lands, or it's cleared on reset), wipe any leftover dragon
+  // selection and close the confirm modal. This keeps the picker rule —
+  // "selection persists only until 전투 시작; auto-resets after 매칭/확인" —
+  // intact even if a future code path forgets to call resetMatchUi().
+  const lastOpponentIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const id = opponent?.id ?? null;
+    if (lastOpponentIdRef.current !== id) {
+      setPlayer(null);
+      setConfirmStart(false);
+      lastOpponentIdRef.current = id;
+    }
+  }, [opponent]);
 
   const tier = useMemo(() => {
     if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
@@ -213,14 +234,18 @@ export function PvpView() {
           });
         }}
         onExit={() => {
+          // Battle is over — selection is finalized. Always clear the player
+          // selection and confirm-modal flag so re-entering the picker (via
+          // 다시 매칭) starts clean. Opponent stays only while the result
+          // popup needs to display its info.
+          setPlayer(null);
+          setConfirmStart(false);
           if (lastResult) {
             setPhase("result");
           } else {
             resetMatchUi();
             setPhase("idle");
           }
-          // Clear the selected dragon so the picker doesn't keep stale highlight.
-          setPlayer(null);
         }}
       />
     );
