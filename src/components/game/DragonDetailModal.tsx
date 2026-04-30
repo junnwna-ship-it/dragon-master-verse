@@ -452,3 +452,87 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
     </section>
   );
 }
+
+/**
+ * 교감하기(Bonding) 섹션.
+ * - 인벤토리에서 'bonding_token' 1개를 소모해 드래곤에게 EXP +500 제공.
+ * - 토큰이 없으면 안내 메시지와 함께 비활성화.
+ * - 성공 시 EXP 게이지 위로 솟구치는 하트/스파크 VFX를 잠깐 띄운다.
+ */
+export function BondingSection({ dragon }: { dragon: Dragon }) {
+  const refetchDragons = useGameStore((s) => s.fetchDragons);
+  const [tokens, setTokens] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [vfx, setVfx] = useState(false);
+
+  const loadTokens = async () => {
+    const { data, error } = await supabase
+      .from("user_inventory")
+      .select("quantity")
+      .eq("item_key", "bonding_token")
+      .maybeSingle();
+    if (error) { console.error("[bonding] inventory fetch:", error); setTokens(0); return; }
+    setTokens(data?.quantity ?? 0);
+  };
+
+  useEffect(() => { void loadTokens(); }, []);
+
+  const bond = async () => {
+    if (!dragon.uuid) { toast.error("이 드래곤은 클라우드에 저장되어 있지 않습니다"); return; }
+    if ((tokens ?? 0) < 1) { toast.error("교감의 증표가 부족합니다"); return; }
+    setBusy(true);
+    const { error } = await supabase.rpc("bond_with_dragon", { _dragon_uuid: dragon.uuid });
+    setBusy(false);
+    if (error) { toast.error(`교감 실패: ${error.message}`); return; }
+    setVfx(true);
+    toast.success(`${dragon.name}와(과)의 친밀도 상승! EXP +500`);
+    setTimeout(() => setVfx(false), 1200);
+    await Promise.all([loadTokens(), refetchDragons()]);
+  };
+
+  const disabled = busy || (tokens ?? 0) < 1 || !dragon.uuid;
+
+  return (
+    <section className="relative">
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-pink-300">
+          <HeartHandshake className="h-3.5 w-3.5" /> 교감하기
+        </h4>
+        <span className="rounded-md bg-pink-500/15 px-2 py-0.5 text-[11px] font-mono font-bold text-pink-200">
+          교감의 증표 × {tokens ?? "…"}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={bond}
+        disabled={disabled}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-pink-500/40 bg-gradient-to-r from-pink-500/20 to-rose-500/20 px-3 py-3 text-sm font-extrabold text-pink-100 transition hover:from-pink-500/30 hover:to-rose-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+        {(tokens ?? 0) < 1 ? "증표 부족 — 퀴즈 시련에서 획득" : "교감의 증표 소모하고 EXP +500"}
+      </button>
+      {vfx && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+          {Array.from({ length: 14 }).map((_, i) => {
+            const a = (i / 14) * Math.PI * 2;
+            return (
+              <span
+                key={i}
+                className="absolute h-2 w-2 rounded-full bg-pink-300"
+                style={{
+                  animation: `bond-burst-${i} 1s ease-out forwards`,
+                }}
+              />
+            );
+          })}
+          <Sparkles className="absolute h-12 w-12 animate-ping text-pink-200" />
+          <style>{Array.from({ length: 14 }).map((_, i) => {
+            const a = (i / 14) * Math.PI * 2;
+            const x = Math.cos(a) * 90, y = Math.sin(a) * 90;
+            return `@keyframes bond-burst-${i} { to { transform: translate(${x}px, ${y}px); opacity: 0; } }`;
+          }).join("\n")}</style>
+        </div>
+      )}
+    </section>
+  );
+}
