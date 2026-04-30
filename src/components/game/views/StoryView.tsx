@@ -100,6 +100,35 @@ export function StoryView() {
   // Helper: which node id is the player currently allowed to enter?
   const activeNodeId = run?.currentNodeId ?? FIRST_NODE_ID;
 
+  /**
+   * Single state-update pipeline used by BOTH battle resolution and event nodes.
+   * Always uses the functional updater form so the preserved HP/MP merges into
+   * the latest run (avoids stale-closure bugs and guarantees the map gauges
+   * reflect the freshest values regardless of which node type triggered it).
+   */
+  const applyRunUpdate = (update: {
+    hp?: number;
+    mp?: number;
+    clearNodeId?: number;
+  }) => {
+    setRun((prev) => {
+      if (!prev) return prev;
+      const nextHp = update.hp ?? prev.playerHp;
+      const nextMp = update.mp ?? prev.playerMp;
+      if (update.clearNodeId == null) {
+        return { ...prev, playerHp: nextHp, playerMp: nextMp };
+      }
+      const cleared = update.clearNodeId;
+      const isLast = cleared >= TOTAL_NODES;
+      return {
+        currentNodeId: isLast ? cleared : cleared + 1,
+        playerHp: nextHp,
+        playerMp: nextMp,
+        visited: prev.visited.includes(cleared) ? prev.visited : [...prev.visited, cleared],
+      };
+    });
+  };
+
   // ----- Battle screen -----
   if (run && selectedDragon && activeBattleNode && activeBattleNode.enemy) {
     return (
@@ -110,29 +139,20 @@ export function StoryView() {
         initialPlayerHp={run.playerHp}
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
-          // Use the functional updater so we always merge into the latest run
-          // (avoids stale-closure bugs across rapid back-to-back battles).
           if (outcome === "lose") {
             setDefeated(true);
             return;
           }
-          setRun((prev) => {
-            if (!prev) return prev;
-            if (outcome === "win") {
-              const nextNodeId = activeBattleNode.id + 1;
-              const isLast = activeBattleNode.id >= TOTAL_NODES;
-              return {
-                currentNodeId: isLast ? activeBattleNode.id : nextNodeId,
-                playerHp: finalState.playerHp,
-                playerMp: finalState.playerMp,
-                visited: prev.visited.includes(activeBattleNode.id)
-                  ? prev.visited
-                  : [...prev.visited, activeBattleNode.id],
-              };
-            }
+          if (outcome === "win") {
+            applyRunUpdate({
+              hp: finalState.playerHp,
+              mp: finalState.playerMp,
+              clearNodeId: activeBattleNode.id,
+            });
+          } else {
             // draw: keep position, persist HP/MP for retry
-            return { ...prev, playerHp: finalState.playerHp, playerMp: finalState.playerMp };
-          });
+            applyRunUpdate({ hp: finalState.playerHp, mp: finalState.playerMp });
+          }
         }}
         onExit={() => {
           setActiveBattleNode(null);
@@ -410,12 +430,7 @@ export function StoryView() {
               if (node.kind === "event") {
                 // Heal +30 HP, no battle
                 const healed = Math.min(selectedDragon.maxHp, run.playerHp + 30);
-                setRun({
-                  ...run,
-                  playerHp: healed,
-                  visited: [...run.visited, node.id],
-                  currentNodeId: node.id + 1,
-                });
+                applyRunUpdate({ hp: healed, clearNodeId: node.id });
                 setEventMessage(`Bella의 장미꽃 향기로 HP 30 회복! (${run.playerHp} → ${healed})`);
                 return;
               }
