@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles } from "lucide-react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
@@ -307,16 +307,31 @@ export function StoryView() {
             className="absolute inset-0 h-full w-full"
             aria-hidden
           >
+            <defs>
+              {/* Animated dash for the "next" connector */}
+              <style>{`
+                @keyframes story-connector-flow {
+                  to { stroke-dashoffset: -6; }
+                }
+                .story-connector-next {
+                  animation: story-connector-flow 1.2s linear infinite;
+                }
+              `}</style>
+            </defs>
             {EDGES.map(([fromId, toId]) => {
               const from = NODES.find((n) => n.id === fromId)!;
               const to = NODES.find((n) => n.id === toId)!;
               const fromCleared = run?.visited.includes(fromId);
               const reachable = run ? activeNodeId >= toId : false;
-              const stroke = fromCleared && reachable
+              // Edge that leads INTO the player's current next node — highlight + animate.
+              const isNextEdge = run ? toId === activeNodeId && fromCleared === true : false;
+              const stroke = isNextEdge
                 ? "rgb(252 211 77)"
-                : fromCleared
-                  ? "rgb(148 163 184)"
-                  : "rgb(71 85 105)";
+                : fromCleared && reachable
+                  ? "rgb(252 211 77)"
+                  : fromCleared
+                    ? "rgb(148 163 184)"
+                    : "rgb(71 85 105)";
               return (
                 <line
                   key={`${fromId}-${toId}`}
@@ -325,8 +340,9 @@ export function StoryView() {
                   x2={to.x}
                   y2={to.y}
                   stroke={stroke}
-                  strokeWidth={0.6}
-                  strokeDasharray={fromCleared ? undefined : "1.5 1.5"}
+                  strokeWidth={isNextEdge ? 1 : 0.6}
+                  strokeDasharray={isNextEdge ? "2 1.5" : fromCleared ? undefined : "1.5 1.5"}
+                  className={isNextEdge ? "story-connector-next" : undefined}
                   strokeLinecap="round"
                 />
               );
@@ -338,6 +354,13 @@ export function StoryView() {
             const cleared = run?.visited.includes(node.id) ?? false;
             const isActive = run ? activeNodeId === node.id : node.id === FIRST_NODE_ID;
             const locked = run ? node.id > activeNodeId : node.id !== FIRST_NODE_ID;
+            const lockReason = locked
+              ? !run
+                ? "여정을 시작하면 잠금이 해제됩니다"
+                : `이전 노드를 먼저 클리어하세요 (현재: ${activeNodeId}단계)`
+              : cleared
+                ? "이미 클리어한 노드입니다"
+                : "";
 
             const ring =
               node.kind === "boss"
@@ -380,25 +403,62 @@ export function StoryView() {
                 key={node.id}
                 onClick={handleClick}
                 disabled={locked && !cleared}
+                title={locked ? lockReason : cleared ? lockReason : node.title}
                 className={`group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 ${
                   locked && !cleared ? "cursor-not-allowed" : "cursor-pointer"
                 }`}
                 style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                aria-label={node.title}
+                aria-label={
+                  locked
+                    ? `${node.title} — 잠김. ${lockReason}`
+                    : cleared
+                      ? `${node.title} — 클리어됨`
+                      : node.title
+                }
+                aria-disabled={locked && !cleared}
               >
                 <span
-                  className={`flex h-14 w-14 items-center justify-center rounded-full border-2 backdrop-blur transition ${ring} ${stateRing} ${
+                  className={`relative flex h-14 w-14 items-center justify-center rounded-full border-2 backdrop-blur transition ${ring} ${stateRing} ${
                     !locked && !cleared ? "group-hover:scale-105" : ""
                   }`}
                 >
                   {nodeIcon(node.kind, cleared)}
+                  {/* Lock badge for locked nodes */}
+                  {locked && !cleared && (
+                    <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 bg-slate-900 text-slate-300 shadow">
+                      <Lock className="h-3 w-3" />
+                    </span>
+                  )}
                 </span>
-                <div className="rounded-md bg-slate-950/80 px-2 py-0.5 text-center">
+                <div
+                  className={`rounded-md px-2 py-0.5 text-center ${
+                    locked && !cleared
+                      ? "border border-slate-700/60 bg-slate-950/80"
+                      : "bg-slate-950/80"
+                  }`}
+                >
                   <p className="text-[11px] font-bold text-slate-100">{node.title}</p>
-                  <p className="text-[9px] uppercase tracking-widest text-slate-400">
-                    {cleared ? "Cleared" : node.subtitle}
+                  <p
+                    className={`text-[9px] uppercase tracking-widest ${
+                      locked && !cleared ? "text-slate-500" : "text-slate-400"
+                    }`}
+                  >
+                    {cleared ? "Cleared" : locked ? "Locked" : node.subtitle}
                   </p>
                 </div>
+
+                {/* Hover tooltip for locked nodes — visible on hover/focus */}
+                {locked && !cleared && (
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-44 -translate-x-1/2 rounded-md border border-slate-700 bg-slate-950/95 px-2 py-1 text-center text-[10px] font-medium text-slate-200 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100"
+                  >
+                    <span className="flex items-center justify-center gap-1 text-slate-300">
+                      <Lock className="h-3 w-3" /> 잠긴 노드
+                    </span>
+                    <span className="mt-0.5 block text-slate-400">{lockReason}</span>
+                  </span>
+                )}
               </button>
             );
           })}
