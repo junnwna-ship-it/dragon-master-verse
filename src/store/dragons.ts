@@ -83,14 +83,15 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set) => ({
   dragons: [
-    // Stats taken from the hand-drawn cards, scaled down so the in-game
-    // bars (max 100) stay readable: HP/MP /20, ATK/DEF /20.
-    { id: 1, name: "Elia",     element: "Water", maxHp: 65,  hp: 65,  mp: 65, atk: 60,  def: 60, image: elia480,     imageLarge: elia800 },
-    { id: 2, name: "Bella",    element: "Water", maxHp: 50,  hp: 50,  mp: 50, atk: 100, def: 50, image: bella480,    imageLarge: bella800 },
-    { id: 3, name: "Comi",     element: "Light", maxHp: 75,  hp: 75,  mp: 50, atk: 75,  def: 50, image: comi480,     imageLarge: comi800 },
-    { id: 4, name: "Snowy",    element: "Water", maxHp: 100, hp: 100, mp: 55, atk: 55,  def: 40, image: snowy480,    imageLarge: snowy800 },
-    { id: 5, name: "Caminont", element: "Dark",  maxHp: 20,  hp: 20,  mp: 5,  atk: 100, def: 5,  image: caminont480, imageLarge: caminont800 },
-    { id: 6, name: "Younigon", element: "Fire",  maxHp: 100, hp: 100, mp: 20, atk: 80,  def: 50, image: younigon480, imageLarge: younigon800 },
+    // 원본 카드 스탯 — HP + MP + ATK + DEF = 5000 (총합 보장).
+    // 카드의 비율을 유지하며 스케일 업한 값. 전투 엔진은 별도의
+    // Engine_HP/ATK/DEF 변환 룰을 따른다 (battleLogic 참조).
+    { id: 1, name: "Elia",     element: "Water", maxHp: 1300, hp: 1300, mp: 1300, atk: 1200, def: 1200, image: elia480,     imageLarge: elia800 },
+    { id: 2, name: "Bella",    element: "Water", maxHp: 1000, hp: 1000, mp: 1000, atk: 2000, def: 1000, image: bella480,    imageLarge: bella800 },
+    { id: 3, name: "Comi",     element: "Light", maxHp: 1500, hp: 1500, mp: 1000, atk: 1500, def: 1000, image: comi480,     imageLarge: comi800 },
+    { id: 4, name: "Snowy",    element: "Water", maxHp: 2000, hp: 2000, mp: 1100, atk: 1100, def: 800,  image: snowy480,    imageLarge: snowy800 },
+    { id: 5, name: "Caminont", element: "Dark",  maxHp: 770,  hp: 770,  mp: 190,  atk: 3850, def: 190,  image: caminont480, imageLarge: caminont800 },
+    { id: 6, name: "Younigon", element: "Fire",  maxHp: 2000, hp: 2000, mp: 400,  atk: 1600, def: 1000, image: younigon480, imageLarge: younigon800 },
   ],
   addDragon: (d) =>
     set((state) => {
