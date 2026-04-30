@@ -804,46 +804,53 @@ export function TagBattleEngine({
           pActive.mp >= pActive.maxMp * MP_SKILL_THRESHOLD_PCT &&
           turn === "player" &&
           !pickingSwap;
+        // 모바일 라운드-풀 액션 도크. 시야를 가리지 않게 슬림한 글래스 바.
         return (
-          <div className="grid grid-cols-4 gap-2">
-            <button
+          <div className="flex items-center justify-center gap-3 rounded-full border border-white/10 bg-slate-950/60 px-3 py-2 backdrop-blur-md shadow-lg shadow-black/40">
+            <motion.button
               onClick={handleAttack}
               disabled={turn !== "player" || pickingSwap}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-rose-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+              whileTap={{ scale: 0.92 }}
+              aria-label="공격"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-900/50 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
-              <Sword className="h-4 w-4" />
-              <span>공격</span>
-            </button>
-            <button
+              <Sword className="h-6 w-6" />
+            </motion.button>
+            <motion.button
               onClick={handleSkill}
               disabled={!canSkill}
+              whileTap={{ scale: 0.92 }}
               title={`MP ${skillCost} 소모, RawDamage x1.5 (하드캡 유지)`}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-violet-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+              aria-label={`특수 스킬 (-${skillCost} MP)`}
+              className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white shadow-xl shadow-violet-900/50 transition hover:from-violet-400 hover:to-fuchsia-500 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
-              <Wand2 className="h-4 w-4" />
-              <span>스킬</span>
-              <span className="font-mono text-[9px] opacity-90">-{skillCost} MP</span>
-            </button>
-            <button
+              <Wand2 className="h-7 w-7" />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-slate-950/90 px-1.5 py-0 font-mono text-[9px] font-bold text-violet-200 ring-1 ring-violet-400/40">
+                -{skillCost}
+              </span>
+            </motion.button>
+            <motion.button
               onClick={() => setPickingSwap((v) => !v)}
               disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
-              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 ${
+              whileTap={{ scale: 0.92 }}
+              aria-label="교체"
+              className={`flex h-14 w-14 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 ${
                 pickingSwap
-                  ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                  : "bg-sky-600 text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500"
+                  ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-900/50 ring-2 ring-amber-200"
+                  : "bg-sky-600 text-white shadow-lg shadow-sky-900/50 hover:bg-sky-500"
               }`}
             >
-              <Repeat className="h-4 w-4" />
-              <span>교체</span>
-            </button>
-            <button
+              <Repeat className="h-6 w-6" />
+            </motion.button>
+            <motion.button
               onClick={handlePass}
               disabled={turn !== "player" || pickingSwap}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-700 px-2 py-2.5 text-xs font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+              whileTap={{ scale: 0.92 }}
+              aria-label="턴 넘기기"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-700 text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
             >
-              <Zap className="h-4 w-4" />
-              <span>넘기기</span>
-            </button>
+              <Zap className="h-6 w-6" />
+            </motion.button>
           </div>
         );
       })()}
