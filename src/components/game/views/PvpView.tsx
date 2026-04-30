@@ -106,17 +106,51 @@ export function PvpView() {
     setPlayer(null);
   };
 
-  // Async matchmaking: show spinner for exactly MATCH_SEARCH_MS, then pick a
-  // ghost opponent and continue. No network call — pure setTimeout.
-  useEffect(() => {
-    if (phase !== "searching") return;
-    const t = setTimeout(() => {
+  // Async matchmaking — show spinner for EXACTLY MATCH_SEARCH_MS (2000ms).
+  //
+  // We deliberately do NOT key the timer to the phase effect cleanup, because
+  // an effect re-run (e.g. parent re-render that triggers strict-mode double
+  // invoke, or a rapid state change) would clear the timer and restart it,
+  // breaking the "exactly 2 seconds" guarantee. Instead we own the timer in
+  // a ref and only ever set it once per "searching" entry.
+  const matchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const matchStartedAtRef = useRef<number | null>(null);
+
+  const startMatchmaking = () => {
+    // Ignore re-entries — a search is already running and must complete its
+    // fixed 2s window unaffected by extra clicks.
+    if (matchTimerRef.current !== null) return;
+    if (phase === "searching") return;
+    setPhase("searching");
+    matchStartedAtRef.current = Date.now();
+    matchTimerRef.current = setTimeout(() => {
       const pick = GHOST_POOL[Math.floor(Math.random() * GHOST_POOL.length)];
       setOpponent(pick);
       setPhase("picker");
+      matchTimerRef.current = null;
+      matchStartedAtRef.current = null;
     }, MATCH_SEARCH_MS);
-    return () => clearTimeout(t);
-  }, [phase]);
+  };
+
+  const cancelMatchmaking = () => {
+    if (matchTimerRef.current !== null) {
+      clearTimeout(matchTimerRef.current);
+      matchTimerRef.current = null;
+    }
+    matchStartedAtRef.current = null;
+    resetMatchUi();
+    setPhase("idle");
+  };
+
+  // Clean up any pending timer on unmount only — not on every re-render.
+  useEffect(() => {
+    return () => {
+      if (matchTimerRef.current !== null) {
+        clearTimeout(matchTimerRef.current);
+        matchTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const tier = useMemo(() => {
     if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
