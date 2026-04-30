@@ -38,18 +38,29 @@ export function useAppSettings() {
   }, [fetchSettings]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel("app-settings")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "app_settings" },
-        () => {
-          fetchSettings();
-        },
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel("app-settings")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "app_settings" },
+          () => {
+            fetchSettings();
+          },
+        )
+        .subscribe();
+    } catch (e) {
+      console.error("[app_settings] realtime subscribe failed:", e);
+    }
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (e) {
+          console.error("[app_settings] removeChannel failed:", e);
+        }
+      }
     };
   }, [fetchSettings]);
 
