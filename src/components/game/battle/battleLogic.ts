@@ -145,8 +145,8 @@ export function performAttack(
     logs.push({ text: `[빙결의 신중함] Snowy의 공격이 20% 약화되었습니다`, tone: "system" });
   }
 
-  // Hard cap: defender.engineMaxHp * 18%
-  const cap = Math.floor(defender.engineMaxHp * 0.18);
+  // Hard cap: defender.engineMaxHp * 22% (체감 데미지 상향, 5턴 보장 유지)
+  const cap = Math.floor(defender.engineMaxHp * 0.22);
   let dmg = Math.min(raw, cap);
 
   logs.push({
