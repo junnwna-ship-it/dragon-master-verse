@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Heart, Droplet, Sword, Shield, Sparkles } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 
@@ -9,6 +10,16 @@ const elementColors: Record<string, string> = {
   Light: "from-yellow-300/30 to-yellow-600/10 text-yellow-200 border-yellow-400/40",
   Dark: "from-violet-500/30 to-violet-800/10 text-violet-300 border-violet-500/40",
 };
+
+const STAT_DESCRIPTIONS: Record<string, string> = {
+  ATK: "공격력. 한 번의 공격으로 입히는 기본 피해량입니다.",
+  DEF: "방어력. 받는 피해를 줄여주는 수치입니다.",
+  HP: "체력. 0이 되면 전투에서 패배합니다.",
+  MP: "마나. 스킬과 일부 행동에 소모되며, 0이 되면 지칩니다.",
+};
+
+/** Long-press threshold (ms) for showing the tooltip on touch devices. */
+const LONG_PRESS_MS = 350;
 
 function StatBar({
   label,
@@ -24,18 +35,81 @@ function StatBar({
   color: string;
 }) {
   const pct = Math.min(100, (value / max) * 100);
+  const [open, setOpen] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressRef.current !== null) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+  // Auto-dismiss the tooltip a couple seconds after a long-press opens it,
+  // so mobile users don't have to tap-elsewhere to clear it.
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => setOpen(false), 2200);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  const desc = STAT_DESCRIPTIONS[label] ?? "";
+  const tooltipId = `stat-${label.toLowerCase()}-tooltip`;
+
   return (
-    <div className="space-y-1">
+    <div
+      className="group relative space-y-1"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+      onTouchStart={() => {
+        clearLongPress();
+        longPressRef.current = setTimeout(() => setOpen(true), LONG_PRESS_MS);
+      }}
+      onTouchEnd={clearLongPress}
+      onTouchCancel={clearLongPress}
+      onTouchMove={clearLongPress}
+      tabIndex={0}
+      role="group"
+      aria-label={`${label} ${value}${max !== 100 ? ` / ${max}` : ""}. ${desc}`}
+      aria-describedby={tooltipId}
+    >
       <div className="flex items-center justify-between text-xs text-slate-300">
         <span className="flex items-center gap-1.5 font-medium">
           {icon}
           {label}
         </span>
-        <span className="font-mono text-slate-200">{value}</span>
+        <span className="font-mono text-slate-200">
+          {value}
+          {max !== 100 && <span className="text-slate-500">/{max}</span>}
+        </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700/60">
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-slate-700/60"
+        // Native browser tooltip as a last-resort fallback (e.g. desktop
+        // assistive tech or environments that suppress our custom popup).
+        title={`${label}: ${value}${max !== 100 ? `/${max}` : ""} — ${desc}`}
+      >
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
+
+      {/* Custom tooltip — shown on hover/focus (desktop) or long-press (touch). */}
+      <span
+        id={tooltipId}
+        role="tooltip"
+        className={`pointer-events-none absolute -top-2 left-1/2 z-20 w-48 -translate-x-1/2 -translate-y-full rounded-lg border border-slate-700 bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug text-slate-200 shadow-lg transition-opacity duration-150 ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <span className="block font-bold text-slate-100">
+          {label}
+          <span className="ml-1 font-mono text-slate-400">
+            {value}
+            {max !== 100 ? `/${max}` : ""}
+          </span>
+        </span>
+        <span className="mt-0.5 block text-slate-400">{desc}</span>
+      </span>
     </div>
   );
 }
