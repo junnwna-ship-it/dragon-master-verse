@@ -1,12 +1,25 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Trash2, Upload, Plus, Pencil, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud } from "lucide-react";
+import { toast } from "sonner";
 import { useGameStore, type Element } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
+import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Admin Dashboard — 커스텀 드래곤 생성/삭제. 이미지 업로드는 FileReader로
- * Base64 변환 후 imageUrl에 저장 → localStorage('customDragons')에 영속.
+ * Admin Dashboard — cloud-backed.
+ *
+ * - Single-create form: writes one dragon row to Supabase. Image (if chosen)
+ *   is compressed in-browser to 400x400 JPEG q=0.8 and uploaded to the
+ *   `dragon-images` Storage bucket under `<uid>/<random>.jpg`. The returned
+ *   public URL is stored as `image_url`.
+ * - Bulk grid: pick N images at once, edit per-row stats inline, then
+ *   "전체 저장" uploads all images in parallel and bulk-inserts the rows.
+ * - Admin-only sections (delete/edit existing rows) are gated by RLS and a
+ *   client-side `useIsAdmin()` check that hides the controls.
  */
+
 const ELEMENTS: { value: Element; label: string }[] = [
   { value: "Water", label: "Water (수)" },
   { value: "Fire",  label: "Fire (화)" },
@@ -16,21 +29,79 @@ const ELEMENTS: { value: Element; label: string }[] = [
   { value: "Dark",  label: "Dark (암)" },
 ];
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
-    reader.readAsDataURL(file);
+const MAX_DIM = 400;
+const JPEG_QUALITY = 0.8;
+
+/** Compress + resize a File to a JPEG Blob no larger than MAX_DIM on its longest side. */
+async function compressImage(file: File): Promise<Blob> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result ?? ""));
+    r.onerror = () => reject(r.error ?? new Error("read failed"));
+    r.readAsDataURL(file);
   });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("decode failed"));
+    i.src = dataUrl;
+  });
+  const ratio = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * ratio));
+  const h = Math.max(1, Math.round(img.height * ratio));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas 2d context unavailable");
+  ctx.drawImage(img, 0, 0, w, h);
+  const blob: Blob = await new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("canvas toBlob failed"))),
+      "image/jpeg",
+      JPEG_QUALITY,
+    ),
+  );
+  return blob;
+}
+
+/** Upload a Blob to dragon-images and return its public URL. */
+async function uploadDragonImage(blob: Blob, uid: string): Promise<string> {
+  const path = `${uid}/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage
+    .from("dragon-images")
+    .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+  if (error) {
+    console.error("[storage] upload failed:", error);
+    throw error;
+  }
+  const { data } = supabase.storage.from("dragon-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+interface BulkRow {
+  key: string;
+  file: File;
+  previewUrl: string;
+  name: string;
+  element: Element;
+  maxHp: number;
+  maxMp: number;
+  atk: number;
+  def: number;
+  lore: string;
 }
 
 export function AdminView() {
   const dragons = useGameStore((s) => s.dragons);
   const customDragons = useGameStore((s) => s.customDragons);
   const addCustomDragon = useGameStore((s) => s.addCustomDragon);
+  const addCustomDragonsBulk = useGameStore((s) => s.addCustomDragonsBulk);
   const removeCustomDragon = useGameStore((s) => s.removeCustomDragon);
   const updateCustomDragon = useGameStore((s) => s.updateCustomDragon);
+
+  const { user } = useAuth();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [justUpdatedId, setJustUpdatedId] = useState<number | null>(null);
@@ -41,11 +112,26 @@ export function AdminView() {
   const [atk, setAtk] = useState(1500);
   const [def, setDef] = useState(1000);
   const [element, setElement] = useState<Element>("Water");
-  const [imageData, setImageData] = useState<string>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageName, setImageName] = useState<string>("");
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [busy, setBusy] = useState(false);
 
-  const customIds = new Set(customDragons.map((d) => d.id));
+  const [bulkRows, setBulkRows] = useState<BulkRow[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const customIds = useMemo(() => new Set(customDragons.map((d) => d.id)), [customDragons]);
+
+  // Revoke object URLs created for previews when bulk rows go away.
+  useEffect(() => {
+    return () => {
+      bulkRows.forEach((r) => URL.revokeObjectURL(r.previewUrl));
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function resetForm() {
     setEditingId(null);
@@ -56,12 +142,18 @@ export function AdminView() {
     setAtk(1500);
     setDef(1000);
     setElement("Water");
-    setImageData("");
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview("");
     setImageName("");
     setError("");
   }
 
   function startEdit(id: number) {
+    if (!isAdmin) {
+      toast.error("관리자만 수정할 수 있습니다");
+      return;
+    }
     const d = customDragons.find((x) => x.id === id);
     if (!d) return;
     setEditingId(id);
@@ -72,58 +164,166 @@ export function AdminView() {
     setAtk(d.atk);
     setDef(d.def);
     setElement(d.element);
-    setImageData(d.imageUrl ?? "");
-    setImageName(d.imageUrl ? "현재 이미지" : "");
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(d.imageUrl ?? "");
+    setImageName(d.imageUrl ? "기존 이미지" : "");
     setError("");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const b64 = await fileToBase64(file);
-      setImageData(b64);
-      setImageName(file.name);
-      setError("");
-    } catch {
-      setError("이미지 변환 실패");
-    }
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setImageName(file.name);
+    setError("");
   }
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!user) {
+      toast.error("로그인이 필요합니다");
+      return;
+    }
     if (!name.trim()) {
       setError("이름을 입력하세요");
       return;
     }
-    if (editingId != null) {
-      updateCustomDragon(editingId, {
-        name: name.trim(),
-        element,
-        maxHp,
-        hp: maxHp,
-        mp: maxMp,
-        atk,
-        def,
-        imageUrl: imageData || undefined,
-        lore: lore.trim() || undefined,
-      });
-      setJustUpdatedId(editingId);
-    } else {
-      addCustomDragon({
-        name: name.trim(),
-        element,
-        maxHp,
-        hp: maxHp,
-        mp: maxMp,
-        atk,
-        def,
-        imageUrl: imageData || undefined,
-        lore: lore.trim() || undefined,
-      });
+    setBusy(true);
+    try {
+      let imageUrl: string | undefined = undefined;
+      if (imageFile) {
+        const blob = await compressImage(imageFile);
+        imageUrl = await uploadDragonImage(blob, user.id);
+      } else if (editingId != null) {
+        // Keep existing image when editing without re-uploading.
+        imageUrl = imagePreview || undefined;
+      }
+
+      if (editingId != null) {
+        await updateCustomDragon(editingId, {
+          name: name.trim(),
+          element,
+          maxHp,
+          hp: maxHp,
+          mp: maxMp,
+          atk,
+          def,
+          imageUrl,
+          lore: lore.trim() || undefined,
+        });
+        setJustUpdatedId(editingId);
+        toast.success("드래곤이 수정되었습니다");
+      } else {
+        await addCustomDragon({
+          name: name.trim(),
+          element,
+          maxHp,
+          hp: maxHp,
+          mp: maxMp,
+          atk,
+          def,
+          imageUrl,
+          lore: lore.trim() || undefined,
+        });
+        toast.success("드래곤이 등록되었습니다");
+      }
+      resetForm();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "알 수 없는 오류";
+      console.error("[admin] save failed:", err);
+      setError(msg);
+      toast.error(`저장 실패: ${msg}`);
+    } finally {
+      setBusy(false);
     }
-    resetForm();
+  }
+
+  async function onBulkFiles(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    const rows: BulkRow[] = files.map((file) => ({
+      key: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 7)}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+      name: file.name.replace(/\.[^.]+$/, "").slice(0, 24),
+      element: "Water",
+      maxHp: 1500,
+      maxMp: 1000,
+      atk: 1500,
+      def: 1000,
+      lore: "",
+    }));
+    setBulkRows((prev) => [...prev, ...rows]);
+    e.target.value = "";
+  }
+
+  function updateBulk(key: string, patch: Partial<BulkRow>) {
+    setBulkRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  }
+
+  function removeBulk(key: string) {
+    setBulkRows((rows) => {
+      const target = rows.find((r) => r.key === key);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return rows.filter((r) => r.key !== key);
+    });
+  }
+
+  async function submitBulk() {
+    if (!user) {
+      toast.error("로그인이 필요합니다");
+      return;
+    }
+    if (bulkRows.length === 0) return;
+    if (bulkRows.some((r) => !r.name.trim())) {
+      toast.error("모든 행에 이름을 입력하세요");
+      return;
+    }
+    setBulkBusy(true);
+    setBulkProgress({ done: 0, total: bulkRows.length });
+    try {
+      // Compress + upload in parallel — track progress so the user sees feedback.
+      let done = 0;
+      const uploads = await Promise.all(
+        bulkRows.map(async (r) => {
+          const blob = await compressImage(r.file);
+          const url = await uploadDragonImage(blob, user.id);
+          done += 1;
+          setBulkProgress({ done, total: bulkRows.length });
+          return { row: r, url };
+        }),
+      );
+
+      const payload = uploads.map(({ row, url }) => ({
+        name: row.name.trim(),
+        element: row.element,
+        maxHp: row.maxHp,
+        hp: row.maxHp,
+        mp: row.maxMp,
+        atk: row.atk,
+        def: row.def,
+        imageUrl: url,
+        lore: row.lore.trim() || undefined,
+      }));
+
+      await addCustomDragonsBulk(payload);
+      toast.success(`${payload.length}마리 일괄 등록 완료`);
+
+      // Cleanup previews.
+      bulkRows.forEach((r) => URL.revokeObjectURL(r.previewUrl));
+      setBulkRows([]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "알 수 없는 오류";
+      console.error("[admin] bulk save failed:", err);
+      toast.error(`일괄 저장 실패: ${msg}`);
+    } finally {
+      setBulkBusy(false);
+      setBulkProgress(null);
+    }
   }
 
   useEffect(() => {
@@ -132,14 +332,36 @@ export function AdminView() {
     return () => clearTimeout(t);
   }, [justUpdatedId]);
 
+  if (!user) {
+    return (
+      <div className="space-y-3 rounded-2xl border border-amber-700/50 bg-amber-900/20 p-4 text-sm text-amber-200">
+        <div className="flex items-center gap-2 font-bold">
+          <ShieldAlert className="h-4 w-4" /> 로그인이 필요합니다
+        </div>
+        <p className="text-xs text-amber-300/80">
+          드래곤을 등록하려면 먼저 로그인하세요.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-slate-100">관리자 페이지</h2>
-        <p className="text-xs text-slate-400">커스텀 드래곤을 생성·관리합니다 (브라우저 저장)</p>
+        <p className="text-xs text-slate-400">
+          {isAdmin
+            ? "커스텀 드래곤을 생성·수정·삭제합니다 (클라우드 동기화)"
+            : "커스텀 드래곤을 생성합니다 (수정·삭제는 관리자 전용)"}
+        </p>
+        {adminLoading ? null : isAdmin ? (
+          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+            <Cloud className="h-3 w-3" /> ADMIN
+          </p>
+        ) : null}
       </div>
 
-      {/* Create form */}
+      {/* Single-card form */}
       <form
         onSubmit={onSubmit}
         className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4"
@@ -213,16 +435,16 @@ export function AdminView() {
           </label>
 
           <label className="col-span-2 block text-xs">
-            <span className="mb-1 block text-slate-400">이미지 업로드</span>
+            <span className="mb-1 block text-slate-400">이미지 업로드 (Storage로 전송)</span>
             <div className="flex items-center gap-2">
               <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600 bg-slate-950/60 px-3 py-2 text-xs text-slate-300 hover:border-amber-500">
                 <Upload className="h-3.5 w-3.5" />
                 <span className="truncate">{imageName || "파일 선택"}</span>
                 <input type="file" accept="image/*" onChange={onFileChange} className="hidden" />
               </label>
-              {imageData && (
+              {imagePreview && (
                 <img
-                  src={imageData}
+                  src={imagePreview}
                   alt="preview"
                   className="h-12 w-12 rounded-lg border border-slate-700 object-cover"
                 />
@@ -235,19 +457,128 @@ export function AdminView() {
 
         <button
           type="submit"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400"
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
         >
           {editingId != null ? (
             <>
-              <Pencil className="h-4 w-4" />변경사항 저장
+              <Pencil className="h-4 w-4" />
+              {busy ? "저장 중…" : "변경사항 저장"}
             </>
           ) : (
             <>
-              <Plus className="h-4 w-4" />새 드래곤 카드 생성하기
+              <Plus className="h-4 w-4" />
+              {busy ? "업로드 중…" : "새 드래곤 카드 생성하기"}
             </>
           )}
         </button>
       </form>
+
+      {/* Bulk upload grid */}
+      <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <Layers className="h-3 w-3" /> 일괄 업로드
+          </p>
+          <label className="flex cursor-pointer items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-200 hover:bg-slate-700">
+            <Upload className="h-3 w-3" /> 파일 추가
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={onBulkFiles}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {bulkRows.length === 0 ? (
+          <p className="text-center text-[11px] text-slate-500">
+            여러 이미지 파일을 한 번에 선택해 자동으로 압축(400px, JPEG q0.8)한 뒤<br />
+            스탯을 매칭해 일괄 등록할 수 있습니다.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {bulkRows.map((r) => (
+              <li
+                key={r.key}
+                className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-2"
+              >
+                <div className="flex items-center gap-2">
+                  <img
+                    src={r.previewUrl}
+                    alt=""
+                    className="h-12 w-12 flex-shrink-0 rounded-lg border border-slate-700 object-cover"
+                  />
+                  <input
+                    value={r.name}
+                    onChange={(e) => updateBulk(r.key, { name: e.target.value })}
+                    placeholder="이름"
+                    className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
+                  />
+                  <select
+                    value={r.element}
+                    onChange={(e) =>
+                      updateBulk(r.key, { element: e.target.value as Element })
+                    }
+                    className="rounded-md border border-slate-700 bg-slate-900 px-1 py-1 text-xs text-slate-100"
+                  >
+                    {ELEMENTS.map((el) => (
+                      <option key={el.value} value={el.value}>
+                        {el.value}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => removeBulk(r.key)}
+                    className="flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                    aria-label="제거"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    { label: "HP", value: r.maxHp, key: "maxHp" as const },
+                    { label: "MP", value: r.maxMp, key: "maxMp" as const },
+                    { label: "ATK", value: r.atk, key: "atk" as const },
+                    { label: "DEF", value: r.def, key: "def" as const },
+                  ].map((f) => (
+                    <label key={f.label} className="block text-[10px] text-slate-400">
+                      <span className="mb-0.5 block">{f.label}</span>
+                      <input
+                        type="number"
+                        value={f.value}
+                        onChange={(e) =>
+                          updateBulk(r.key, { [f.key]: Number(e.target.value) || 0 })
+                        }
+                        className="w-full rounded-md border border-slate-700 bg-slate-900 px-1.5 py-1 text-xs text-slate-100"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {bulkRows.length > 0 && (
+          <button
+            type="button"
+            onClick={submitBulk}
+            disabled={bulkBusy}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
+          >
+            <Cloud className="h-4 w-4" />
+            {bulkBusy
+              ? bulkProgress
+                ? `업로드 ${bulkProgress.done}/${bulkProgress.total}…`
+                : "업로드 중…"
+              : `전체 저장 (${bulkRows.length}마리)`}
+          </button>
+        )}
+      </section>
 
       {/* Manage list */}
       <section>
@@ -272,9 +603,13 @@ export function AdminView() {
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-slate-100">
                     {d.name}
-                    {isCustom && (
+                    {isCustom ? (
                       <span className="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
                         CUSTOM
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-sky-500/20 px-1.5 py-0.5 text-[9px] font-bold text-sky-300">
+                        SEED
                       </span>
                     )}
                   </p>
@@ -282,7 +617,7 @@ export function AdminView() {
                     {d.element} · HP {d.maxHp} · MP {d.mp} · ATK {d.atk} · DEF {d.def}
                   </p>
                 </div>
-                {isCustom ? (
+                {isAdmin ? (
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -298,9 +633,14 @@ export function AdminView() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (editingId === d.id) resetForm();
-                        removeCustomDragon(d.id);
+                        try {
+                          await removeCustomDragon(d.id);
+                          toast.success(`${d.name} 삭제됨`);
+                        } catch {
+                          /* toast already shown by store */
+                        }
                       }}
                       aria-label={`${d.name} 삭제`}
                       className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
@@ -309,7 +649,9 @@ export function AdminView() {
                     </button>
                   </div>
                 ) : (
-                  <span className="text-[9px] uppercase tracking-wider text-slate-600">기본</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-600">
+                    {isCustom ? "잠김" : "기본"}
+                  </span>
                 )}
               </li>
             );

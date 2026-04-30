@@ -1,22 +1,21 @@
 import { create } from "zustand";
-// Optimized WebP variants (small for cards, large for the modal hero).
-import elia480 from "@/assets/dragons/elia-480.webp";
-import elia800 from "@/assets/dragons/elia-800.webp";
-import bella480 from "@/assets/dragons/bella-480.webp";
-import bella800 from "@/assets/dragons/bella-800.webp";
-import comi480 from "@/assets/dragons/comi-480.webp";
-import comi800 from "@/assets/dragons/comi-800.webp";
-import snowy480 from "@/assets/dragons/snowy-480.webp";
-import snowy800 from "@/assets/dragons/snowy-800.webp";
-import caminont480 from "@/assets/dragons/caminont-480.webp";
-import caminont800 from "@/assets/dragons/caminont-800.webp";
-import younigon480 from "@/assets/dragons/younigon-480.webp";
-import younigon800 from "@/assets/dragons/younigon-800.webp";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type Element = "Wood" | "Water" | "Fire" | "Earth" | "Light" | "Dark";
 
 export interface Dragon {
+  /** Stable in-memory numeric id assigned at fetch time; used by deck/PvP/battle systems. */
   id: number;
+  /** Authoritative cloud UUID (Supabase row id). Optional for transient/local-only entries. */
+  uuid?: string;
+  /** True for the original 8 hard-coded dragons (read-only for non-admins). */
+  isSeed?: boolean;
+  /** True if not a seed (= user-uploaded). */
+  isCustom?: boolean;
+  /** Author user id (auth.uid()). Null for seeds. */
+  createdBy?: string | null;
+  lore?: string;
   name: string;
   element: Element;
   hp: number;
@@ -24,14 +23,7 @@ export interface Dragon {
   mp: number;
   atk: number;
   def: number;
-  /** ~480px wide WebP — used by the lobby card grid. */
-  image?: string;
-  /** ~800px wide WebP — used by the detail modal hero. */
-  imageLarge?: string;
-  /**
-   * 사용자 업로드 이미지(절대경로, 예: "/Ain.jpg"). 지정 시 모든 곳에서
-   * 우선적으로 사용된다. 누락/로드 실패 시 기존 webp/그라디언트 폴백.
-   */
+  /** Public Storage URL (Supabase). Optional — falls back to gradient placeholder. */
   imageUrl?: string;
 }
 
@@ -62,7 +54,13 @@ export interface RewardDrop {
 
 interface GameState {
   dragons: Dragon[];
-  addDragon: (d: Omit<Dragon, "id">) => void;
+  /** True while the initial cloud fetch is in flight. */
+  loadingDragons: boolean;
+  /** Last load error message (null on success). */
+  loadError: string | null;
+  /** Fetches the dragons list from Supabase and replaces local state. */
+  fetchDragons: () => Promise<void>;
+  addDragon: (d: Omit<Dragon, "id" | "uuid">) => void;
   setDragons: (dragons: Dragon[]) => void;
   view: View;
   setView: (v: View) => void;
@@ -95,95 +93,189 @@ interface GameState {
   toggleDeckMember: (id: number) => void;
   clearDeck: () => void;
   setEnemyDeck: (ids: number[]) => void;
-  // ===== Admin / Custom Dragons =====
-  /** localStorage에 저장되는 사용자 정의 드래곤 (lore 포함). */
-  customDragons: (Dragon & { lore?: string; isCustom: true })[];
-  addCustomDragon: (d: Omit<Dragon, "id"> & { lore?: string }) => void;
-  removeCustomDragon: (id: number) => void;
-  updateCustomDragon: (id: number, patch: Partial<Omit<Dragon, "id">> & { lore?: string }) => void;
+  // ===== Admin / Custom Dragons (cloud-backed) =====
+  /** Derived view of cloud dragons authored by users (non-seed). */
+  customDragons: Dragon[];
+  /** Inserts a new dragon into Supabase, then re-fetches. Throws on failure. */
+  addCustomDragon: (d: Omit<Dragon, "id" | "uuid"> & { lore?: string }) => Promise<void>;
+  /** Bulk insert. Used by the Admin grid upload flow. */
+  addCustomDragonsBulk: (dragons: (Omit<Dragon, "id" | "uuid"> & { lore?: string })[]) => Promise<void>;
+  /** Admin-only delete (RLS enforces). */
+  removeCustomDragon: (id: number) => Promise<void>;
+  /** Admin-only update (RLS enforces). */
+  updateCustomDragon: (
+    id: number,
+    patch: Partial<Omit<Dragon, "id" | "uuid">> & { lore?: string },
+  ) => Promise<void>;
 }
 
-const CUSTOM_KEY = "customDragons";
+/**
+ * Maps a Supabase row to a client Dragon. We assign a stable in-memory
+ * numeric id (incrementing per fetch) so the rest of the app — battle
+ * engine, deck picker, debug view — keeps using `number` ids unchanged.
+ * The cloud `uuid` is kept on the object for cloud writes.
+ */
+type DragonRow = {
+  id: string;
+  name: string;
+  element: string;
+  max_hp: number;
+  mp: number;
+  atk: number;
+  def: number;
+  image_url: string | null;
+  lore: string | null;
+  is_seed: boolean;
+  created_by: string | null;
+};
 
-function loadCustomDragons(): (Dragon & { lore?: string; isCustom: true })[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(CUSTOM_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr.map((d) => ({ ...d, isCustom: true as const }));
-  } catch {
-    return [];
-  }
+function rowToDragon(row: DragonRow, numericId: number): Dragon {
+  const element = (row.element as Element) ?? "Water";
+  return {
+    id: numericId,
+    uuid: row.id,
+    name: row.name,
+    element,
+    maxHp: row.max_hp,
+    hp: row.max_hp,
+    mp: row.mp,
+    atk: row.atk,
+    def: row.def,
+    imageUrl: row.image_url ?? undefined,
+    lore: row.lore ?? undefined,
+    isSeed: row.is_seed,
+    isCustom: !row.is_seed,
+    createdBy: row.created_by,
+  };
 }
 
-function persistCustomDragons(list: (Dragon & { lore?: string; isCustom: true })[]) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
-  } catch {
-    // ignore quota errors
-  }
-}
-
-const BASE_DRAGONS: Dragon[] = [
-  { id: 1, name: "Elia",     element: "Water", maxHp: 1300, hp: 1300, mp: 1300, atk: 1200, def: 1200, image: elia480,     imageLarge: elia800,     imageUrl: "/Ain.jpg" },
-  { id: 2, name: "Bella",    element: "Water", maxHp: 1000, hp: 1000, mp: 1000, atk: 2000, def: 1000, image: bella480,    imageLarge: bella800,    imageUrl: "/Ajin.jpg" },
-  { id: 3, name: "Comi",     element: "Light", maxHp: 1500, hp: 1500, mp: 1000, atk: 1500, def: 1000, image: comi480,     imageLarge: comi800,     imageUrl: "/Comi.jpg" },
-  { id: 4, name: "Snowy",    element: "Water", maxHp: 2000, hp: 2000, mp: 1100, atk: 1100, def: 800,  image: snowy480,    imageLarge: snowy800,    imageUrl: "/Sua.jpg" },
-  { id: 5, name: "Caminont", element: "Dark",  maxHp: 770,  hp: 770,  mp: 190,  atk: 3850, def: 190,  image: caminont480, imageLarge: caminont800, imageUrl: "/Yisul.jpg" },
-  { id: 6, name: "Younigon", element: "Fire",  maxHp: 2000, hp: 2000, mp: 400,  atk: 1600, def: 1000, image: younigon480, imageLarge: younigon800, imageUrl: "/Younigon.jpg" },
-  { id: 7, name: "Puri",     element: "Wood",  maxHp: 1500, hp: 1500, mp: 1000, atk: 1300, def: 1200, imageUrl: "/image_9b1c9b.png" },
-  { id: 8, name: "Spike",    element: "Water", maxHp: 1400, hp: 1400, mp: 900,  atk: 1500, def: 1200, imageUrl: "/image_9b19b0.png" },
-];
-
-const INITIAL_CUSTOM = loadCustomDragons();
-const INITIAL_DRAGONS: Dragon[] = [...BASE_DRAGONS, ...INITIAL_CUSTOM];
-const INITIAL_OWNED = INITIAL_DRAGONS.map((d) => d.id);
-
-export const useGameStore = create<GameState>((set) => ({
-  dragons: INITIAL_DRAGONS,
-  customDragons: INITIAL_CUSTOM,
-  addCustomDragon: (d) =>
-    set((state) => {
-      const nextId = state.dragons.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const created = { ...d, id: nextId, isCustom: true as const };
-      const customs = [...state.customDragons, created];
-      persistCustomDragons(customs);
-      return {
-        customDragons: customs,
-        dragons: [...state.dragons, created],
-        ownedDragonIds: [...state.ownedDragonIds, nextId],
-      };
-    }),
-  removeCustomDragon: (id) =>
-    set((state) => {
-      const customs = state.customDragons.filter((d) => d.id !== id);
-      persistCustomDragons(customs);
-      return {
-        customDragons: customs,
-        dragons: state.dragons.filter((d) => d.id !== id),
-        ownedDragonIds: state.ownedDragonIds.filter((x) => x !== id),
-        selectedDeck: state.selectedDeck.filter((x) => x !== id),
-      };
-    }),
-  updateCustomDragon: (id, patch) =>
-    set((state) => {
-      if (!state.customDragons.some((d) => d.id === id)) return {};
-      const customs = state.customDragons.map((d) =>
-        d.id === id ? { ...d, ...patch, id: d.id, isCustom: true as const } : d,
-      );
-      persistCustomDragons(customs);
-      const dragons = state.dragons.map((d) =>
-        d.id === id ? { ...d, ...patch, id: d.id } : d,
-      );
-      return { customDragons: customs, dragons };
-    }),
+export const useGameStore = create<GameState>((set, get) => ({
+  dragons: [],
+  customDragons: [],
+  loadingDragons: true,
+  loadError: null,
+  fetchDragons: async () => {
+    set({ loadingDragons: true, loadError: null });
+    const { data, error } = await supabase
+      .from("dragons")
+      .select("*")
+      .order("is_seed", { ascending: false })
+      .order("created_at", { ascending: true });
+    if (error) {
+      console.error("[dragons] fetch failed:", error);
+      set({ loadingDragons: false, loadError: error.message });
+      toast.error(`드래곤 불러오기 실패: ${error.message}`);
+      return;
+    }
+    const rows = (data ?? []) as DragonRow[];
+    const dragons = rows.map((r, i) => rowToDragon(r, i + 1));
+    const customs = dragons.filter((d) => !d.isSeed);
+    set({
+      dragons,
+      customDragons: customs,
+      loadingDragons: false,
+      loadError: null,
+      ownedDragonIds: dragons.map((d) => d.id),
+    });
+  },
+  addCustomDragon: async (d) => {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) {
+      toast.error("로그인이 필요합니다");
+      throw new Error("not authenticated");
+    }
+    const { error } = await supabase.from("dragons").insert({
+      name: d.name,
+      element: d.element,
+      max_hp: d.maxHp,
+      mp: d.mp,
+      atk: d.atk,
+      def: d.def,
+      image_url: d.imageUrl ?? null,
+      lore: d.lore ?? null,
+      is_seed: false,
+      created_by: uid,
+    });
+    if (error) {
+      console.error("[dragons] insert failed:", error);
+      toast.error(`등록 실패: ${error.message}`);
+      throw error;
+    }
+    await get().fetchDragons();
+  },
+  addCustomDragonsBulk: async (list) => {
+    if (list.length === 0) return;
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) {
+      toast.error("로그인이 필요합니다");
+      throw new Error("not authenticated");
+    }
+    const rows = list.map((d) => ({
+      name: d.name,
+      element: d.element,
+      max_hp: d.maxHp,
+      mp: d.mp,
+      atk: d.atk,
+      def: d.def,
+      image_url: d.imageUrl ?? null,
+      lore: d.lore ?? null,
+      is_seed: false,
+      created_by: uid,
+    }));
+    const { error } = await supabase.from("dragons").insert(rows);
+    if (error) {
+      console.error("[dragons] bulk insert failed:", error);
+      toast.error(`일괄 저장 실패: ${error.message}`);
+      throw error;
+    }
+    await get().fetchDragons();
+  },
+  removeCustomDragon: async (id) => {
+    const target = get().dragons.find((d) => d.id === id);
+    if (!target || !target.uuid) return;
+    const { error } = await supabase.from("dragons").delete().eq("id", target.uuid);
+    if (error) {
+      console.error("[dragons] delete failed:", error);
+      toast.error(`삭제 실패: ${error.message} (관리자 권한이 필요합니다)`);
+      throw error;
+    }
+    await get().fetchDragons();
+  },
+  updateCustomDragon: async (id, patch) => {
+    const target = get().dragons.find((d) => d.id === id);
+    if (!target || !target.uuid) return;
+    const update: {
+      name?: string;
+      element?: string;
+      max_hp?: number;
+      mp?: number;
+      atk?: number;
+      def?: number;
+      image_url?: string | null;
+      lore?: string | null;
+    } = {};
+    if (patch.name !== undefined) update.name = patch.name;
+    if (patch.element !== undefined) update.element = patch.element;
+    if (patch.maxHp !== undefined) update.max_hp = patch.maxHp;
+    if (patch.mp !== undefined) update.mp = patch.mp;
+    if (patch.atk !== undefined) update.atk = patch.atk;
+    if (patch.def !== undefined) update.def = patch.def;
+    if (patch.imageUrl !== undefined) update.image_url = patch.imageUrl ?? null;
+    if (patch.lore !== undefined) update.lore = patch.lore ?? null;
+    const { error } = await supabase.from("dragons").update(update).eq("id", target.uuid);
+    if (error) {
+      console.error("[dragons] update failed:", error);
+      toast.error(`수정 실패: ${error.message} (관리자 권한이 필요합니다)`);
+      throw error;
+    }
+    await get().fetchDragons();
+  },
   addDragon: (d) =>
     set((state) => {
       const id = state.dragons.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      return { dragons: [...state.dragons, { ...d, id }] };
+      return { dragons: [...state.dragons, { ...d, id, uuid: `local-${id}` }] };
     }),
   setDragons: (dragons) => set({ dragons }),
   view: "lobby",
@@ -231,7 +323,7 @@ export const useGameStore = create<GameState>((set) => ({
   pvpDraws: 0,
   pvpSelectedDragonId: null,
   setPvpSelectedDragonId: (id) => set({ pvpSelectedDragonId: id }),
-  ownedDragonIds: INITIAL_OWNED,
+  ownedDragonIds: [],
   selectedDeck: [],
   enemyDeck: [],
   toggleDeckMember: (id) =>
