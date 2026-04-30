@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
@@ -79,6 +79,20 @@ export function StoryView() {
   const [activeBattleNode, setActiveBattleNode] = useState<MapNode | null>(null);
   const [eventMessage, setEventMessage] = useState<string | null>(null);
   const [defeated, setDefeated] = useState(false);
+  // Pulse the HP/MP gauges briefly when state changes after a battle/event.
+  const [gaugePulseKey, setGaugePulseKey] = useState(0);
+  const prevStateRef = useRef<{ hp: number; mp: number } | null>(null);
+  useEffect(() => {
+    if (!run) {
+      prevStateRef.current = null;
+      return;
+    }
+    const prev = prevStateRef.current;
+    if (prev && (prev.hp !== run.playerHp || prev.mp !== run.playerMp)) {
+      setGaugePulseKey((k) => k + 1);
+    }
+    prevStateRef.current = { hp: run.playerHp, mp: run.playerMp };
+  }, [run]);
 
   // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
   const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
@@ -96,22 +110,29 @@ export function StoryView() {
         initialPlayerHp={run.playerHp}
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
-          if (outcome === "win") {
-            // Persist player HP/MP, advance to next node
-            const nextNodeId = activeBattleNode.id + 1;
-            const isLast = activeBattleNode.id >= TOTAL_NODES;
-            setRun({
-              currentNodeId: isLast ? activeBattleNode.id : nextNodeId,
-              playerHp: finalState.playerHp,
-              playerMp: finalState.playerMp,
-              visited: [...run.visited, activeBattleNode.id],
-            });
-          } else if (outcome === "lose") {
+          // Use the functional updater so we always merge into the latest run
+          // (avoids stale-closure bugs across rapid back-to-back battles).
+          if (outcome === "lose") {
             setDefeated(true);
-          } else {
-            // draw: keep state as-is, allow retry of the same node
-            setRun({ ...run, playerHp: finalState.playerHp, playerMp: finalState.playerMp });
+            return;
           }
+          setRun((prev) => {
+            if (!prev) return prev;
+            if (outcome === "win") {
+              const nextNodeId = activeBattleNode.id + 1;
+              const isLast = activeBattleNode.id >= TOTAL_NODES;
+              return {
+                currentNodeId: isLast ? activeBattleNode.id : nextNodeId,
+                playerHp: finalState.playerHp,
+                playerMp: finalState.playerMp,
+                visited: prev.visited.includes(activeBattleNode.id)
+                  ? prev.visited
+                  : [...prev.visited, activeBattleNode.id],
+              };
+            }
+            // draw: keep position, persist HP/MP for retry
+            return { ...prev, playerHp: finalState.playerHp, playerMp: finalState.playerMp };
+          });
         }}
         onExit={() => {
           setActiveBattleNode(null);
@@ -237,15 +258,17 @@ export function StoryView() {
               진행 {Math.min(run.visited.length, TOTAL_NODES)} / {TOTAL_NODES}
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+          <div key={gaugePulseKey} className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
             <div>
               <div className="flex items-center justify-between text-slate-400">
                 <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
-                <span className="font-mono text-slate-200">{run.playerHp}/{selectedDragon.maxHp}</span>
+                <span className="font-mono text-slate-200 transition-colors animate-in fade-in duration-300">
+                  {run.playerHp}/{selectedDragon.maxHp}
+                </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
                 <div
-                  className="h-full bg-emerald-500 transition-all"
+                  className="h-full bg-emerald-500 transition-[width] duration-500 ease-out"
                   style={{ width: `${(run.playerHp / selectedDragon.maxHp) * 100}%` }}
                 />
               </div>
@@ -253,11 +276,13 @@ export function StoryView() {
             <div>
               <div className="flex items-center justify-between text-slate-400">
                 <span className="flex items-center gap-1"><Droplet className="h-3 w-3 text-sky-400" /> MP</span>
-                <span className="font-mono text-slate-200">{Math.max(0, run.playerMp)}/{selectedDragon.mp}</span>
+                <span className="font-mono text-slate-200 transition-colors animate-in fade-in duration-300">
+                  {Math.max(0, run.playerMp)}/{selectedDragon.mp}
+                </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
                 <div
-                  className="h-full bg-sky-500 transition-all"
+                  className="h-full bg-sky-500 transition-[width] duration-500 ease-out"
                   style={{ width: `${Math.max(0, Math.min(100, (run.playerMp / Math.max(1, selectedDragon.mp)) * 100))}%` }}
                 />
               </div>
