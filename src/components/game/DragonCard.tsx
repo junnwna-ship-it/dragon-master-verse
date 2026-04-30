@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Heart, Droplet, Sword, Shield, Sparkles } from "lucide-react";
+import { Heart, Droplet, Sword, Shield } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
+import { DragonImage } from "./DragonImage";
 
 const elementColors: Record<string, string> = {
   Wood: "from-emerald-500/30 to-emerald-700/10 text-emerald-300 border-emerald-500/40",
@@ -137,27 +138,14 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
   return (
     <div className="snap-center shrink-0 w-[78vw] max-w-[320px] rounded-3xl border border-slate-700/60 bg-gradient-to-b from-slate-800/90 to-slate-900/90 p-4 shadow-2xl shadow-black/40">
       <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-2xl border bg-gradient-to-br ${tone}`}>
-        {dragon.image ? (
-          <img
-            src={dragon.image}
-            srcSet={dragon.imageLarge ? `${dragon.image} 480w, ${dragon.imageLarge} 800w` : undefined}
-            sizes="(max-width: 480px) 78vw, 320px"
-            alt={`${dragon.name} 일러스트`}
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-            // Tell the browser the intrinsic ratio so layout is stable
-            // even before the bitmap finishes decoding.
-            width={480}
-            height={600}
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-700/60 text-slate-400">
-              <Sparkles className="h-10 w-10" />
-            </div>
-          </div>
-        )}
+        <DragonImage
+          dragon={dragon}
+          className="absolute inset-0 h-full w-full"
+          fit="cover"
+          sizes="(max-width: 480px) 78vw, 320px"
+          width={480}
+          height={600}
+        />
         <span className={`absolute left-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}>
           {dragon.element}
         </span>

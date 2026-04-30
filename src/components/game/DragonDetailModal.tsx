@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Dragon, Element } from "@/store/dragons";
+import { DragonImage } from "./DragonImage";
 
 const ELEMENT_META: Record<Element, { label: string; color: string; icon: React.ComponentType<{ className?: string }>; strong: Element; weak: Element }> = {
   Fire:  { label: "화염",   color: "text-rose-300",    icon: Flame,    strong: "Wood",  weak: "Water" },
@@ -210,21 +211,17 @@ export function DragonDetailModal({
         </div>
 
         <div className="space-y-4 px-5 py-4">
-          {dragon.image && (
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
-              <img
-                // Prefer the high-res variant in the modal hero.
-                src={dragon.imageLarge ?? dragon.image}
-                srcSet={dragon.imageLarge ? `${dragon.image} 480w, ${dragon.imageLarge} 800w` : undefined}
-                sizes="(max-width: 640px) 100vw, 448px"
-                alt={`${dragon.name} 일러스트`}
-                className="absolute inset-0 h-full w-full object-contain"
-                decoding="async"
-                // High priority hint — this is the modal's focal point.
-                fetchPriority="high"
-              />
-            </div>
-          )}
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
+            <DragonImage
+              dragon={dragon}
+              preferLarge
+              fit="contain"
+              className="absolute inset-0 h-full w-full"
+              sizes="(max-width: 640px) 100vw, 448px"
+              loading="eager"
+              fetchPriority="high"
+            />
+          </div>
           <section>
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">스탯</h4>
