@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/game/auth/AuthDialog";
 import { CardScanner } from "@/components/game/scan/CardScanner";
 import { supabase } from "@/integrations/supabase/client";
+import { DragonDetailModal } from "../DragonDetailModal";
 
 export function LobbyView() {
   const dragons = useGameStore((s) => s.dragons);
@@ -18,6 +19,7 @@ export function LobbyView() {
   // (driven by IntersectionObserver) and which one is user-selected via tap.
   const [centeredId, setCenteredId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -128,11 +130,15 @@ export function LobbyView() {
               role="button"
               tabIndex={0}
               aria-pressed={isSelected}
-              onClick={() => setSelectedId((cur) => (cur === d.id ? null : d.id))}
+              onClick={() => {
+                setSelectedId(d.id);
+                setDetailId(d.id);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setSelectedId((cur) => (cur === d.id ? null : d.id));
+                  setSelectedId(d.id);
+                  setDetailId(d.id);
                 }
               }}
               className={`group cursor-pointer rounded-3xl transition-all duration-300 ease-out will-change-transform ${
@@ -195,6 +201,10 @@ export function LobbyView() {
       {showScan && user && (
         <CardScanner userId={user.id} onClose={() => setShowScan(false)} />
       )}
+      {detailId !== null && (() => {
+        const d = dragons.find((x) => x.id === detailId);
+        return d ? <DragonDetailModal dragon={d} onClose={() => setDetailId(null)} /> : null;
+      })()}
     </div>
   );
 }
