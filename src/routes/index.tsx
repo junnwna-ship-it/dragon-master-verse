@@ -7,6 +7,7 @@ import { StoryView } from "@/components/game/views/StoryView";
 import { PvpView } from "@/components/game/views/PvpView";
 import { VaultView } from "@/components/game/views/VaultView";
 import { AdminView } from "@/components/game/views/AdminView";
+import { DebugView } from "@/components/game/views/DebugView";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,6 +45,7 @@ function Index() {
           {view === "story" && <StoryView />}
           {view === "pvp" && <PvpView />}
           {view === "admin" && <AdminView />}
+          {view === "debug" && <DebugView />}
         </main>
         <BottomNav />
       </div>
