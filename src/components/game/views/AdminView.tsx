@@ -655,6 +655,9 @@ export function AdminView() {
         )}
       </section>
 
+      {/* Quiz manager — admin only */}
+      {isAdmin && <QuizManager />}
+
       {/* Manage list */}
       <section>
         <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
