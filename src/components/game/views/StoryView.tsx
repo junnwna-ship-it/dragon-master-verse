@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock } from "lucide-react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
@@ -78,6 +78,10 @@ export function StoryView() {
   const [selectedDragon, setSelectedDragon] = useState<Dragon | null>(null);
   const [activeBattleNode, setActiveBattleNode] = useState<MapNode | null>(null);
   const [eventMessage, setEventMessage] = useState<string | null>(null);
+  const [battleResult, setBattleResult] = useState<
+    | { outcome: "win" | "draw" | "lose"; nodeTitle: string; enemyName?: string }
+    | null
+  >(null);
   const [defeated, setDefeated] = useState(false);
   const [defeatStats, setDefeatStats] = useState<{ hp: number; mp: number } | null>(null);
   // Pulse the HP/MP gauges briefly when state changes after a battle/event.
@@ -94,6 +98,13 @@ export function StoryView() {
     }
     prevStateRef.current = { hp: run.playerHp, mp: run.playerMp };
   }, [run]);
+
+  // Auto-dismiss the post-battle banner after a few seconds.
+  useEffect(() => {
+    if (!battleResult) return;
+    const t = setTimeout(() => setBattleResult(null), 3500);
+    return () => clearTimeout(t);
+  }, [battleResult]);
 
   // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
   const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
@@ -140,6 +151,11 @@ export function StoryView() {
         initialPlayerHp={run.playerHp}
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
+          setBattleResult({
+            outcome,
+            nodeTitle: activeBattleNode.title,
+            enemyName: activeBattleNode.enemyName,
+          });
           if (outcome === "lose") {
             setDefeatStats({ hp: finalState.playerHp, mp: finalState.playerMp });
             setDefeated(true);
