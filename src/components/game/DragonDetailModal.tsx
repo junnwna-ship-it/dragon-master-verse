@@ -372,7 +372,7 @@ export function DragonDetailModal({
  * - `isTrainingOpen === false` 또는 보유 포인트가 없으면 버튼 비활성화.
  * - 잠금 시 회색 + 툴팁("드래곤 훈련소 공사 중") 표시.
  */
-function TrainingSection({ dragon }: { dragon: Dragon }) {
+export function TrainingSection({ dragon }: { dragon: Dragon }) {
   const { settings } = useAppSettings();
   const refetchDragons = useGameStore((s) => s.fetchDragons);
   const [busyStat, setBusyStat] = useState<string | null>(null);
