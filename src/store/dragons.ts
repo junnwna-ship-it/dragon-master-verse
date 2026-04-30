@@ -234,7 +234,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   removeCustomDragon: async (id) => {
     const target = get().dragons.find((d) => d.id === id);
-    if (!target) return;
+    if (!target || !target.uuid) return;
     const { error } = await supabase.from("dragons").delete().eq("id", target.uuid);
     if (error) {
       console.error("[dragons] delete failed:", error);
@@ -245,7 +245,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   updateCustomDragon: async (id, patch) => {
     const target = get().dragons.find((d) => d.id === id);
-    if (!target) return;
+    if (!target || !target.uuid) return;
     const update: {
       name?: string;
       element?: string;
