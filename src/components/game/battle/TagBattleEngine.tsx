@@ -579,6 +579,10 @@ export function TagBattleEngine({
     if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
     const r = performAttack(a, d, { turnNumber });
     pushLogs(r.logs);
+    const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
+    const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
+    playAttackFx("player", dmgDealt);
+    if (reflect > 0) popDamage("player", reflect); // 상성 반사 피해
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
     finishTurn("player", nextP, nextE);
@@ -599,6 +603,10 @@ export function TagBattleEngine({
     if (a.mp < a.maxMp * MP_SKILL_THRESHOLD_PCT) return;
     const r = performAttack(a, d, { turnNumber, skill: true });
     pushLogs(r.logs);
+    const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
+    const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
+    playAttackFx("player", dmgDealt, true);
+    if (reflect > 0) popDamage("player", reflect);
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
     finishTurn("player", nextP, nextE);
