@@ -53,6 +53,8 @@ function defaultBuildKey(d: Dragon): BuildKey {
 
 export function DragonDetailModal({
   dragon,
+  nextDragon,
+  prevDragon,
   onClose,
   onNext,
   onPrev,
@@ -60,6 +62,10 @@ export function DragonDetailModal({
   hasPrev = false,
 }: {
   dragon: Dragon;
+  /** Optional neighbor dragons — used purely to preload artwork so swiping
+      to the next/previous card feels instant. */
+  nextDragon?: Dragon;
+  prevDragon?: Dragon;
   onClose: () => void;
   /** Advance to the next dragon in the roster (called by swipe-left / →). */
   onNext?: () => void;
@@ -207,9 +213,15 @@ export function DragonDetailModal({
           {dragon.image && (
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
               <img
-                src={dragon.image}
+                // Prefer the high-res variant in the modal hero.
+                src={dragon.imageLarge ?? dragon.image}
+                srcSet={dragon.imageLarge ? `${dragon.image} 480w, ${dragon.imageLarge} 800w` : undefined}
+                sizes="(max-width: 640px) 100vw, 448px"
                 alt={`${dragon.name} 일러스트`}
                 className="absolute inset-0 h-full w-full object-contain"
+                decoding="async"
+                // High priority hint — this is the modal's focal point.
+                fetchPriority="high"
               />
             </div>
           )}
@@ -332,6 +344,25 @@ export function DragonDetailModal({
             닫기
           </button>
         </div>
+        </div>
+        {/* Neighbor preloading. Render hidden <img> tags for the previous
+            and next dragons so swiping/arrow-key navigation gets a
+            decoded bitmap from cache instead of a fresh network round-trip.
+            We preload the small variant (480w) which is what the modal
+            falls back to when the large one isn't yet decoded. */}
+        <div aria-hidden="true" className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0">
+          {nextDragon?.image && (
+            <img src={nextDragon.image} alt="" decoding="async" loading="eager" />
+          )}
+          {nextDragon?.imageLarge && (
+            <img src={nextDragon.imageLarge} alt="" decoding="async" loading="eager" />
+          )}
+          {prevDragon?.image && (
+            <img src={prevDragon.image} alt="" decoding="async" loading="eager" />
+          )}
+          {prevDragon?.imageLarge && (
+            <img src={prevDragon.imageLarge} alt="" decoding="async" loading="eager" />
+          )}
         </div>
       </div>
     </div>

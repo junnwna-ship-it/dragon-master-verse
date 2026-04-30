@@ -370,8 +370,10 @@ export function LobbyView() {
         const idx = dragons.findIndex((x) => x.id === pvpSelectedDragonId);
         if (idx < 0) return null;
         const d = dragons[idx];
+        const n = dragons.length;
+        const nextDragon = n > 1 ? dragons[(idx + 1) % n] : undefined;
+        const prevDragon = n > 1 ? dragons[(idx - 1 + n) % n] : undefined;
         const goTo = (nextIdx: number) => {
-          const n = dragons.length;
           if (n === 0) return;
           const wrapped = ((nextIdx % n) + n) % n;
           const target = dragons[wrapped];
@@ -380,6 +382,8 @@ export function LobbyView() {
         return (
           <DragonDetailModal
             dragon={d}
+            nextDragon={nextDragon}
+            prevDragon={prevDragon}
             onClose={() => setDetailOpen(false)}
             onNext={dragons.length > 1 ? () => goTo(idx + 1) : undefined}
             onPrev={dragons.length > 1 ? () => goTo(idx - 1) : undefined}
