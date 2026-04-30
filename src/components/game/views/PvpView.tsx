@@ -103,10 +103,12 @@ export function PvpView() {
   } | null>(null);
 
   // Centralized reset so cancel / 다시 매칭 / 확인 always land in the same
-  // clean idle state (no leftover opponent, player, or selection highlight).
+  // clean idle state — no leftover opponent, player selection, highlight,
+  // or open confirm modal.
   const resetMatchUi = () => {
     setOpponent(null);
     setPlayer(null);
+    setConfirmStart(false);
   };
 
   // Async matchmaking — show spinner for EXACTLY MATCH_SEARCH_MS (2000ms).
@@ -124,6 +126,10 @@ export function PvpView() {
     // fixed 2s window unaffected by extra clicks.
     if (matchTimerRef.current !== null) return;
     if (phase === "searching") return;
+    // Each new matchmaking attempt starts from a fully clean slate so the
+    // resulting picker can never inherit stale selection / opponent / modal
+    // state from a previous match.
+    resetMatchUi();
     setPhase("searching");
     matchStartedAtRef.current = Date.now();
     matchTimerRef.current = setTimeout(() => {
