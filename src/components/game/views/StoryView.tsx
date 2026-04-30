@@ -538,6 +538,22 @@ export function StoryView() {
                 .story-connector-next {
                   animation: story-connector-flow 1.2s linear infinite;
                 }
+                @keyframes story-node-shake {
+                  0%, 100% { transform: translate(-50%, -50%); }
+                  15% { transform: translate(calc(-50% - 3px), calc(-50% - 1px)); }
+                  30% { transform: translate(calc(-50% + 3px), calc(-50% + 1px)); }
+                  45% { transform: translate(calc(-50% - 2px), calc(-50% + 1px)); }
+                  60% { transform: translate(calc(-50% + 2px), calc(-50% - 1px)); }
+                  75% { transform: translate(calc(-50% - 1px), calc(-50% + 0px)); }
+                }
+                .story-node-shake { animation: story-node-shake 0.55s ease-in-out 1; }
+                @keyframes story-progress-ring {
+                  0% { stroke-dashoffset: 138; opacity: 0.95; }
+                  100% { stroke-dashoffset: 0; opacity: 0.6; }
+                }
+                .story-progress-ring {
+                  animation: story-progress-ring 1.6s ease-out infinite;
+                }
               `}</style>
             </defs>
             {EDGES.map(([fromId, toId]) => {
