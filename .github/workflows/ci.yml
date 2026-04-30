@@ -537,6 +537,8 @@ jobs:
 
           # ---------- Bar chart (SVG, inlined into the summary) ----------
           mkdir -p reports
+          # Pass bucket data into the node script via env
+          export L0_DATA="$L0" L1_DATA="$L1" L2_DATA="$L2" L3_DATA="$L3" MS_DATA="$MS"
           node -e "
             const fs = require('fs');
             const parseAvg = (d) => {
@@ -546,11 +548,11 @@ jobs:
             };
             const parseN = (d) => parseInt(((d || '').split('|')[0] || '0'), 10) || 0;
             const data = [
-              { label: 'L0 exact',      avg: parseAvg(process.env.L0), n: parseN(process.env.L0), color: '#2da44e' },
-              { label: 'L1 sources',    avg: parseAvg(process.env.L1), n: parseN(process.env.L1), color: '#46954a' },
-              { label: 'L2 config',     avg: parseAvg(process.env.L2), n: parseN(process.env.L2), color: '#bf8700' },
-              { label: 'L3 version',    avg: parseAvg(process.env.L3), n: parseN(process.env.L3), color: '#d29922' },
-              { label: 'Miss',          avg: parseAvg(process.env.MS), n: parseN(process.env.MS), color: '#cf222e' },
+              { label: 'L0 exact',      avg: parseAvg(process.env.L0_DATA), n: parseN(process.env.L0_DATA), color: '#2da44e' },
+              { label: 'L1 sources',    avg: parseAvg(process.env.L1_DATA), n: parseN(process.env.L1_DATA), color: '#46954a' },
+              { label: 'L2 config',     avg: parseAvg(process.env.L2_DATA), n: parseN(process.env.L2_DATA), color: '#bf8700' },
+              { label: 'L3 version',    avg: parseAvg(process.env.L3_DATA), n: parseN(process.env.L3_DATA), color: '#d29922' },
+              { label: 'Miss',          avg: parseAvg(process.env.MS_DATA), n: parseN(process.env.MS_DATA), color: '#cf222e' },
             ];
             const maxAvg = Math.max(0.001, ...data.map(d => d.avg));
             const W = 720, H = 320, pad = { l: 110, r: 24, t: 32, b: 56 };
@@ -605,8 +607,6 @@ jobs:
               echo "<img alt='Average lint time by cache level' src='$DATA_URI' />"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
-        # Bucket data exposed to the node script above
-        env: {}
 
       - name: Fail if ESLint reported errors
         if: steps.eslint.outcome == 'failure'
