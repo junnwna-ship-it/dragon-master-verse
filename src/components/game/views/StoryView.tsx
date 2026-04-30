@@ -639,7 +639,10 @@ export function StoryView() {
                 title={locked ? lockReason : cleared ? lockReason : node.title}
                 className={`group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 ${
                   locked && !cleared ? "cursor-not-allowed" : "cursor-pointer"
-                }`}
+                } ${isActive ? "story-node-shake" : ""}`}
+                // Re-mount via key bump so the shake re-runs each time
+                // activeNodeId changes (e.g. after onResolved).
+                data-shake-key={isActive ? shakeKey : undefined}
                 style={{ left: `${node.x}%`, top: `${node.y}%` }}
                 aria-label={
                   locked
@@ -656,6 +659,26 @@ export function StoryView() {
                   }`}
                 >
                   {nodeIcon(node.kind, cleared)}
+                  {/* Subtle progress ring on the active (next) node */}
+                  {isActive && !cleared && (
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 50 50"
+                      className="pointer-events-none absolute inset-0 h-full w-full -rotate-90"
+                    >
+                      <circle
+                        cx="25"
+                        cy="25"
+                        r="22"
+                        fill="none"
+                        stroke="rgb(252 211 77)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeDasharray="138"
+                        className="story-progress-ring"
+                      />
+                    </svg>
+                  )}
                   {/* Lock badge for locked nodes */}
                   {locked && !cleared && (
                     <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 bg-slate-900 text-slate-300 shadow">
