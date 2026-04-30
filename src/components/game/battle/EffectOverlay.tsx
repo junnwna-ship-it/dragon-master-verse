@@ -182,6 +182,7 @@ export interface StatusFlags {
   burning?: boolean;
   feared?: boolean;
   stunned?: boolean;
+  frozen?: boolean;
 }
 
 /**
