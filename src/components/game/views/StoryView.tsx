@@ -430,12 +430,7 @@ export function StoryView() {
               if (node.kind === "event") {
                 // Heal +30 HP, no battle
                 const healed = Math.min(selectedDragon.maxHp, run.playerHp + 30);
-                setRun({
-                  ...run,
-                  playerHp: healed,
-                  visited: [...run.visited, node.id],
-                  currentNodeId: node.id + 1,
-                });
+                applyRunUpdate({ hp: healed, clearNodeId: node.id });
                 setEventMessage(`Bella의 장미꽃 향기로 HP 30 회복! (${run.playerHp} → ${healed})`);
                 return;
               }
