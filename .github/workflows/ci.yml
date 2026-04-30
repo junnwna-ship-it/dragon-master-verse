@@ -825,6 +825,8 @@ jobs:
       - name: Compare matched_runs between history debug files
         if: always()
         continue-on-error: true
+        env:
+          WORKFLOW_FILE: ci.yml
         run: |
           A=reports/cache-history-debug.json
           B=reports/lint-time-history-debug.json
@@ -842,6 +844,95 @@ jobs:
             exit 0
           fi
 
+          # ---------------------------------------------------------------
+          # Strong pinning check: refuse to diff unless BOTH debug files
+          # pin to the SAME workflow_file_sha AND that SHA matches the one
+          # resolved from the current commit's .github/workflows/ci.yml.
+          # This prevents misleading diffs across CI configuration changes.
+          # ---------------------------------------------------------------
+          WORKFLOW_PATH=".github/workflows/${WORKFLOW_FILE}"
+          CURRENT_WF_SHA=$(git rev-parse "${{ github.sha }}:${WORKFLOW_PATH}" 2>/dev/null || echo "")
+          SHA_A=$(jq -r '.current_workflow_file_sha // ""' "$A")
+          SHA_B=$(jq -r '.current_workflow_file_sha // ""' "$B")
+
+          PIN_OK=true
+          PIN_REASON=""
+          if [ -z "$CURRENT_WF_SHA" ]; then
+            PIN_OK=false
+            PIN_REASON="could not resolve current workflow file SHA"
+          elif [ -z "$SHA_A" ] || [ -z "$SHA_B" ]; then
+            PIN_OK=false
+            PIN_REASON="one or both debug files missing current_workflow_file_sha"
+          elif [ "$SHA_A" != "$SHA_B" ]; then
+            PIN_OK=false
+            PIN_REASON="debug files pin to different workflow SHAs (A=$SHA_A, B=$SHA_B)"
+          elif [ "$SHA_A" != "$CURRENT_WF_SHA" ]; then
+            PIN_OK=false
+            PIN_REASON="debug files pinned to $SHA_A but current workflow SHA is $CURRENT_WF_SHA"
+          fi
+
+          # Also require every row's workflow_file_sha to match (defense-in-depth
+          # against any future row-builder bug that lets stale rows slip through).
+          if [ "$PIN_OK" = "true" ]; then
+            ROW_OK=$(jq -r --arg sha "$CURRENT_WF_SHA" '
+              ((.matched_runs // []) | map(.workflow_file_sha // "") | unique) as $shas
+              | if ($shas | length) == 0 then "true"
+                elif ($shas | length) == 1 and ($shas[0] == $sha) then "true"
+                else "false" end
+            ' "$A")
+            ROW_OK_B=$(jq -r --arg sha "$CURRENT_WF_SHA" '
+              ((.matched_runs // []) | map(.workflow_file_sha // "") | unique) as $shas
+              | if ($shas | length) == 0 then "true"
+                elif ($shas | length) == 1 and ($shas[0] == $sha) then "true"
+                else "false" end
+            ' "$B")
+            if [ "$ROW_OK" != "true" ] || [ "$ROW_OK_B" != "true" ]; then
+              PIN_OK=false
+              PIN_REASON="matched_runs[].workflow_file_sha does not uniformly match current workflow SHA"
+            fi
+          fi
+
+          if [ "$PIN_OK" != "true" ]; then
+            echo "::warning::Refusing to compare history debug files — $PIN_REASON"
+            jq -n \
+              --arg current_workflow_file_sha "$CURRENT_WF_SHA" \
+              --arg sha_a "$SHA_A" \
+              --arg sha_b "$SHA_B" \
+              --arg reason "$PIN_REASON" \
+              --arg generated_at "$(date -u +%FT%TZ)" \
+              '{
+                source: "history-debug-diff",
+                status: "skipped",
+                reason: $reason,
+                pinning: {
+                  current_workflow_file_sha: $current_workflow_file_sha,
+                  workflow_file_sha_a: $sha_a,
+                  workflow_file_sha_b: $sha_b,
+                  current_short: ($current_workflow_file_sha | .[0:7]),
+                  a_short: ($sha_a | .[0:7]),
+                  b_short: ($sha_b | .[0:7])
+                },
+                generated_at: $generated_at
+              }' > "$OUT"
+            {
+              echo ""
+              echo "## History debug diff"
+              echo ""
+              echo "⛔ **Skipped** — workflow file SHA pinning check failed."
+              echo ""
+              echo "_Reason:_ $PIN_REASON"
+              echo ""
+              echo "| Source | workflow_file_sha |"
+              echo "| --- | --- |"
+              echo "| current run | \`${CURRENT_WF_SHA:0:7}\` |"
+              echo "| cache-history | \`${SHA_A:0:7}\` |"
+              echo "| lint-time-history | \`${SHA_B:0:7}\` |"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "Pinning OK: both files match current workflow SHA ${CURRENT_WF_SHA:0:7}."
+
           # Compare the matched_runs arrays from both files.
           # Identity = run id. Report:
           #   - same workflow_file_sha pinning (sanity check)
@@ -850,6 +941,7 @@ jobs:
           jq -n \
             --slurpfile a "$A" \
             --slurpfile b "$B" \
+            --arg current_workflow_file_sha "$CURRENT_WF_SHA" \
             '
               ($a[0]) as $A | ($b[0]) as $B
               | ($A.matched_runs // []) as $ar
@@ -860,11 +952,19 @@ jobs:
               | ($bids - $aids) as $only_in_b
               | ($aids - ($aids - $bids)) as $shared
               | {
+                  status: "compared",
                   source_a: $A.source,
                   source_b: $B.source,
                   workflow_sha_match: ($A.current_workflow_file_sha == $B.current_workflow_file_sha),
                   workflow_sha_a: $A.current_workflow_file_sha,
                   workflow_sha_b: $B.current_workflow_file_sha,
+                  pinning: {
+                    current_workflow_file_sha: $current_workflow_file_sha,
+                    matches_current: (
+                      $A.current_workflow_file_sha == $current_workflow_file_sha and
+                      $B.current_workflow_file_sha == $current_workflow_file_sha
+                    )
+                  },
                   branch_a: $A.branch,
                   branch_b: $B.branch,
                   matched_count_a: ($ar | length),
