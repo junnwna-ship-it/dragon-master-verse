@@ -459,11 +459,38 @@ jobs:
           CURRENT_LINT_MS: ${{ steps.eslint.outputs.duration_ms }}
         run: |
           set -e
+          # Pin to current workflow file SHA — never compare across CI versions.
+          WORKFLOW_PATH=".github/workflows/${WORKFLOW_FILE}"
+          CURRENT_WF_SHA=$(git rev-parse "${{ github.sha }}:${WORKFLOW_PATH}" 2>/dev/null || echo "")
+          if [ -z "$CURRENT_WF_SHA" ]; then
+            echo "Could not resolve workflow file SHA — skipping cache-vs-time history."
+            {
+              echo ""
+              echo "## Lint time vs cache level (history)"
+              echo ""
+              echo "_Skipped — could not pin to current workflow version._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           BRANCH="${{ github.ref_name }}"
-          RUNS=$(gh api -X GET \
+          CANDIDATE_RUNS=$(gh api -X GET \
             "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
-            -f branch="$BRANCH" -f status=completed -f per_page=20 \
-            --jq '.workflow_runs[].id')
+            -f branch="$BRANCH" -f status=completed -f per_page=50 \
+            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)"')
+
+          RUNS=""
+          KEPT=0
+          while IFS=$'\t' read -r RID HEAD_SHA; do
+            [ -z "$RID" ] && continue
+            [ "$KEPT" -ge 20 ] && break
+            WF_SHA_AT_RUN=$(git rev-parse "$HEAD_SHA:${WORKFLOW_PATH}" 2>/dev/null || echo "")
+            if [ "$WF_SHA_AT_RUN" = "$CURRENT_WF_SHA" ]; then
+              RUNS="$RUNS $RID"
+              KEPT=$((KEPT + 1))
+            fi
+          done <<< "$CANDIDATE_RUNS"
+          echo "Comparing $KEPT runs matching workflow ${CURRENT_WF_SHA:0:7}."
 
           # Buckets: tab-separated lists of "ms" values per level
           : > /tmp/L0.txt; : > /tmp/L1.txt; : > /tmp/L2.txt; : > /tmp/L3.txt; : > /tmp/MISS.txt
