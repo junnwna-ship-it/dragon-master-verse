@@ -322,7 +322,10 @@ export function PvpView() {
   // ---------------- Dragon picker ----------------
   if (phase === "picker" && opponent) {
     return (
-      <div className="space-y-3">
+      <div
+        key="pvp-picker"
+        className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out"
+      >
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
           <p className="text-[10px] uppercase tracking-widest text-rose-300">매칭 완료</p>
           <p className="mt-0.5 text-sm font-bold text-slate-100">
@@ -559,7 +562,10 @@ export function PvpView() {
       {/* Async matchmaking */}
       <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 text-center">
         {phase === "searching" ? (
-          <div className="flex flex-col items-center gap-3">
+          <div
+            key="searching"
+            className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-200 ease-out"
+          >
             <Loader2 className="h-10 w-10 animate-spin text-amber-400" />
             <p className="text-sm font-bold text-slate-100">상대 탐색 중...</p>
             <p className="text-[11px] text-slate-400">
@@ -573,7 +579,10 @@ export function PvpView() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3">
+          <div
+            key="idle"
+            className="flex flex-col items-center gap-3 animate-in fade-in duration-200 ease-out"
+          >
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
               <Shield className="h-6 w-6" />
             </div>
