@@ -477,62 +477,19 @@ export function PvpView() {
 
         {/* Confirm-start modal — cancelling does NOT clear the picker selection. */}
         {confirmStart && player && opponent && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 animate-in fade-in duration-150"
-            onClick={() => setConfirmStart(false)}
-            role="presentation"
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="pvp-confirm-title"
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-xs rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl animate-in zoom-in-95 duration-150"
-            >
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
-                <Swords className="h-6 w-6" />
-              </div>
-              <h3
-                id="pvp-confirm-title"
-                className="mt-3 text-center text-base font-bold text-slate-100"
-              >
-                선택한 드래곤으로 진행할까요?
-              </h3>
-              <div className="mt-3 space-y-1.5 rounded-lg border border-slate-700/60 bg-slate-800/60 p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">내 드래곤</span>
-                  <span className="font-bold text-amber-300">{player.name}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">상대</span>
-                  <span className="font-bold text-rose-300">
-                    {opponent.trainer} · {opponent.dragon.name}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setConfirmStart(false)}
-                  className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => {
-                    setConfirmStart(false);
-                    setPhase("battle");
-                    // Note: we deliberately do NOT clear `player` here —
-                    // the BattleEngine consumes the selection and the
-                    // post-battle onExit handler runs the
-                    // "post-battle-cleanup" mutation.
-                  }}
-                  className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-500"
-                >
-                  진행
-                </button>
-              </div>
-            </div>
-          </div>
+          <ConfirmStartModal
+            playerName={player.name}
+            opponentTrainer={opponent.trainer}
+            opponentDragonName={opponent.dragon.name}
+            onCancel={() => setConfirmStart(false)}
+            onConfirm={() => {
+              setConfirmStart(false);
+              setPhase("battle");
+              // Note: we deliberately do NOT clear `player` here — the
+              // BattleEngine consumes the selection and the post-battle
+              // onExit handler runs the "post-battle-cleanup" mutation.
+            }}
+          />
         )}
       </div>
     );
