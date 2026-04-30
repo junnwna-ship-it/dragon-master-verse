@@ -40,6 +40,8 @@ export interface RewardDrop {
 
 interface GameState {
   dragons: Dragon[];
+  addDragon: (d: Omit<Dragon, "id">) => void;
+  setDragons: (dragons: Dragon[]) => void;
   view: View;
   setView: (v: View) => void;
   storyProgress: number; // highest cleared stage id (0 = none)
@@ -62,6 +64,12 @@ export const useGameStore = create<GameState>((set) => ({
     { id: 2, name: "Spike", element: "Water", hp: 50, maxHp: 50, mp: 90, atk: 80, def: 20 },
     { id: 3, name: "Bella", element: "Water", hp: 40, maxHp: 40, mp: 80, atk: 75, def: 35 },
   ],
+  addDragon: (d) =>
+    set((state) => {
+      const id = state.dragons.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+      return { dragons: [...state.dragons, { ...d, id }] };
+    }),
+  setDragons: (dragons) => set({ dragons }),
   view: "lobby",
   setView: (view) => set({ view }),
   storyProgress: 0,
