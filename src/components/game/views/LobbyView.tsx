@@ -20,6 +20,14 @@ export function LobbyView() {
   const [centeredId, setCenteredId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
+  // True while a touch/wheel scroll is active OR within ~140ms of the last
+  // scroll event — drives the "live micro-hover" applied to the snapping
+  // card during the swipe gesture. Once it flips back to false, the card
+  // that ended up centered keeps a calmer "snapped" highlight.
+  const [isScrolling, setIsScrolling] = useState(false);
+  // The card that the scroller settled on after the most recent gesture.
+  // Distinct from `centeredId` (live during swipe) and `selectedId` (tap).
+  const [snappedId, setSnappedId] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -55,6 +63,44 @@ export function LobbyView() {
     cardRefs.current.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, [dragons]);
+
+  // Track active scrolling so we can split visual treatment into two
+  // distinct phases:
+  //   • during scroll → the centered card gets a live "micro-hover"
+  //     (subtle lift + brightness boost) that follows the snap point.
+  //   • after scroll  → the highlight settles on the snapped card and
+  //     stays put even after the user lifts their finger.
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root) return;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const onScroll = () => {
+      if (!isScrollingRef.current) {
+        isScrollingRef.current = true;
+        setIsScrolling(true);
+      }
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        isScrollingRef.current = false;
+        setIsScrolling(false);
+        // Lock the snapped card to whatever was centered when motion stopped.
+        setSnappedId(centeredIdRef.current);
+      }, 140);
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      root.removeEventListener("scroll", onScroll);
+      if (idleTimer) clearTimeout(idleTimer);
+    };
+  }, [dragons]);
+
+  // Refs mirror state so the scroll handler (which doesn't re-bind on
+  // every render) can read the latest values without stale closures.
+  const isScrollingRef = useRef(false);
+  const centeredIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    centeredIdRef.current = centeredId;
+  }, [centeredId]);
 
   useEffect(() => {
     if (!user) return;
@@ -119,6 +165,14 @@ export function LobbyView() {
         {dragons.map((d) => {
           const isCentered = centeredId === d.id;
           const isSelected = selectedId === d.id;
+          const isSnapped = snappedId === d.id;
+          // While a swipe is active, the centered card gets a quick,
+          // springy micro-hover. This MUST NOT override an existing tap
+          // selection — selectedId always wins visually.
+          const liveHover = isScrolling && isCentered && !isSelected;
+          // After the gesture ends, the snapped card keeps a soft persistent
+          // highlight (only when the user hasn't already tapped one).
+          const settledSnap = !isScrolling && isSnapped && !isSelected;
           return (
             <div
               key={d.id}
@@ -141,12 +195,21 @@ export function LobbyView() {
                   setDetailId(d.id);
                 }
               }}
-              className={`group cursor-pointer rounded-3xl transition-all duration-300 ease-out will-change-transform ${
+              // Transition timing differs by phase:
+              //  • live swipe → short 180ms ease-out (springy follow)
+              //  • settled    → calmer 300ms ease-out (locks in place)
+              className={`group cursor-pointer rounded-3xl will-change-transform ${
+                isScrolling ? "transition-all duration-[180ms] ease-out" : "transition-all duration-300 ease-out"
+              } ${
                 isSelected
-                  ? "scale-[1.04] ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30"
-                  : isCentered
-                    ? "scale-[1.02] shadow-xl shadow-black/40"
-                    : "scale-95 opacity-80 hover:scale-100 hover:opacity-100"
+                  ? "scale-[1.04] opacity-100 ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30 brightness-105"
+                  : liveHover
+                    ? "scale-[1.035] -translate-y-0.5 opacity-100 shadow-xl shadow-black/40 brightness-110"
+                    : settledSnap
+                      ? "scale-[1.02] opacity-100 shadow-lg shadow-black/40 ring-1 ring-slate-300/20"
+                      : isCentered
+                        ? "scale-[1.01] opacity-95 shadow-lg shadow-black/30"
+                        : "scale-95 opacity-80 hover:scale-100 hover:opacity-100"
               }`}
             >
               <DragonCard dragon={d} />
