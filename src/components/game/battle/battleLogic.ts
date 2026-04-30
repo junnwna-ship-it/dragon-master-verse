@@ -99,14 +99,16 @@ export function makeCombatant(base: Dragon): Combatant {
   };
 }
 
-/** 현재 시점 유효 ATK/DEF (스택/탈진 포함). */
+/**
+ * 현재 시점 유효 ATK/DEF.
+ * 주의: engineAtk/engineDef는 스택 변동 시 이미 영구 누적된 상태로 저장된다.
+ * 따라서 여기서는 스택 배율을 다시 곱하지 않고, 탈진(50%)만 적용한다.
+ */
 export function effectiveStats(c: Combatant) {
   const exMod = c.exhausted ? 0.5 : 1;
-  const atkBuff = 1 + c.atkBuffStacks * 0.05;
-  const defDebuff = 1 - c.defDebuffStacks * 0.1;
   return {
-    atk: Math.max(1, Math.round(c.engineAtk * atkBuff * exMod)),
-    def: Math.max(0, Math.round(c.engineDef * defDebuff * exMod)),
+    atk: Math.max(1, Math.round(c.engineAtk * exMod)),
+    def: Math.max(0, Math.round(c.engineDef * exMod)),
   };
 }
 
