@@ -465,6 +465,7 @@ export function TagBattleEngine({
   // ===== Cinematic / Screen-shake / Onomatopoeia =====
   const [cinematicSide, setCinematicSide] = useState<"player" | "enemy" | null>(null);
   const [dimming, setDimming] = useState(false);
+  const [specialElement, setSpecialElement] = useState<string | null>(null);
   const [screenShakeKey, setScreenShakeKey] = useState(0);
   interface Onomatopoeia { id: number; text: string; tone: "boom" | "hiss" | "crit"; }
   const [onomats, setOnomats] = useState<Onomatopoeia[]>([]);
@@ -474,14 +475,16 @@ export function TagBattleEngine({
     setOnomats((prev) => [...prev, { id, text, tone }]);
     setTimeout(() => setOnomats((prev) => prev.filter((o) => o.id !== id)), 500);
   };
-  /** 스킬 시네마틱 시퀀스. dim → zoom (공격자) → 0.3초 뒤 풀림. */
-  const playSkillCinematic = (actor: "player" | "enemy") => {
+  /** 스킬 시네마틱 시퀀스. dim → zoom + 속성 풀스크린 VFX → 0.5초 뒤 풀림. */
+  const playSkillCinematic = (actor: "player" | "enemy", element?: string) => {
     setDimming(true);
     setCinematicSide(actor);
+    if (element) setSpecialElement(element);
     setTimeout(() => {
       setDimming(false);
       setCinematicSide(null);
-    }, 350);
+      setSpecialElement(null);
+    }, 500);
   };
   /** 큰 데미지 임팩트: 화면 전체 흔들림 + 의성어. */
   const playBigImpact = (target: "player" | "enemy", word = "콰광!") => {
