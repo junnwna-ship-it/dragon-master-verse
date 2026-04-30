@@ -350,6 +350,7 @@ jobs:
             reports/eslint-failed-files.json
             reports/eslint-timing.json
             reports/eslint-rule-timing.txt
+            reports/lint-time-by-cache.svg
           retention-days: 14
 
       - name: Compute cache hit-rate (last 20 runs)
