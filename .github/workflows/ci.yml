@@ -776,6 +776,127 @@ jobs:
             echo "::warning::No SVG→PNG converter available (rsvg-convert / convert); skipping PNG."
           fi
 
+      - name: Compare matched_runs between history debug files
+        if: always()
+        continue-on-error: true
+        run: |
+          A=reports/cache-history-debug.json
+          B=reports/lint-time-history-debug.json
+          OUT=reports/history-debug-diff.json
+          if [ ! -s "$A" ] || [ ! -s "$B" ]; then
+            echo "One or both history debug files missing — skipping diff."
+            echo "  cache-history: $([ -s "$A" ] && echo present || echo missing)"
+            echo "  lint-time-history: $([ -s "$B" ] && echo present || echo missing)"
+            {
+              echo ""
+              echo "## History debug diff"
+              echo ""
+              echo "_Skipped — one or both debug files are missing._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Compare the matched_runs arrays from both files.
+          # Identity = run id. Report:
+          #   - same workflow_file_sha pinning (sanity check)
+          #   - ids only in A, ids only in B, ids in both
+          #   - per-run field mismatches for shared ids (created_at/event/url)
+          jq -n \
+            --slurpfile a "$A" \
+            --slurpfile b "$B" \
+            '
+              ($a[0]) as $A | ($b[0]) as $B
+              | ($A.matched_runs // []) as $ar
+              | ($B.matched_runs // []) as $br
+              | ($ar | map(.id)) as $aids
+              | ($br | map(.id)) as $bids
+              | ($aids - $bids) as $only_in_a
+              | ($bids - $aids) as $only_in_b
+              | ($aids - ($aids - $bids)) as $shared
+              | {
+                  source_a: $A.source,
+                  source_b: $B.source,
+                  workflow_sha_match: ($A.current_workflow_file_sha == $B.current_workflow_file_sha),
+                  workflow_sha_a: $A.current_workflow_file_sha,
+                  workflow_sha_b: $B.current_workflow_file_sha,
+                  branch_a: $A.branch,
+                  branch_b: $B.branch,
+                  matched_count_a: ($ar | length),
+                  matched_count_b: ($br | length),
+                  identical_id_sets: (($only_in_a | length) == 0 and ($only_in_b | length) == 0),
+                  only_in_a: $only_in_a,
+                  only_in_b: $only_in_b,
+                  shared_ids: $shared,
+                  field_mismatches: [
+                    $shared[] as $id
+                    | ($ar[] | select(.id == $id)) as $ra
+                    | ($br[] | select(.id == $id)) as $rb
+                    | {
+                        id: $id,
+                        diffs: (
+                          [["head_sha", $ra.head_sha, $rb.head_sha],
+                           ["created_at", $ra.created_at, $rb.created_at],
+                           ["event", $ra.event, $rb.event],
+                           ["workflow_file_sha", $ra.workflow_file_sha, $rb.workflow_file_sha],
+                           ["html_url", $ra.html_url, $rb.html_url]]
+                          | map(select(.[1] != .[2]) | {field: .[0], a: .[1], b: .[2]})
+                        )
+                      }
+                    | select(.diffs | length > 0)
+                  ]
+                }
+            ' > "$OUT"
+
+          echo "Wrote $OUT"
+          cat "$OUT"
+
+          IDENTICAL=$(jq -r '.identical_id_sets' "$OUT")
+          SHA_OK=$(jq -r '.workflow_sha_match' "$OUT")
+          A_CNT=$(jq -r '.matched_count_a' "$OUT")
+          B_CNT=$(jq -r '.matched_count_b' "$OUT")
+          ONLY_A=$(jq -r '.only_in_a | length' "$OUT")
+          ONLY_B=$(jq -r '.only_in_b | length' "$OUT")
+          SHARED=$(jq -r '.shared_ids | length' "$OUT")
+          MISMATCHES=$(jq -r '.field_mismatches | length' "$OUT")
+
+          if [ "$IDENTICAL" = "true" ] && [ "$SHA_OK" = "true" ] && [ "$MISMATCHES" = "0" ]; then
+            VERDICT="✅ Identical"
+          elif [ "$IDENTICAL" = "true" ] && [ "$SHA_OK" = "true" ]; then
+            VERDICT="⚠️ Same id set, $MISMATCHES field mismatch(es)"
+          else
+            VERDICT="❌ Differ"
+          fi
+
+          {
+            echo ""
+            echo "## History debug diff"
+            echo ""
+            echo "Compares \`matched_runs\` between the two debug artifacts to confirm both"
+            echo "history queries (cache hit-rate vs lint-time-by-cache) saw the same runs."
+            echo ""
+            echo "| Field | cache-history | lint-time-history |"
+            echo "| --- | --- | --- |"
+            echo "| matched_count | $A_CNT | $B_CNT |"
+            echo "| workflow_file_sha | \`$(jq -r '.workflow_sha_a[0:7]' "$OUT") \` | \`$(jq -r '.workflow_sha_b[0:7]' "$OUT") \` |"
+            echo "| branch | $(jq -r '.branch_a' "$OUT") | $(jq -r '.branch_b' "$OUT") |"
+            echo ""
+            echo "**Verdict:** $VERDICT"
+            echo ""
+            echo "- Shared run ids: **$SHARED**"
+            echo "- Only in cache-history: **$ONLY_A**"
+            echo "- Only in lint-time-history: **$ONLY_B**"
+            echo "- Field mismatches on shared ids: **$MISMATCHES**"
+            if [ "$ONLY_A" != "0" ] || [ "$ONLY_B" != "0" ] || [ "$MISMATCHES" != "0" ]; then
+              echo ""
+              echo "<details><summary>Diff details</summary>"
+              echo ""
+              echo '```json'
+              jq '{only_in_a, only_in_b, field_mismatches}' "$OUT"
+              echo '```'
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload ESLint reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -791,6 +912,7 @@ jobs:
             reports/lint-time-by-cache.png
             reports/cache-history-debug.json
             reports/lint-time-history-debug.json
+            reports/history-debug-diff.json
           retention-days: 14
           if-no-files-found: warn
 
