@@ -45,7 +45,7 @@ export interface LogEntry {
 }
 
 /** 정률 MP 경제 상수 */
-export const MP_TURN_END_PCT = 0.10;   // 턴 종료 시 MaxMp의 10% 차감
+export const MP_TURN_END_PCT = 0.05;   // 턴 종료 시 MaxMp의 5% 차감 (완화)
 export const MP_PASSIVE_PCT = 0.05;    // 패시브/상성 발동 시 MaxMp의 5% 추가 차감
 export const MP_SKILL_COST_PCT = 0.20; // 특수 스킬 발동 비용 MaxMp의 20%
 export const MP_SKILL_THRESHOLD_PCT = 0.20; // 스킬 사용 가능 최소 MP 비율
@@ -79,15 +79,15 @@ export function isReverseMatchup(attacker: BattleElement, defender: BattleElemen
 }
 
 export function makeCombatant(base: Dragon): Combatant {
-  // Engine stat 변환: Engine_HP = 5000 + UI_HP*5, Engine_DEF = UI_DEF*2
-  const engineMaxHp = 5000 + base.maxHp * 5;
-  const engineHp = 5000 + base.hp * 5;
+  // Engine stat 변환: Engine_HP = UI_HP * 3, Engine_DEF = UI_DEF
+  const engineMaxHp = base.maxHp * 3;
+  const engineHp = base.hp * 3;
   return {
     base,
     engineMaxHp,
     engineHp,
     engineAtk: base.atk,
-    engineDef: base.def * 2,
+    engineDef: base.def,
     mp: base.mp,
     maxMp: base.mp,
     exhausted: false,
@@ -167,10 +167,10 @@ export function performAttack(
   const aStats = effectiveStats(attacker);
   const dStats = effectiveStats(defender);
 
-  // RawDamage
-  let raw = aStats.atk - dStats.def;
-  // 최소 데미지 보장: engineAtk의 10%
-  const minDmg = Math.max(1, Math.round(attacker.engineAtk * 0.1));
+  // RawDamage = ATK * 1.5 - DEF
+  let raw = Math.round(aStats.atk * 1.5 - dStats.def);
+  // 최소 데미지 보장: engineAtk의 20%
+  const minDmg = Math.max(1, Math.round(attacker.engineAtk * 0.2));
   if (raw < minDmg) raw = minDmg;
 
   // 특수 스킬: RawDamage 1.5배 증폭 (하드캡은 이후 적용)
@@ -225,7 +225,7 @@ export function performAttack(
         text: `[원소 공포] ${attacker.base.name}의 방어력이 하락했습니다! (스택 ${attacker.defDebuffStacks}/3)`,
         tone: "penalty",
       });
-      attacker.engineDef = Math.max(0, Math.round(attacker.base.def * 2 * (1 - attacker.defDebuffStacks * 0.1)));
+      attacker.engineDef = Math.max(0, Math.round(attacker.base.def * (1 - attacker.defDebuffStacks * 0.1)));
     }
   } else if (adv) {
     // 원소 각성 발동 비용 (MaxMp 5%)
@@ -331,13 +331,13 @@ export function endTurnDrain(
   ctx: { turnNumber: number },
 ): { self: Combatant; opponent: Combatant; logs: Omit<LogEntry, "id">[] } {
   const logs: Omit<LogEntry, "id">[] = [];
-  // 정률 기반 턴 종료 MP 소모 (MaxMp의 10%)
+  // 정률 기반 턴 종료 MP 소모 (MaxMp의 5%)
   const turnDrain = Math.floor(selfIn.maxMp * MP_TURN_END_PCT);
   let self: Combatant = { ...selfIn, mp: selfIn.mp - turnDrain };
   let opponent: Combatant = { ...opponentIn };
 
   logs.push({
-    text: `${self.base.name}의 MP -${turnDrain} (MaxMp 10%, 잔량 ${Math.max(0, self.mp)}/${self.maxMp})`,
+    text: `${self.base.name}의 MP -${turnDrain} (MaxMp 5%, 잔량 ${Math.max(0, self.mp)}/${self.maxMp})`,
     tone: "system",
   });
   if (self.mp <= 0 && !self.exhausted) {
