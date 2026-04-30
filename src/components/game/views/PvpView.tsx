@@ -481,10 +481,7 @@ export function PvpView() {
               비슷한 RP의 트레이너를 찾고 있습니다
             </p>
             <button
-              onClick={() => {
-                resetMatchUi();
-                setPhase("idle");
-              }}
+              onClick={cancelMatchmaking}
               className="mt-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
             >
               취소
@@ -502,9 +499,11 @@ export function PvpView() {
             <button
               onClick={() => {
                 if (dragons.length === 0) return;
-                setPhase("searching");
+                startMatchmaking();
               }}
-              disabled={dragons.length === 0}
+              // Disabled while a search is in flight so rapid double-clicks
+              // can't restart the timer or otherwise compress the 2s window.
+              disabled={dragons.length === 0 || phase === "searching"}
               className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
               <Search className="h-4 w-4" /> 상대 탐색
