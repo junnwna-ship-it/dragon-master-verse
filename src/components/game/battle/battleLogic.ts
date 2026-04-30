@@ -44,6 +44,24 @@ export interface LogEntry {
   tone: LogTone;
 }
 
+/** 정률 MP 경제 상수 */
+export const MP_TURN_END_PCT = 0.10;   // 턴 종료 시 MaxMp의 10% 차감
+export const MP_PASSIVE_PCT = 0.05;    // 패시브/상성 발동 시 MaxMp의 5% 추가 차감
+export const MP_SKILL_COST_PCT = 0.20; // 특수 스킬 발동 비용 MaxMp의 20%
+export const MP_SKILL_THRESHOLD_PCT = 0.20; // 스킬 사용 가능 최소 MP 비율
+export const MP_BENCH_RECOVER_PCT = 0.15;   // 벤치 턴 종료 시 MaxMp의 15% 회복
+export const SKILL_RAW_MULT = 1.5;          // 특수 스킬 RawDamage 배수
+
+/** 자신의 MaxMp의 N% 만큼 정수 차감하고 새 Combatant + 설명 텍스트 반환 */
+function spendPctMp(c: Combatant, pct: number): { next: Combatant; spent: number } {
+  const spent = Math.floor(c.maxMp * pct);
+  if (spent <= 0) return { next: c, spent: 0 };
+  const nextMp = c.mp - spent;
+  let next: Combatant = { ...c, mp: nextMp };
+  if (nextMp <= 0 && !next.exhausted) next.exhausted = true;
+  return { next, spent };
+}
+
 // Wood > Soil > Water > Fire > Metal > Wood
 const STRONG_AGAINST: Record<BattleElement, BattleElement> = {
   Wood: "Soil",
