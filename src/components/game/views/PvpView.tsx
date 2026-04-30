@@ -501,9 +501,11 @@ export function PvpView() {
                 if (dragons.length === 0) return;
                 startMatchmaking();
               }}
-              // Disabled while a search is in flight so rapid double-clicks
-              // can't restart the timer or otherwise compress the 2s window.
-              disabled={dragons.length === 0 || phase === "searching"}
+              // Note: this branch only renders when phase !== "searching", so the
+              // button itself can't be clicked mid-search. The startMatchmaking()
+              // helper additionally guards via matchTimerRef so any spurious
+              // re-entry can't compress the fixed 2s window.
+              disabled={dragons.length === 0}
               className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
               <Search className="h-4 w-4" /> 상대 탐색
