@@ -188,7 +188,12 @@ function ActivePanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
             <span className="font-mono text-slate-200">{uiHp(c)}/{c.base.maxHp}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
-            <div className="h-full bg-emerald-500 transition-all" style={{ width: `${hpPct}%` }} />
+            <motion.div
+              className="h-full bg-emerald-500"
+              initial={false}
+              animate={{ width: `${hpPct}%` }}
+              transition={{ type: "spring", stiffness: 180, damping: 24 }}
+            />
           </div>
         </div>
         <div>
@@ -197,7 +202,12 @@ function ActivePanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
             <span className="font-mono text-slate-200">{Math.max(0, c.mp)}/{c.maxMp}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
-            <div className="h-full bg-sky-500 transition-all" style={{ width: `${mpPct}%` }} />
+            <motion.div
+              className={`h-full ${c.exhausted ? "bg-rose-500" : "bg-sky-500"}`}
+              initial={false}
+              animate={{ width: `${mpPct}%` }}
+              transition={{ type: "spring", stiffness: 180, damping: 24 }}
+            />
           </div>
         </div>
       </div>
