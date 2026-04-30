@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake } from "lucide-react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
@@ -56,6 +56,30 @@ const EDGES: Array<[number, number]> = [
 const FIRST_NODE_ID = 1;
 const TOTAL_NODES = NODES.length;
 
+/**
+ * Battle-result banner display behavior.
+ *  - number > 0 → auto-dismiss after that many ms
+ *  - "manual"   → keep visible until the user dismisses it
+ *  - "off"      → never show the banner
+ */
+type BannerDuration = 1500 | 3500 | "manual" | "off";
+const BANNER_DURATION_KEY = "story.bannerDuration";
+const BANNER_OPTIONS: Array<{ value: BannerDuration; label: string }> = [
+  { value: 1500, label: "1.5s" },
+  { value: 3500, label: "3.5s" },
+  { value: "manual", label: "수동" },
+  { value: "off", label: "끄기" },
+];
+
+function loadBannerDuration(): BannerDuration {
+  if (typeof window === "undefined") return 3500;
+  const raw = window.localStorage.getItem(BANNER_DURATION_KEY);
+  if (raw === "manual" || raw === "off") return raw;
+  const n = Number(raw);
+  if (n === 1500 || n === 3500) return n;
+  return 3500;
+}
+
 interface RunState {
   currentNodeId: number; // the next node the player must clear
   playerHp: number;
@@ -84,6 +108,12 @@ export function StoryView() {
   >(null);
   const [defeated, setDefeated] = useState(false);
   const [defeatStats, setDefeatStats] = useState<{ hp: number; mp: number } | null>(null);
+  const [bannerDuration, setBannerDuration] = useState<BannerDuration>(() => loadBannerDuration());
+  const [showBannerSettings, setShowBannerSettings] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(BANNER_DURATION_KEY, String(bannerDuration));
+  }, [bannerDuration]);
   // Pulse the HP/MP gauges briefly when state changes after a battle/event.
   const [gaugePulseKey, setGaugePulseKey] = useState(0);
   const prevStateRef = useRef<{ hp: number; mp: number } | null>(null);
@@ -99,12 +129,14 @@ export function StoryView() {
     prevStateRef.current = { hp: run.playerHp, mp: run.playerMp };
   }, [run]);
 
-  // Auto-dismiss the post-battle banner after a few seconds.
+  // Auto-dismiss the post-battle banner based on the user's chosen duration.
+  // "manual" → never auto-dismiss; "off" → handled at set-time (banner won't appear).
   useEffect(() => {
     if (!battleResult) return;
-    const t = setTimeout(() => setBattleResult(null), 3500);
+    if (bannerDuration === "manual" || bannerDuration === "off") return;
+    const t = setTimeout(() => setBattleResult(null), bannerDuration);
     return () => clearTimeout(t);
-  }, [battleResult]);
+  }, [battleResult, bannerDuration]);
 
   // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
   const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
@@ -151,11 +183,13 @@ export function StoryView() {
         initialPlayerHp={run.playerHp}
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
-          setBattleResult({
-            outcome,
-            nodeTitle: activeBattleNode.title,
-            enemyName: activeBattleNode.enemyName,
-          });
+          if (bannerDuration !== "off") {
+            setBattleResult({
+              outcome,
+              nodeTitle: activeBattleNode.title,
+              enemyName: activeBattleNode.enemyName,
+            });
+          }
           if (outcome === "lose") {
             setDefeatStats({ hp: finalState.playerHp, mp: finalState.playerMp });
             setDefeated(true);
@@ -284,18 +318,77 @@ export function StoryView() {
           <MapIcon className="h-5 w-5 text-amber-400" />
           <h2 className="text-xl font-bold text-slate-100">Story · 여정의 맵</h2>
         </div>
-        {run && selectedDragon && (
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={() => {
-              setRun(null);
-              setSelectedDragon(null);
-            }}
-            className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+            onClick={() => setShowBannerSettings((v) => !v)}
+            aria-label="배너 표시 설정"
+            aria-expanded={showBannerSettings}
+            title="전투 결과 배너 표시 시간"
+            className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] transition ${
+              showBannerSettings
+                ? "border-amber-500/60 bg-amber-500/10 text-amber-200"
+                : "border-slate-700 text-slate-400 hover:bg-slate-800"
+            }`}
           >
-            여정 포기
+            <Settings2 className="h-3 w-3" />
+            배너 {bannerDuration === "off" ? "끔" : bannerDuration === "manual" ? "수동" : `${bannerDuration / 1000}s`}
           </button>
-        )}
+          {run && selectedDragon && (
+            <button
+              onClick={() => {
+                setRun(null);
+                setSelectedDragon(null);
+              }}
+              className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+            >
+              여정 포기
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Battle result banner — display-duration settings */}
+      {showBannerSettings && (
+        <div className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold text-slate-200">전투 결과 배너 표시 시간</p>
+            <button
+              onClick={() => setShowBannerSettings(false)}
+              className="rounded px-1 text-[10px] text-slate-500 hover:text-slate-300"
+              aria-label="설정 닫기"
+            >
+              ✕
+            </button>
+          </div>
+          <div
+            role="radiogroup"
+            aria-label="배너 표시 시간"
+            className="mt-2 grid grid-cols-4 gap-1.5"
+          >
+            {BANNER_OPTIONS.map((opt) => {
+              const active = bannerDuration === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setBannerDuration(opt.value)}
+                  className={`rounded-md border px-2 py-1.5 text-[11px] font-semibold transition ${
+                    active
+                      ? "border-amber-400/70 bg-amber-500/15 text-amber-200"
+                      : "border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-slate-500">
+            "수동" 선택 시 배너는 직접 닫을 때까지 유지됩니다.
+          </p>
+        </div>
+      )}
 
       {/* Player status (only during a run) */}
       {run && selectedDragon && (
