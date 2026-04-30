@@ -12,6 +12,10 @@ export function LobbyView() {
   const dragons = useGameStore((s) => s.dragons);
   const setDragons = useGameStore((s) => s.setDragons);
   const inventory = useGameStore((s) => s.inventory);
+  // Mirror lobby tap-selection into the global PvP selection so the user's
+  // current pick is the same dragon that the PvP picker will pre-highlight.
+  const pvpSelectedDragonId = useGameStore((s) => s.pvpSelectedDragonId);
+  const setPvpSelectedDragonId = useGameStore((s) => s.setPvpSelectedDragonId);
   const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [showScan, setShowScan] = useState(false);
@@ -20,6 +24,14 @@ export function LobbyView() {
   const [centeredId, setCenteredId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
+
+  // Two-way sync with the global store:
+  //  • If the global PvP selection changes elsewhere (e.g. PvP picker), the
+  //    lobby card highlight should follow.
+  //  • If the user taps a card here, push that id into the global store.
+  useEffect(() => {
+    setSelectedId(pvpSelectedDragonId);
+  }, [pvpSelectedDragonId]);
   // True while a touch/wheel scroll is active OR within ~140ms of the last
   // scroll event — drives the "live micro-hover" applied to the snapping
   // card during the swipe gesture. Once it flips back to false, the card
@@ -185,13 +197,13 @@ export function LobbyView() {
               tabIndex={0}
               aria-pressed={isSelected}
               onClick={() => {
-                setSelectedId(d.id);
+                setPvpSelectedDragonId(d.id);
                 setDetailId(d.id);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setSelectedId(d.id);
+                  setPvpSelectedDragonId(d.id);
                   setDetailId(d.id);
                 }
               }}

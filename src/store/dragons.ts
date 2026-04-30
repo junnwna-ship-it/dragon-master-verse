@@ -56,6 +56,12 @@ interface GameState {
   pvpLosses: number;
   pvpDraws: number;
   recordPvp: (r: Omit<PvpRecord, "id" | "timestamp">) => void;
+  // Globally selected dragon for PvP. Single source of truth shared by
+  // LobbyView (tap-to-highlight), PvpView matchmaking/picker (currently
+  // chosen entrant), and the post-battle handoff. `null` means no dragon
+  // is currently picked for PvP.
+  pvpSelectedDragonId: number | null;
+  setPvpSelectedDragonId: (id: number | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -113,6 +119,8 @@ export const useGameStore = create<GameState>((set) => ({
   pvpWins: 0,
   pvpLosses: 0,
   pvpDraws: 0,
+  pvpSelectedDragonId: null,
+  setPvpSelectedDragonId: (id) => set({ pvpSelectedDragonId: id }),
   recordPvp: (r) =>
     set((state) => {
       const entry: PvpRecord = {
