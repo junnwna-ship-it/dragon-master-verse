@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Swords,
   ChevronRight,
@@ -119,12 +119,37 @@ export function PvpView() {
   }, [phase]);
 
   const tier = useMemo(() => {
-    if (rp >= 1500) return { label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
-    if (rp >= 1200) return { label: "Platinum", tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10" };
-    if (rp >= 1000) return { label: "Gold", tone: "text-amber-300 border-amber-400/40 bg-amber-500/10" };
-    if (rp >= 800) return { label: "Silver", tone: "text-slate-200 border-slate-400/40 bg-slate-400/10" };
-    return { label: "Bronze", tone: "text-orange-300 border-orange-400/40 bg-orange-500/10" };
+    if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
+    if (rp >= 1200) return { rank: 4, label: "Platinum", tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10" };
+    if (rp >= 1000) return { rank: 3, label: "Gold", tone: "text-amber-300 border-amber-400/40 bg-amber-500/10" };
+    if (rp >= 800) return { rank: 2, label: "Silver", tone: "text-slate-200 border-slate-400/40 bg-slate-400/10" };
+    return { rank: 1, label: "Bronze", tone: "text-orange-300 border-orange-400/40 bg-orange-500/10" };
   }, [rp]);
+
+  // Track RP changes to animate the badge: direction (up/down/none),
+  // a one-shot pulse key that re-runs the animation on every change,
+  // and a special "promotion/demotion" flash when the tier itself shifts.
+  const prevRpRef = useRef<number>(rp);
+  const prevTierRef = useRef<number>(tier.rank);
+  const [direction, setDirection] = useState<"up" | "down" | "none">("none");
+  const [pulseKey, setPulseKey] = useState(0);
+  const [tierShift, setTierShift] = useState<"promote" | "demote" | null>(null);
+  useEffect(() => {
+    const prevRp = prevRpRef.current;
+    if (prevRp !== rp) {
+      setDirection(rp > prevRp ? "up" : "down");
+      setPulseKey((k) => k + 1);
+    }
+    const prevTier = prevTierRef.current;
+    if (prevTier !== tier.rank) {
+      setTierShift(tier.rank > prevTier ? "promote" : "demote");
+      const t = setTimeout(() => setTierShift(null), 1400);
+      prevTierRef.current = tier.rank;
+      prevRpRef.current = rp;
+      return () => clearTimeout(t);
+    }
+    prevRpRef.current = rp;
+  }, [rp, tier.rank]);
 
   // ---------------- Battle ----------------
   if (phase === "battle" && player && opponent) {
@@ -320,20 +345,82 @@ export function PvpView() {
       </div>
 
       {/* MMR / RP header */}
-      <div className={`rounded-2xl border p-4 ${tier.tone}`}>
+      <div
+        className={`relative overflow-hidden rounded-2xl border p-4 transition-colors duration-500 ease-out ${tier.tone} ${
+          tierShift === "promote"
+            ? "ring-2 ring-emerald-400/60 shadow-lg shadow-emerald-500/30"
+            : tierShift === "demote"
+              ? "ring-2 ring-rose-400/60 shadow-lg shadow-rose-500/30"
+              : ""
+        }`}
+        // Inline keyframes scoped to this card for the pulse + sweep effects.
+        style={
+          tierShift
+            ? ({ animation: "pvp-tier-flash 1.2s ease-out 1" } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <style>{`
+          @keyframes pvp-tier-flash {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.03); }
+            60% { transform: scale(0.995); }
+            100% { transform: scale(1); }
+          }
+          @keyframes pvp-rp-pulse {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.12); }
+            100% { transform: scale(1); }
+          }
+          .pvp-rp-pulse { animation: pvp-rp-pulse 0.45s ease-out 1; }
+        `}</style>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5" />
+            <Crown
+              className={`h-5 w-5 transition-colors duration-500 ${
+                tierShift === "promote"
+                  ? "text-emerald-300"
+                  : tierShift === "demote"
+                    ? "text-rose-300"
+                    : ""
+              }`}
+            />
             <div>
               <p className="text-[10px] uppercase tracking-widest opacity-70">랭크</p>
-              <p className="text-sm font-bold">{tier.label}</p>
+              <p className="text-sm font-bold transition-colors duration-500">{tier.label}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-widest opacity-70">랭크 점수</p>
-            <p className="text-2xl font-bold tabular-nums">{rp} <span className="text-xs opacity-70">RP</span></p>
+            <p
+              key={pulseKey}
+              className="pvp-rp-pulse flex items-center justify-end gap-1 text-2xl font-bold tabular-nums origin-right"
+            >
+              {direction === "up" && (
+                <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden />
+              )}
+              {direction === "down" && (
+                <TrendingDown className="h-4 w-4 text-rose-300" aria-hidden />
+              )}
+              <span>{rp}</span>
+              <span className="text-xs opacity-70">RP</span>
+            </p>
           </div>
         </div>
+        {tierShift && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mt-2 rounded-md px-2 py-1 text-center text-[11px] font-bold ${
+              tierShift === "promote"
+                ? "bg-emerald-500/20 text-emerald-200"
+                : "bg-rose-500/20 text-rose-200"
+            }`}
+          >
+            {tierShift === "promote" ? "🎉 승급! " : "⬇ 강등 "}
+            <span className="font-mono">{tier.label}</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2">
