@@ -586,35 +586,57 @@ export function TagBattleEngine({
         </div>
       </div>
 
-      {!winner && (
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={handleAttack}
-            disabled={turn !== "player" || pickingSwap}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-3 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
-          >
-            <Sword className="h-4 w-4" /> 공격
-          </button>
-          <button
-            onClick={() => setPickingSwap((v) => !v)}
-            disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
-            className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 ${
-              pickingSwap
-                ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                : "bg-sky-600 text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500"
-            }`}
-          >
-            <Repeat className="h-4 w-4" /> 교체
-          </button>
-          <button
-            onClick={handlePass}
-            disabled={turn !== "player" || pickingSwap}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-700 px-3 py-3 text-sm font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
-          >
-            <Zap className="h-4 w-4" /> 턴 넘기기
-          </button>
-        </div>
-      )}
+      {!winner && (() => {
+        const skillCost = pActive ? Math.floor(pActive.maxMp * MP_SKILL_COST_PCT) : 0;
+        const canSkill =
+          !!pActive &&
+          pActive.engineHp > 0 &&
+          pActive.mp >= pActive.maxMp * MP_SKILL_THRESHOLD_PCT &&
+          turn === "player" &&
+          !pickingSwap;
+        return (
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              onClick={handleAttack}
+              disabled={turn !== "player" || pickingSwap}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-rose-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+            >
+              <Sword className="h-4 w-4" />
+              <span>공격</span>
+            </button>
+            <button
+              onClick={handleSkill}
+              disabled={!canSkill}
+              title={`MP ${skillCost} 소모, RawDamage x1.5 (하드캡 유지)`}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-violet-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+            >
+              <Wand2 className="h-4 w-4" />
+              <span>스킬</span>
+              <span className="font-mono text-[9px] opacity-90">-{skillCost} MP</span>
+            </button>
+            <button
+              onClick={() => setPickingSwap((v) => !v)}
+              disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 ${
+                pickingSwap
+                  ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                  : "bg-sky-600 text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500"
+              }`}
+            >
+              <Repeat className="h-4 w-4" />
+              <span>교체</span>
+            </button>
+            <button
+              onClick={handlePass}
+              disabled={turn !== "player" || pickingSwap}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-700 px-2 py-2.5 text-xs font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+            >
+              <Zap className="h-4 w-4" />
+              <span>넘기기</span>
+            </button>
+          </div>
+        );
+      })()}
 
       {winner && (
         <div
