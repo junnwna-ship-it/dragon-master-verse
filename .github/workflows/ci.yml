@@ -428,6 +428,12 @@ jobs:
               generated_at: $generated_at,
               candidates_scanned: $candidates_scanned,
               matched_count: $matched_count,
+              workflow_version: {
+                sha_short: ($current_workflow_file_sha | .[0:7]),
+                sha_full: $current_workflow_file_sha,
+                candidates_scanned: $candidates_scanned,
+                matched_count: $matched_count
+              },
               matched_runs: $matched
             }' > reports/cache-history-debug.json
           echo "Wrote reports/cache-history-debug.json (matched=$KEPT)"
@@ -546,6 +552,12 @@ jobs:
               generated_at: $generated_at,
               candidates_scanned: 50,
               matched_count: $matched_count,
+              workflow_version: {
+                sha_short: ($current_workflow_file_sha | .[0:7]),
+                sha_full: $current_workflow_file_sha,
+                candidates_scanned: 50,
+                matched_count: $matched_count
+              },
               matched_runs: $matched
             }' > reports/lint-time-history-debug.json
           echo "Wrote reports/lint-time-history-debug.json (matched=$KEPT)"
@@ -823,6 +835,18 @@ jobs:
                   branch_b: $B.branch,
                   matched_count_a: ($ar | length),
                   matched_count_b: ($br | length),
+                  workflow_version_a: ($A.workflow_version // {
+                    sha_short: ($A.current_workflow_file_sha | .[0:7]),
+                    sha_full: $A.current_workflow_file_sha,
+                    candidates_scanned: $A.candidates_scanned,
+                    matched_count: $A.matched_count
+                  }),
+                  workflow_version_b: ($B.workflow_version // {
+                    sha_short: ($B.current_workflow_file_sha | .[0:7]),
+                    sha_full: $B.current_workflow_file_sha,
+                    candidates_scanned: $B.candidates_scanned,
+                    matched_count: $B.matched_count
+                  }),
                   identical_id_sets: (($only_in_a | length) == 0 and ($only_in_b | length) == 0),
                   only_in_a: $only_in_a,
                   only_in_b: $only_in_b,
