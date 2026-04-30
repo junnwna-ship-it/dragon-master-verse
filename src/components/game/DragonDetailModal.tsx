@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Dragon, Element } from "@/store/dragons";
 
@@ -11,13 +11,44 @@ const ELEMENT_META: Record<Element, { label: string; color: string; icon: React.
   Dark:  { label: "어둠",   color: "text-violet-300",  icon: Moon,     strong: "Light", weak: "Light" },
 };
 
-function recommendBuild(d: Dragon): { title: string; desc: string; tags: string[] } {
-  const { atk, def, maxHp, mp } = d;
-  const max = Math.max(atk, def, maxHp / 10, mp / 5);
-  if (max === atk) return { title: "공격형 딜러", desc: "선공으로 적의 체력을 빠르게 깎는 빌드. 공격 보조 장비를 우선 장착하세요.", tags: ["선공", "치명타", "공격 버프"] };
-  if (max === def) return { title: "방어형 탱커", desc: "긴 교전을 버티며 아군을 보호하는 빌드. 방어/회복 장비가 잘 어울립니다.", tags: ["피해 감소", "도발", "회복"] };
-  if (max === maxHp / 10) return { title: "지속형 브루저", desc: "높은 체력을 바탕으로 끈질기게 싸우는 빌드. 흡혈/재생 효과와 시너지가 좋습니다.", tags: ["체력", "흡혈", "재생"] };
-  return { title: "마법형 캐스터", desc: "MP를 활용한 스킬 위주 빌드. 마나 회복과 스킬 강화 장비를 권장합니다.", tags: ["스킬", "마나", "원거리"] };
+// Build presets keyed by stat focus. Each preset carries a title, narrative
+// description, suggested gameplay tags, and a recommended-stat scalar so we
+// can pick a sensible default tab from the dragon's strongest attribute.
+type BuildKey = "ATK" | "DEF" | "HP" | "MP";
+const BUILD_PRESETS: Record<BuildKey, { title: string; desc: string; tags: string[] }> = {
+  ATK: {
+    title: "공격형 딜러",
+    desc: "선공으로 적의 체력을 빠르게 깎는 빌드. 공격 보조 장비를 우선 장착하고, 치명타·관통 옵션을 노려 단기전을 끝내세요.",
+    tags: ["선공", "치명타", "공격 버프"],
+  },
+  DEF: {
+    title: "방어형 탱커",
+    desc: "긴 교전을 버티며 아군을 보호하는 빌드. 피해 감소·도발 효과와 회복 장비를 조합해 전선을 유지하세요.",
+    tags: ["피해 감소", "도발", "회복"],
+  },
+  HP: {
+    title: "지속형 브루저",
+    desc: "높은 체력을 바탕으로 끈질기게 싸우는 빌드. 흡혈·재생 효과와 시너지가 좋아 장기전에서 유리합니다.",
+    tags: ["체력", "흡혈", "재생"],
+  },
+  MP: {
+    title: "마법형 캐스터",
+    desc: "MP를 활용한 스킬 위주 빌드. 마나 회복과 스킬 강화 장비를 권장하며, 원거리 견제로 거리를 유지하세요.",
+    tags: ["스킬", "마나", "원거리"],
+  },
+};
+
+// Returns the build key whose normalized stat is highest — used as the
+// default selected tab so the modal opens on the dragon's natural strength.
+function defaultBuildKey(d: Dragon): BuildKey {
+  const scores: Record<BuildKey, number> = {
+    ATK: d.atk,
+    DEF: d.def,
+    HP: d.maxHp / 10,
+    MP: d.mp / 5,
+  };
+  return (Object.entries(scores) as [BuildKey, number][]) 
+    .reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0];
 }
 
 export function DragonDetailModal({
@@ -88,11 +119,20 @@ export function DragonDetailModal({
   const meta = ELEMENT_META[dragon.element];
   const ElIcon = meta.icon;
   const total = dragon.atk + dragon.def + dragon.maxHp + dragon.mp;
-  const build = recommendBuild(dragon);
   const strongMeta = ELEMENT_META[meta.strong];
   const weakMeta = ELEMENT_META[meta.weak];
 
-  const stats = [
+  // Active build tab. Defaults to the dragon's strongest stat and resets
+  // whenever the dragon changes (swipe-navigation, lobby selection update,
+  // etc.) so the recommendation is always meaningful for the active card.
+  const naturalKey = useMemo(() => defaultBuildKey(dragon), [dragon]);
+  const [buildTab, setBuildTab] = useState<BuildKey>(naturalKey);
+  useEffect(() => {
+    setBuildTab(naturalKey);
+  }, [naturalKey]);
+  const build = BUILD_PRESETS[buildTab];
+
+  const stats: { label: BuildKey; value: number; icon: typeof Swords; color: string; bg: string }[] = [
     { label: "ATK", value: dragon.atk, icon: Swords, color: "text-rose-300", bg: "bg-rose-500/20" },
     { label: "DEF", value: dragon.def, icon: Shield, color: "text-sky-300", bg: "bg-sky-500/20" },
     { label: "HP",  value: dragon.maxHp, icon: Heart, color: "text-emerald-300", bg: "bg-emerald-500/20" },
@@ -209,8 +249,60 @@ export function DragonDetailModal({
 
           <section>
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">추천 빌드</h4>
-            <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-rose-500/5 px-3 py-3">
-              <p className="text-sm font-bold text-amber-200">{build.title}</p>
+            {/* Tab bar: one button per stat focus. The dragon's natural
+                strength is highlighted with a small badge so the user can
+                tell at a glance which preset matches its raw stats best. */}
+            <div
+              role="tablist"
+              aria-label="빌드 분류"
+              className="mb-2 grid grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1"
+            >
+              {stats.map((s) => {
+                const Icon = s.icon;
+                const active = buildTab === s.label;
+                const isNatural = naturalKey === s.label;
+                return (
+                  <button
+                    key={s.label}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-controls="recommended-build-panel"
+                    onClick={() => setBuildTab(s.label)}
+                    className={`relative flex flex-col items-center gap-0.5 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition ${
+                      active
+                        ? `${s.bg} ${s.color} shadow-inner`
+                        : "text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{s.label}</span>
+                    {isNatural && !active && (
+                      <span
+                        aria-hidden
+                        className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400"
+                        title="기본 추천"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              id="recommended-build-panel"
+              role="tabpanel"
+              aria-live="polite"
+              key={buildTab}
+              className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-rose-500/5 px-3 py-3 animate-in fade-in duration-200"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-bold text-amber-200">{build.title}</p>
+                {naturalKey === buildTab && (
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
+                    기본 추천
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-xs leading-relaxed text-slate-300">{build.desc}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {build.tags.map((t) => (
