@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/game/auth/AuthDialog";
 import { useProfile } from "@/hooks/useProfile";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -76,7 +77,11 @@ function Index() {
           {view === "vault" && <VaultView />}
           {view === "story" && <StoryView />}
           {view === "pvp" && <PvpView />}
-          {view === "shop" && <ShopView />}
+          {view === "shop" && (
+            <ErrorBoundary label="Shop">
+              <ShopView />
+            </ErrorBoundary>
+          )}
           {view === "admin" && <AdminView />}
           {view === "debug" && <DebugView />}
         </main>
