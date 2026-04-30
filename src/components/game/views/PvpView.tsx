@@ -1,13 +1,76 @@
-import { useState } from "react";
-import { Swords, ChevronRight, Trophy, Skull, Minus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Swords,
+  ChevronRight,
+  Trophy,
+  Skull,
+  Minus,
+  Loader2,
+  Shield,
+  Crown,
+  Search,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
-const opponents: Dragon[] = [
-  { id: 201, name: "Vortex", element: "Water", hp: 55, maxHp: 55, mp: 70, atk: 82, def: 30 },
-  { id: 202, name: "Mossguard", element: "Wood", hp: 75, maxHp: 75, mp: 45, atk: 50, def: 55 },
-  { id: 203, name: "Cinder", element: "Fire", hp: 60, maxHp: 60, mp: 60, atk: 76, def: 28 },
+/**
+ * Async "ghost battle" PvP arena.
+ *  - MMR (RP) persisted in localStorage; +25 on win, -15 on loss, 0 on draw.
+ *  - Match button shows a 2s loading spinner, then snaps the player into a
+ *    BattleEngine fight against a dummy opponent (no real network call).
+ *  - Post-match popup surfaces the outcome and the RP delta.
+ */
+
+const RP_KEY = "pvp.rp";
+const RP_INITIAL = 1000;
+const RP_WIN_DELTA = 25;
+const RP_LOSS_DELTA = -15;
+const MATCH_SEARCH_MS = 2000;
+
+function loadRp(): number {
+  if (typeof window === "undefined") return RP_INITIAL;
+  const raw = window.localStorage.getItem(RP_KEY);
+  const n = Number(raw);
+  return Number.isFinite(n) && raw !== null ? n : RP_INITIAL;
+}
+
+// Dummy "other player" decks — disguised AI opponents for ghost matchmaking.
+interface GhostOpponent {
+  id: number;
+  trainer: string; // fake user handle
+  rp: number; // shown in matchmaking card
+  dragon: Dragon;
+}
+const GHOST_POOL: GhostOpponent[] = [
+  {
+    id: 201,
+    trainer: "@vortex_kr",
+    rp: 1024,
+    dragon: { id: 201, name: "Vortex", element: "Water", hp: 55, maxHp: 55, mp: 70, atk: 82, def: 30 },
+  },
+  {
+    id: 202,
+    trainer: "@mossguard",
+    rp: 988,
+    dragon: { id: 202, name: "Mossguard", element: "Wood", hp: 75, maxHp: 75, mp: 45, atk: 50, def: 55 },
+  },
+  {
+    id: 203,
+    trainer: "@cinder99",
+    rp: 1041,
+    dragon: { id: 203, name: "Cinder", element: "Fire", hp: 60, maxHp: 60, mp: 60, atk: 76, def: 28 },
+  },
+  {
+    id: 204,
+    trainer: "@ironscale",
+    rp: 1012,
+    dragon: { id: 204, name: "Ironscale", element: "Earth", hp: 80, maxHp: 80, mp: 40, atk: 58, def: 62 },
+  },
 ];
+
+type Phase = "idle" | "searching" | "picker" | "battle" | "result";
 
 export function PvpView() {
   const dragons = useGameStore((s) => s.dragons);
@@ -16,36 +79,168 @@ export function PvpView() {
   const pvpWins = useGameStore((s) => s.pvpWins);
   const pvpLosses = useGameStore((s) => s.pvpLosses);
   const pvpDraws = useGameStore((s) => s.pvpDraws);
-  const [enemy, setEnemy] = useState<Dragon | null>(null);
-  const [player, setPlayer] = useState<Dragon | null>(null);
 
-  if (player && enemy) {
+  const [rp, setRp] = useState<number>(() => loadRp());
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(RP_KEY, String(rp));
+  }, [rp]);
+
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [opponent, setOpponent] = useState<GhostOpponent | null>(null);
+  const [player, setPlayer] = useState<Dragon | null>(null);
+  const [lastResult, setLastResult] = useState<{
+    outcome: "win" | "lose" | "draw";
+    delta: number;
+    rpBefore: number;
+    rpAfter: number;
+    enemyName: string;
+    trainer: string;
+  } | null>(null);
+
+  // Async matchmaking: show spinner for exactly MATCH_SEARCH_MS, then pick a
+  // ghost opponent and continue. No network call — pure setTimeout.
+  useEffect(() => {
+    if (phase !== "searching") return;
+    const t = setTimeout(() => {
+      const pick = GHOST_POOL[Math.floor(Math.random() * GHOST_POOL.length)];
+      setOpponent(pick);
+      setPhase("picker");
+    }, MATCH_SEARCH_MS);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  const tier = useMemo(() => {
+    if (rp >= 1500) return { label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
+    if (rp >= 1200) return { label: "Platinum", tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10" };
+    if (rp >= 1000) return { label: "Gold", tone: "text-amber-300 border-amber-400/40 bg-amber-500/10" };
+    if (rp >= 800) return { label: "Silver", tone: "text-slate-200 border-slate-400/40 bg-slate-400/10" };
+    return { label: "Bronze", tone: "text-orange-300 border-orange-400/40 bg-orange-500/10" };
+  }, [rp]);
+
+  // ---------------- Battle ----------------
+  if (phase === "battle" && player && opponent) {
     return (
       <BattleEngine
         player={player}
-        enemy={enemy}
+        enemy={opponent.dragon}
         context="pvp"
-        onResolved={(outcome) =>
-          recordPvp({ playerName: player.name, enemyName: enemy.name, outcome })
-        }
+        autoExitMs={1200}
+        onResolved={(outcome) => {
+          recordPvp({ playerName: player.name, enemyName: opponent.dragon.name, outcome });
+          const delta =
+            outcome === "win" ? RP_WIN_DELTA : outcome === "lose" ? RP_LOSS_DELTA : 0;
+          const before = rp;
+          const after = Math.max(0, before + delta);
+          setRp(after);
+          setLastResult({
+            outcome,
+            delta,
+            rpBefore: before,
+            rpAfter: after,
+            enemyName: opponent.dragon.name,
+            trainer: opponent.trainer,
+          });
+        }}
         onExit={() => {
+          setPhase(lastResult ? "result" : "idle");
           setPlayer(null);
-          setEnemy(null);
         }}
       />
     );
   }
 
-  if (enemy) {
+  // ---------------- Result popup ----------------
+  if (phase === "result" && lastResult) {
+    const r = lastResult;
+    const tone =
+      r.outcome === "win"
+        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+        : r.outcome === "lose"
+          ? "border-rose-500/40 bg-rose-500/10 text-rose-200"
+          : "border-slate-500/40 bg-slate-500/10 text-slate-200";
+    const Icon = r.outcome === "win" ? Trophy : r.outcome === "lose" ? Skull : Minus;
+    return (
+      <div className="space-y-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="PvP 결과"
+          className={`rounded-2xl border p-6 text-center ${tone}`}
+        >
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-900/40">
+            <Icon className="h-8 w-8" />
+          </div>
+          <h3 className="mt-3 text-xl font-bold">
+            {r.outcome === "win" ? "승리!" : r.outcome === "lose" ? "패배..." : "무승부"}
+          </h3>
+          <p className="mt-1 text-xs opacity-80">
+            {r.trainer} · {r.enemyName}
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+            <span className="font-mono text-slate-300">{r.rpBefore} RP</span>
+            <ChevronRight className="h-4 w-4 opacity-60" />
+            <span className="font-mono font-bold">{r.rpAfter} RP</span>
+            <span
+              className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-bold ${
+                r.delta > 0
+                  ? "bg-emerald-500/20 text-emerald-300"
+                  : r.delta < 0
+                    ? "bg-rose-500/20 text-rose-300"
+                    : "bg-slate-500/20 text-slate-300"
+              }`}
+            >
+              {r.delta > 0 ? <TrendingUp className="h-3 w-3" /> : r.delta < 0 ? <TrendingDown className="h-3 w-3" /> : null}
+              {r.delta > 0 ? `+${r.delta}` : r.delta}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setLastResult(null);
+            setOpponent(null);
+            setPhase("idle");
+          }}
+          className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
+        >
+          확인
+        </button>
+        <button
+          onClick={() => {
+            setLastResult(null);
+            setOpponent(null);
+            setPhase("searching");
+          }}
+          className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800"
+        >
+          다시 매칭
+        </button>
+      </div>
+    );
+  }
+
+  // ---------------- Dragon picker ----------------
+  if (phase === "picker" && opponent) {
     return (
       <div className="space-y-3">
-        <p className="text-xs uppercase tracking-widest text-slate-500">상대: {enemy.name}</p>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
+          <p className="text-[10px] uppercase tracking-widest text-rose-300">매칭 완료</p>
+          <p className="mt-0.5 text-sm font-bold text-slate-100">
+            {opponent.trainer} · {opponent.dragon.name}
+          </p>
+          <p className="text-[11px] text-slate-400">
+            {opponent.dragon.element} · ATK {opponent.dragon.atk} · DEF {opponent.dragon.def} · {opponent.rp} RP
+          </p>
+        </div>
         <h2 className="text-xl font-bold text-slate-100">출전할 드래곤 선택</h2>
         <div className="grid gap-2">
           {dragons.map((d) => (
             <button
               key={d.id}
-              onClick={() => setPlayer(d)}
+              onClick={() => {
+                setPlayer(d);
+                setPhase("battle");
+              }}
               className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/70 px-3 py-3 text-left hover:border-amber-500/50"
             >
               <div>
@@ -59,7 +254,10 @@ export function PvpView() {
           ))}
         </div>
         <button
-          onClick={() => setEnemy(null)}
+          onClick={() => {
+            setOpponent(null);
+            setPhase("idle");
+          }}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
         >
           취소
@@ -68,12 +266,31 @@ export function PvpView() {
     );
   }
 
+  // ---------------- Idle / Searching home ----------------
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Swords className="h-5 w-5 text-rose-400" />
         <h2 className="text-xl font-bold text-slate-100">PvP Arena</h2>
       </div>
+
+      {/* MMR / RP header */}
+      <div className={`rounded-2xl border p-4 ${tier.tone}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Crown className="h-5 w-5" />
+            <div>
+              <p className="text-[10px] uppercase tracking-widest opacity-70">랭크</p>
+              <p className="text-sm font-bold">{tier.label}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest opacity-70">랭크 점수</p>
+            <p className="text-2xl font-bold tabular-nums">{rp} <span className="text-xs opacity-70">RP</span></p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center">
           <p className="text-[10px] uppercase text-emerald-400">Win</p>
@@ -88,23 +305,49 @@ export function PvpView() {
           <p className="text-lg font-bold text-slate-300">{pvpDraws}</p>
         </div>
       </div>
-      <div className="grid gap-2">
-        {opponents.map((o) => (
-          <button
-            key={o.id}
-            onClick={() => setEnemy(o)}
-            className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/70 px-3 py-3 text-left hover:border-rose-500/50"
-          >
-            <div>
-              <p className="text-sm font-bold text-slate-100">{o.name}</p>
-              <p className="text-[11px] text-slate-400">
-                {o.element} · ATK {o.atk} · DEF {o.def} · HP {o.maxHp}
-              </p>
+
+      {/* Async matchmaking */}
+      <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 text-center">
+        {phase === "searching" ? (
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-10 w-10 animate-spin text-amber-400" />
+            <p className="text-sm font-bold text-slate-100">상대 탐색 중...</p>
+            <p className="text-[11px] text-slate-400">
+              비슷한 RP의 트레이너를 찾고 있습니다
+            </p>
+            <button
+              onClick={() => setPhase("idle")}
+              className="mt-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+            >
+              취소
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
+              <Shield className="h-6 w-6" />
             </div>
-            <ChevronRight className="h-4 w-4 text-slate-500" />
-          </button>
-        ))}
+            <p className="text-xs text-slate-400">
+              승리 <span className="font-bold text-emerald-400">+{RP_WIN_DELTA}</span> · 패배{" "}
+              <span className="font-bold text-rose-400">{RP_LOSS_DELTA}</span> RP
+            </p>
+            <button
+              onClick={() => {
+                if (dragons.length === 0) return;
+                setPhase("searching");
+              }}
+              disabled={dragons.length === 0}
+              className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+            >
+              <Search className="h-4 w-4" /> 상대 탐색
+            </button>
+            {dragons.length === 0 && (
+              <p className="text-[10px] text-slate-500">먼저 드래곤을 보유해야 합니다</p>
+            )}
+          </div>
+        )}
       </div>
+
       {pvpRecords.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-widest text-slate-500">최근 기록</p>
@@ -140,3 +383,4 @@ export function PvpView() {
     </div>
   );
 }
+
