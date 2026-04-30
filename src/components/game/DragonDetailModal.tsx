@@ -239,17 +239,8 @@ export function DragonDetailModal({
         </div>
 
         <div className="space-y-4 px-5 py-4">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
-            <DragonImage
-              dragon={dragon}
-              preferLarge
-              fit="contain"
-              className="absolute inset-0 h-full w-full"
-              sizes="(max-width: 640px) 100vw, 448px"
-              loading="eager"
-              fetchPriority="high"
-            />
-          </div>
+          <BondableCardImage dragon={dragon} />
+          <ExpGauge dragon={dragon} />
           <section>
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">스탯</h4>
