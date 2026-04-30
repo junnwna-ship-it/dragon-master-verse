@@ -132,6 +132,9 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
     { icon: Shield, label: "DEF", value: dragon.def, tint: "text-emerald-300" },
   ];
 
+  const elementInfo = ELEMENT_INFO[dragon.element];
+  const passive = PASSIVES[dragon.name];
+
   return (
     <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
       {/* Hero */}
@@ -140,8 +143,8 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
           <DragonImage dragon={dragon} className="h-full w-full" preferLarge />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-            {dragon.element}
+          <p className={`text-[10px] font-bold uppercase tracking-widest ${elementInfo.tint}`}>
+            {elementInfo.icon} {dragon.element} · {elementInfo.kr}
           </p>
           <h3 className="truncate text-lg font-bold text-slate-100">{dragon.name}</h3>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -177,6 +180,56 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
         </div>
       </div>
 
+      {/* Element matchup (5행 상성) */}
+      <div>
+        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          속성 상성 (5행)
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="flex items-center gap-1.5 rounded-lg border border-emerald-800/60 bg-emerald-500/5 px-2 py-1.5">
+            <ArrowRight className="h-3.5 w-3.5 text-emerald-300" />
+            <span className="text-[10px] text-slate-400">강함</span>
+            <span className="ml-auto text-xs font-bold text-emerald-200">
+              {ELEMENT_INFO[elementInfo.strongVs].icon} {elementInfo.strongVs}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-lg border border-rose-800/60 bg-rose-500/5 px-2 py-1.5">
+            <ArrowLeft className="h-3.5 w-3.5 text-rose-300" />
+            <span className="text-[10px] text-slate-400">약함</span>
+            <span className="ml-auto text-xs font-bold text-rose-200">
+              {ELEMENT_INFO[elementInfo.weakTo].icon} {elementInfo.weakTo}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Passive / Signature skill */}
+      <div>
+        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          고유 스킬 / 패시브
+        </p>
+        <div className="space-y-1.5">
+          <div className="rounded-lg border border-amber-800/60 bg-amber-500/5 px-3 py-2">
+            <div className="flex items-center gap-1.5">
+              <Flame className="h-3.5 w-3.5 text-amber-300" />
+              <span className="text-[11px] font-bold text-amber-200">특수 스킬</span>
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+              MP의 20%를 소모해 RawDamage 1.5배 강화 공격을 발동합니다.
+            </p>
+          </div>
+          {passive && (
+            <div className="rounded-lg border border-violet-800/60 bg-violet-500/5 px-3 py-2">
+              <div className="flex items-center gap-1.5">
+                <Wand2 className="h-3.5 w-3.5 text-violet-300" />
+                <span className="text-[11px] font-bold text-violet-200">{passive.name}</span>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-300">{passive.desc}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Lore */}
       {dragon.lore && (
         <div>
@@ -196,3 +249,29 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
     </section>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Static catalogs (read-only): 5행 상성 + 드래곤 고유 패시브.
+// 5행 정규화: Light→Metal, Dark→Soil(=Earth). 사이클: Wood>Soil>Water>Fire>Metal>Wood.
+// ─────────────────────────────────────────────────────────────────────────────
+type ElementMeta = {
+  kr: string;
+  icon: string;
+  tint: string;
+  strongVs: Dragon["element"];
+  weakTo: Dragon["element"];
+};
+const ELEMENT_INFO: Record<Dragon["element"], ElementMeta> = {
+  Wood:  { kr: "목", icon: "🌳", tint: "text-emerald-300", strongVs: "Earth", weakTo: "Light" },
+  Earth: { kr: "토", icon: "🪨", tint: "text-amber-300",   strongVs: "Water", weakTo: "Wood"  },
+  Water: { kr: "수", icon: "💧", tint: "text-sky-300",     strongVs: "Fire",  weakTo: "Earth" },
+  Fire:  { kr: "화", icon: "🔥", tint: "text-rose-300",    strongVs: "Light", weakTo: "Water" },
+  Light: { kr: "금", icon: "✨", tint: "text-yellow-200",  strongVs: "Wood",  weakTo: "Fire"  },
+  Dark:  { kr: "토(암)", icon: "🌑", tint: "text-violet-300", strongVs: "Water", weakTo: "Wood" },
+};
+
+const PASSIVES: Record<string, { name: string; desc: string }> = {
+  Comi:      { name: "강철의 인내",   desc: "피격 시 받는 데미지가 일정 비율 경감됩니다." },
+  Snowy:     { name: "빙결의 신중함", desc: "짝수 턴에 30% 회피, 자신의 공격은 20% 약화됩니다." },
+  Caminont:  { name: "맹독의 송곳니", desc: "공격 시 적에게 지속 독 데미지를 부여합니다." },
+};
