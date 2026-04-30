@@ -117,6 +117,29 @@ export function hpPercent(c: Combatant): number {
   return Math.max(0, Math.min(100, (c.engineHp / Math.max(1, c.engineMaxHp)) * 100));
 }
 
+/**
+ * 모든 DEF 디버프 이벤트(공격/피격/턴종료/캡)에서 동일한 포맷으로 출력하는 헬퍼.
+ * 형식: `[<이벤트>] <이름> DEF <prev>→<next> (<±delta>, <±pct>%) | 스택 <prev>/3 → <next>/3 (남은 <N>회)`
+ */
+export function formatDefChangeLog(
+  event: "원소 공포" | "디버프 감쇠" | "디버프 캡",
+  c: Combatant,
+  prevStacks: number,
+  prevDef: number,
+  newStacks: number,
+  newDef: number,
+): string {
+  const deltaDef = newDef - prevDef;
+  const deltaPct = (newStacks - prevStacks) * 10; // 스택 +1 = -10%, -1 = +10%
+  const sign = deltaDef >= 0 ? "+" : "";
+  const pctSign = deltaPct >= 0 ? "+" : ""; // 스택이 줄면 양수(=DEF 회복)
+  // 스택 표기 방향을 통일하기 위해 부호 반전: 스택 증가는 -%, 감소는 +%
+  const dispPct = -deltaPct;
+  const dispSign = dispPct >= 0 ? "+" : "";
+  const remaining = Math.max(0, 3 - newStacks);
+  return `[${event}] ${c.base.name} DEF ${prevDef}→${newDef} (${sign}${deltaDef}, ${dispSign}${dispPct}%) | 스택 ${prevStacks}/3 → ${newStacks}/3 (남은 ${remaining}회)`;
+}
+
 export interface AttackResult {
   attacker: Combatant;
   defender: Combatant;
