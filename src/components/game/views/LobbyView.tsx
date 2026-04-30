@@ -53,7 +53,7 @@ export function LobbyView() {
   // Distinct from `centeredId` (live during swipe) and `selectedId` (tap).
   const [snappedId, setSnappedId] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
 
   // Observe each card's intersection ratio inside the horizontal scroller and
   // mark the one closest to the viewport center as "centered" — this drives
