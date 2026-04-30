@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Lock, Dumbbell, Sparkles, Coins, Heart, Swords, Shield, Zap } from "lucide-react";
+import { Lock, Dumbbell, Sparkles, Coins, Heart, Swords, Shield, Zap, Flame, ArrowRight, ArrowLeft, Wand2 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { DragonImage } from "../DragonImage";
