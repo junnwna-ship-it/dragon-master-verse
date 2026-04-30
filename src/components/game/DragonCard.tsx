@@ -140,9 +140,16 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
         {dragon.image ? (
           <img
             src={dragon.image}
+            srcSet={dragon.imageLarge ? `${dragon.image} 480w, ${dragon.imageLarge} 800w` : undefined}
+            sizes="(max-width: 480px) 78vw, 320px"
             alt={`${dragon.name} 일러스트`}
             className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
+            decoding="async"
+            // Tell the browser the intrinsic ratio so layout is stable
+            // even before the bitmap finishes decoding.
+            width={480}
+            height={600}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">

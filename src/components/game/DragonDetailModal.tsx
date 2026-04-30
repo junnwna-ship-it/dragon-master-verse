@@ -207,9 +207,15 @@ export function DragonDetailModal({
           {dragon.image && (
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
               <img
-                src={dragon.image}
+                // Prefer the high-res variant in the modal hero.
+                src={dragon.imageLarge ?? dragon.image}
+                srcSet={dragon.imageLarge ? `${dragon.image} 480w, ${dragon.imageLarge} 800w` : undefined}
+                sizes="(max-width: 640px) 100vw, 448px"
                 alt={`${dragon.name} 일러스트`}
                 className="absolute inset-0 h-full w-full object-contain"
+                decoding="async"
+                // High priority hint — this is the modal's focal point.
+                fetchPriority="high"
               />
             </div>
           )}
