@@ -633,16 +633,16 @@ export function StoryView() {
 
             return (
               <button
-                key={node.id}
+                // When this node is the active one, include shakeKey so the
+                // element re-mounts on each activeNodeId change and the CSS
+                // shake animation reliably re-runs.
+                key={isActive ? `${node.id}-shake-${shakeKey}` : node.id}
                 onClick={handleClick}
                 disabled={locked && !cleared}
                 title={locked ? lockReason : cleared ? lockReason : node.title}
                 className={`group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 ${
                   locked && !cleared ? "cursor-not-allowed" : "cursor-pointer"
                 } ${isActive ? "story-node-shake" : ""}`}
-                // Re-mount via key bump so the shake re-runs each time
-                // activeNodeId changes (e.g. after onResolved).
-                data-shake-key={isActive ? shakeKey : undefined}
                 style={{ left: `${node.x}%`, top: `${node.y}%` }}
                 aria-label={
                   locked
