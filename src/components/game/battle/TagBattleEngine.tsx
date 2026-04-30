@@ -453,12 +453,40 @@ export function TagBattleEngine({
   const [activeEffects, setActiveEffects] = useState<ActiveEffect[]>([]);
   const effectIdRef = useRef(1);
   /** 이펙트 트리거: 큐에 추가하고 0.6초 뒤 자동 제거. */
-  const triggerEffect = (target: "player" | "enemy", type: EffectType) => {
+  const triggerEffect = (target: "player" | "enemy", type: EffectType, intensity = 1) => {
     const id = effectIdRef.current++;
-    setActiveEffects((prev) => [...prev, { id, target, type }]);
+    setActiveEffects((prev) => [...prev, { id, target, type, intensity }]);
     setTimeout(() => {
       setActiveEffects((prev) => prev.filter((e) => e.id !== id));
     }, 600);
+  };
+
+  // ===== Cinematic / Screen-shake / Onomatopoeia =====
+  const [cinematicSide, setCinematicSide] = useState<"player" | "enemy" | null>(null);
+  const [dimming, setDimming] = useState(false);
+  const [screenShakeKey, setScreenShakeKey] = useState(0);
+  interface Onomatopoeia { id: number; text: string; tone: "boom" | "hiss" | "crit"; }
+  const [onomats, setOnomats] = useState<Onomatopoeia[]>([]);
+  const onoIdRef = useRef(1);
+  const popOno = (text: string, tone: Onomatopoeia["tone"] = "boom") => {
+    const id = onoIdRef.current++;
+    setOnomats((prev) => [...prev, { id, text, tone }]);
+    setTimeout(() => setOnomats((prev) => prev.filter((o) => o.id !== id)), 500);
+  };
+  /** 스킬 시네마틱 시퀀스. dim → zoom (공격자) → 0.3초 뒤 풀림. */
+  const playSkillCinematic = (actor: "player" | "enemy") => {
+    setDimming(true);
+    setCinematicSide(actor);
+    setTimeout(() => {
+      setDimming(false);
+      setCinematicSide(null);
+    }, 350);
+  };
+  /** 큰 데미지 임팩트: 화면 전체 흔들림 + 의성어. */
+  const playBigImpact = (target: "player" | "enemy", word = "콰광!") => {
+    setScreenShakeKey((k) => k + 1);
+    triggerEffect(target, "burst", 3);
+    popOno(word, "boom");
   };
 
   /** -dmg 텍스트 파티클을 한쪽에 띄우고 1.1초 후 제거. */
