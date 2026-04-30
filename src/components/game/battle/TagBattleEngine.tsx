@@ -245,6 +245,21 @@ export function TagBattleEngine({
   const [autoExitEnabled, setAutoExitEnabled] = useState(autoExitMs > 0);
   const [countdown, setCountdown] = useState<number | null>(null);
 
+  // Always-fresh refs so synchronous handlers can read/write the latest team
+  // state without nesting setState callbacks (which made the previous draft
+  // unreliable). All mutations go through `commit(...)` below.
+  const pTeamRef = useRef(pTeam);
+  const eTeamRef = useRef(eTeam);
+  pTeamRef.current = pTeam;
+  eTeamRef.current = eTeam;
+
+  const commit = (nextP: Team, nextE: Team) => {
+    pTeamRef.current = nextP;
+    eTeamRef.current = nextE;
+    setPTeam(nextP);
+    setETeam(nextE);
+  };
+
   const pushLogs = (entries: Omit<LogEntry, "id">[]) => {
     if (!entries.length) return;
     setLogs((prev) => {
@@ -291,13 +306,12 @@ export function TagBattleEngine({
     if (turn !== "player") return;
     if (playerStartRanRef.current === turnNumber) return;
     playerStartRanRef.current = turnNumber;
-    setPTeam((t) => {
-      const cur = t.members[t.activeIdx];
-      if (!cur || cur.engineHp <= 0) return t;
-      const { next, logs: l } = onTurnStart(cur);
-      pushLogs(l);
-      return setActive(t, t.activeIdx, next);
-    });
+    const t = pTeamRef.current;
+    const cur = t.members[t.activeIdx];
+    if (!cur || cur.engineHp <= 0) return;
+    const { next, logs: l } = onTurnStart(cur);
+    pushLogs(l);
+    commit(setActive(t, t.activeIdx, next), eTeamRef.current);
   }, [turn, turnNumber, winner]);
 
   /** 공통: 한쪽 active가 KO되면 자동 출전 처리 + 로그. */
@@ -314,84 +328,58 @@ export function TagBattleEngine({
     return next;
   };
 
-  /** 턴 종료 처리: drain → 사망 자동출전 → 벤치 회복 → 턴 전환. */
-  const finishTurn = (
-    actor: "player" | "enemy",
-    afterAttack?: { actorTeam: Team; opponentTeam: Team },
-  ) => {
-    setPTeam((curP) => {
-      setETeam((curE) => {
-        const baseP = afterAttack && actor === "player" ? afterAttack.actorTeam : curP;
-        const baseE = afterAttack && actor === "player" ? afterAttack.opponentTeam : afterAttack && actor === "enemy" ? afterAttack.opponentTeam : curE;
-        const realE = afterAttack && actor === "enemy" ? afterAttack.actorTeam : baseE;
+  /** 턴 종료 처리: drain → 사망 자동출전 → 벤치 회복 → 턴 전환. 동기적으로 ref+setState 갱신. */
+  const finishTurn = (actor: "player" | "enemy", overrideP?: Team, overrideE?: Team) => {
+    const startP = overrideP ?? pTeamRef.current;
+    const startE = overrideE ?? eTeamRef.current;
 
-        const selfTeam = actor === "player" ? baseP : realE;
-        const oppTeam = actor === "player" ? baseE : baseP;
+    const selfTeam = actor === "player" ? startP : startE;
+    const oppTeam = actor === "player" ? startE : startP;
 
-        const selfActive = selfTeam.members[selfTeam.activeIdx];
-        const oppActive = oppTeam.members[oppTeam.activeIdx];
-        if (!selfActive || !oppActive) {
-          return realE;
-        }
+    const selfActive = selfTeam.members[selfTeam.activeIdx];
+    const oppActive = oppTeam.members[oppTeam.activeIdx];
+    if (!selfActive || !oppActive) {
+      commit(startP, startE);
+      return;
+    }
 
-        // drain은 active 기준으로만 적용 (벤치는 별도 +MP 회복)
-        const drained = endTurnDrain(selfActive, oppActive, { turnNumber });
-        pushLogs(drained.logs);
+    const drained = endTurnDrain(selfActive, oppActive, { turnNumber });
+    pushLogs(drained.logs);
 
-        let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
-        let nextOppTeam = setActive(oppTeam, oppTeam.activeIdx, drained.opponent);
+    let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
+    let nextOppTeam = setActive(oppTeam, oppTeam.activeIdx, drained.opponent);
 
-        // 사망 자동 출전
-        nextSelfTeam = advanceIfDead(nextSelfTeam, actor === "player" ? "내" : "적");
-        nextOppTeam = advanceIfDead(nextOppTeam, actor === "player" ? "적" : "내");
+    nextSelfTeam = advanceIfDead(nextSelfTeam, actor === "player" ? "내" : "적");
+    nextOppTeam = advanceIfDead(nextOppTeam, actor === "player" ? "적" : "내");
 
-        // 벤치 MP +5 (양쪽)
-        nextSelfTeam = tickBenchMp(nextSelfTeam);
-        nextOppTeam = tickBenchMp(nextOppTeam);
+    nextSelfTeam = tickBenchMp(nextSelfTeam);
+    nextOppTeam = tickBenchMp(nextOppTeam);
 
-        if (actor === "player") {
-          // 플레이어가 행동 → 다음 적 턴
-          setTurn("enemy");
-          // 결과 적팀 반영
-          // selfTeam=P, oppTeam=E
-          // P를 외부 setPTeam 반환으로
-          // E를 이 inner setETeam 반환으로
-          // (P 갱신은 아래 return)
-          // turnNumber는 한 라운드(=양측 모두 행동)가 끝날 때 증가시키는 대신
-          // 단순화를 위해 매 행동마다 +1.
-          setTurnNumber((n) => n + 1);
-          // 외부 P 갱신
-          queueMicrotask(() => setPTeam(nextSelfTeam));
-          return nextOppTeam;
-        } else {
-          // 적이 행동 → 다음 플레이어 턴
-          setTurn("player");
-          setTurnNumber((n) => n + 1);
-          queueMicrotask(() => setPTeam(nextOppTeam));
-          return nextSelfTeam;
-        }
-      });
-      return curP;
-    });
+    const finalP = actor === "player" ? nextSelfTeam : nextOppTeam;
+    const finalE = actor === "player" ? nextOppTeam : nextSelfTeam;
+
+    commit(finalP, finalE);
+
+    // 이미 한쪽이 전멸했다면 턴 진행 멈춤 (winner effect가 처리)
+    if (isTeamWiped(finalP) || isTeamWiped(finalE)) return;
+
+    setTurn(actor === "player" ? "enemy" : "player");
+    setTurnNumber((n) => n + 1);
   };
 
   // ----- 플레이어 액션 -----
   const handleAttack = () => {
     if (winner || turn !== "player" || pickingSwap) return;
-    setPTeam((curP) => {
-      setETeam((curE) => {
-        const a = curP.members[curP.activeIdx];
-        const d = curE.members[curE.activeIdx];
-        if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return curE;
-        const r = performAttack(a, d, { turnNumber });
-        pushLogs(r.logs);
-        const nextP = setActive(curP, curP.activeIdx, r.attacker);
-        const nextE = setActive(curE, curE.activeIdx, r.defender);
-        finishTurn("player", { actorTeam: nextP, opponentTeam: nextE });
-        return nextE;
-      });
-      return curP;
-    });
+    const curP = pTeamRef.current;
+    const curE = eTeamRef.current;
+    const a = curP.members[curP.activeIdx];
+    const d = curE.members[curE.activeIdx];
+    if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
+    const r = performAttack(a, d, { turnNumber });
+    pushLogs(r.logs);
+    const nextP = setActive(curP, curP.activeIdx, r.attacker);
+    const nextE = setActive(curE, curE.activeIdx, r.defender);
+    finishTurn("player", nextP, nextE);
   };
 
   const handlePass = () => {
@@ -401,20 +389,16 @@ export function TagBattleEngine({
 
   const handleSwapTo = (idx: number) => {
     if (winner || turn !== "player") return;
+    const curP = pTeamRef.current;
+    if (idx === curP.activeIdx) return;
+    const target = curP.members[idx];
+    if (!target || target.engineHp <= 0) return;
+    pushLogs([
+      { text: `[교체] ${curP.members[curP.activeIdx].base.name} → ${target.base.name}`, tone: "system" },
+    ]);
     setPickingSwap(false);
-    setPTeam((curP) => {
-      if (idx === curP.activeIdx) return curP;
-      const target = curP.members[idx];
-      if (!target || target.engineHp <= 0) return curP;
-      pushLogs([
-        { text: `[교체] ${curP.members[curP.activeIdx].base.name} → ${target.base.name}`, tone: "system" },
-      ]);
-      const next: Team = { ...curP, activeIdx: idx };
-      // 교체는 턴 소모 → 종료 처리
-      // 직접 finishTurn 호출은 setPTeam 내부라 race를 피하기 위해 microtask
-      queueMicrotask(() => finishTurn("player"));
-      return next;
-    });
+    const swapped: Team = { ...curP, activeIdx: idx };
+    finishTurn("player", swapped, eTeamRef.current);
   };
 
   // ----- 적 턴 -----
@@ -425,29 +409,31 @@ export function TagBattleEngine({
     enemyTurnRanRef.current = turnNumber;
 
     // 적 턴 시작 훅 (Bella 등)
-    setETeam((t) => {
+    {
+      const t = eTeamRef.current;
       const cur = t.members[t.activeIdx];
-      if (!cur || cur.engineHp <= 0) return t;
-      const { next, logs: l } = onTurnStart(cur);
-      pushLogs(l);
-      return setActive(t, t.activeIdx, next);
-    });
+      if (cur && cur.engineHp > 0) {
+        const { next, logs: l } = onTurnStart(cur);
+        if (l.length) pushLogs(l);
+        if (next !== cur) commit(pTeamRef.current, setActive(t, t.activeIdx, next));
+      }
+    }
 
     const attackTimer = setTimeout(() => {
-      setETeam((curE) => {
-        setPTeam((curP) => {
-          const a = curE.members[curE.activeIdx];
-          const d = curP.members[curP.activeIdx];
-          if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return curP;
-          const r = performAttack(a, d, { turnNumber });
-          pushLogs(r.logs);
-          const nextE = setActive(curE, curE.activeIdx, r.attacker);
-          const nextP = setActive(curP, curP.activeIdx, r.defender);
-          finishTurn("enemy", { actorTeam: nextE, opponentTeam: nextP });
-          return nextP;
-        });
-        return curE;
-      });
+      const curP = pTeamRef.current;
+      const curE = eTeamRef.current;
+      const a = curE.members[curE.activeIdx];
+      const d = curP.members[curP.activeIdx];
+      if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) {
+        // 둘 중 하나가 이미 KO면 턴만 넘김
+        finishTurn("enemy");
+        return;
+      }
+      const r = performAttack(a, d, { turnNumber });
+      pushLogs(r.logs);
+      const nextE = setActive(curE, curE.activeIdx, r.attacker);
+      const nextP = setActive(curP, curP.activeIdx, r.defender);
+      finishTurn("enemy", nextP, nextE);
     }, 600);
     return () => clearTimeout(attackTimer);
   }, [turn, turnNumber, winner]);
