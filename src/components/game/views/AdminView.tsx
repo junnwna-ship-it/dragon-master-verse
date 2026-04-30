@@ -148,6 +148,7 @@ export function AdminView() {
 
   const { user } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { settings, setFlag } = useAppSettings();
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [justUpdatedId, setJustUpdatedId] = useState<number | null>(null);
