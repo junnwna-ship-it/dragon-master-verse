@@ -713,13 +713,9 @@ jobs:
                 <text x='\${x}' y='\${pad.t + chartH + 18}' text-anchor='middle' font-size='11' fill='#57606a'>\${v}s</text>\`;
             }).join('');
 
-            const svg = \`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 \${W} \${H}' width='\${W}' height='\${H}' role='img' aria-label='Average lint time by cache level'>
-            // Apply render scale to width/height while keeping viewBox at logical units —
-            // crisper rendering on HiDPI and in raster conversion without changing layout.
-            const svgScaled = svg.replace(
-              /width='\\\${W}' height='\\\${H}'/,
-              \`width='\${W * SCALE}' height='\${H * SCALE}'\`
-            );
+            // Apply render scale to width/height while keeping viewBox at logical units
+            // — crisper rendering on HiDPI and in raster conversion without changing layout.
+            const svg = \`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 \${W} \${H}' width='\${W * SCALE}' height='\${H * SCALE}' role='img' aria-label='Average lint time by cache level'>
               <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }</style>
               <rect width='100%' height='100%' fill='#ffffff'/>
               <text x='\${W/2}' y='20' text-anchor='middle' font-size='14' font-weight='700' fill='#24292f'>Average lint time by cache level</text>
@@ -729,7 +725,7 @@ jobs:
               <line x1='\${pad.l}' y1='\${pad.t + chartH}' x2='\${pad.l + chartW}' y2='\${pad.t + chartH}' stroke='#24292f' stroke-width='1'/>
             </svg>\`;
             fs.writeFileSync('reports/lint-time-by-cache.svg', svg);
-            console.log('Wrote reports/lint-time-by-cache.svg');
+            console.log('Wrote reports/lint-time-by-cache.svg (scale=' + SCALE + 'x)');
           " || echo "Chart generation skipped (node error)"
 
           # Inline the SVG directly into the summary as a base64 data URI so it
