@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Coins, Flame } from "lucide-react";
 import { useGameStore } from "@/store/dragons";
 import { BottomNav } from "@/components/game/BottomNav";
@@ -8,6 +9,10 @@ import { PvpView } from "@/components/game/views/PvpView";
 import { VaultView } from "@/components/game/views/VaultView";
 import { AdminView } from "@/components/game/views/AdminView";
 import { DebugView } from "@/components/game/views/DebugView";
+import { Toaster } from "@/components/ui/sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthDialog } from "@/components/game/auth/AuthDialog";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,6 +27,27 @@ export const Route = createFileRoute("/")({
 function Index() {
   const view = useGameStore((s) => s.view);
   const gold = useGameStore((s) => s.gold);
+  const fetchDragons = useGameStore((s) => s.fetchDragons);
+  const loadingDragons = useGameStore((s) => s.loadingDragons);
+  const { user, loading: authLoading } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
+
+  // Initial cloud sync — re-fetch whenever the signed-in user changes so a
+  // fresh login pulls the latest dragons list under the user's session.
+  useEffect(() => {
+    if (authLoading) return;
+    if (user) {
+      fetchDragons();
+    }
+  }, [user, authLoading, fetchDragons]);
+
+  // Force unauthenticated users to sign in — RLS denies all dragon reads
+  // without a session, so we gate the entire app on auth.
+  useEffect(() => {
+    if (!authLoading && !user) setShowAuth(true);
+    if (user) setShowAuth(false);
+  }, [user, authLoading]);
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-md flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
@@ -40,6 +66,11 @@ function Index() {
           </div>
         </header>
         <main className="flex-1 px-4 py-5">
+          {loadingDragons && user && (
+            <div className="mb-3 rounded-lg border border-slate-700/60 bg-slate-800/40 px-3 py-2 text-center text-xs text-slate-400">
+              드래곤 목록 동기화 중…
+            </div>
+          )}
           {view === "lobby" && <LobbyView />}
           {view === "vault" && <VaultView />}
           {view === "story" && <StoryView />}
@@ -49,6 +80,8 @@ function Index() {
         </main>
         <BottomNav />
       </div>
+      <Toaster />
+      {showAuth && <AuthDialog onClose={() => setShowAuth(false)} />}
     </div>
   );
 }
