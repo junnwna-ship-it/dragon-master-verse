@@ -11,8 +11,10 @@ export function useProfile() {
   const [gold, setGold] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const userId = user?.id ?? null;
+
   const fetchProfile = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setGold(null);
       setLoading(false);
       return;
@@ -20,7 +22,7 @@ export function useProfile() {
     const { data, error } = await supabase
       .from("profiles")
       .select("gold")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .maybeSingle();
     if (error) {
       console.error("[profile] fetch failed:", error);
@@ -29,7 +31,7 @@ export function useProfile() {
     }
     setGold(data?.gold ?? 0);
     setLoading(false);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     fetchProfile();
@@ -37,18 +39,18 @@ export function useProfile() {
 
   // Realtime — gold updates from RPCs (battle reward, shop) reflect instantly.
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     // Unique channel name per mount avoids "cannot add postgres_changes
     // callbacks ... after subscribe()" when multiple components consume
     // useProfile() at the same time.
-    const channelName = `profile-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
+    const channelName = `profile-${userId}-${Math.random().toString(36).slice(2, 8)}-${Date.now()}`;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       channel = supabase
         .channel(channelName)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` },
+          { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${userId}` },
           (payload) => {
             const next = (payload.new as { gold?: number } | null)?.gold;
             if (typeof next === "number") setGold(next);
@@ -66,7 +68,7 @@ export function useProfile() {
         console.error("[profile] removeChannel failed:", e);
       }
     };
-  }, [user]);
+  }, [userId]);
 
   return { gold: gold ?? 0, loading, refetch: fetchProfile };
 }
