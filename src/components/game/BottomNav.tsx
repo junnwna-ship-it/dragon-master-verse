@@ -1,4 +1,4 @@
-import { Home, ScrollText, Swords, Library, Wrench } from "lucide-react";
+import { Home, ScrollText, Swords, Library, Wrench, Bug } from "lucide-react";
 import { useGameStore, type View } from "@/store/dragons";
 
 const tabs: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -12,6 +12,7 @@ export function BottomNav() {
   const view = useGameStore((s) => s.view);
   const setView = useGameStore((s) => s.setView);
   const adminActive = view === "admin";
+  const debugActive = view === "debug";
   return (
     <nav className="sticky bottom-0 z-20 border-t border-slate-700/60 bg-slate-900/95 backdrop-blur">
       <ul className="mx-auto flex max-w-md items-stretch justify-around px-2 py-2">
@@ -44,6 +45,19 @@ export function BottomNav() {
             }`}
           >
             <Wrench className="h-3.5 w-3.5" />
+          </button>
+        </li>
+        <li className="flex w-8 items-stretch">
+          <button
+            type="button"
+            onClick={() => setView("debug")}
+            aria-label="Debug"
+            title="Debug"
+            className={`flex w-full items-center justify-center rounded-lg py-2 transition-colors ${
+              debugActive ? "text-amber-400" : "text-slate-600 hover:text-slate-400"
+            }`}
+          >
+            <Bug className="h-3.5 w-3.5" />
           </button>
         </li>
       </ul>

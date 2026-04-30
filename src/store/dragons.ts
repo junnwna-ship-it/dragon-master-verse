@@ -35,7 +35,7 @@ export interface Dragon {
   imageUrl?: string;
 }
 
-export type View = "lobby" | "story" | "pvp" | "vault" | "admin";
+export type View = "lobby" | "story" | "pvp" | "vault" | "admin" | "debug";
 
 export type BattleOutcome = "win" | "lose" | "draw";
 
