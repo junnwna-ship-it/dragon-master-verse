@@ -304,6 +304,10 @@ jobs:
           EXTRACT_MS_VAL=${EXTRACT_MS:-0}
           TOTAL_MS=$((LINT_MS_VAL + HTML_MS_VAL + EXTRACT_MS_VAL))
 
+          # Grep-friendly markers consumed by the cache-vs-time history step below.
+          echo "METRIC lint_total_ms=$TOTAL_MS"
+          echo "METRIC lint_only_ms=$LINT_MS_VAL"
+
           {
             echo ""
             echo "## ESLint timing"
@@ -410,6 +414,126 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "Cache hit-rate: ${HIT_RATE}% ($HIT/$TOTAL)"
+
+      - name: Compare lint time by cache level (history)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_FILE: ci.yml
+          JOB_NAME: Lint
+          CURRENT_LINT_MS: ${{ steps.eslint.outputs.duration_ms }}
+        run: |
+          set -e
+          BRANCH="${{ github.ref_name }}"
+          RUNS=$(gh api -X GET \
+            "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
+            -f branch="$BRANCH" -f status=completed -f per_page=20 \
+            --jq '.workflow_runs[].id')
+
+          # Buckets: tab-separated lists of "ms" values per level
+          : > /tmp/L0.txt; : > /tmp/L1.txt; : > /tmp/L2.txt; : > /tmp/L3.txt; : > /tmp/MISS.txt
+
+          for RUN_ID in $RUNS; do
+            if [ "$RUN_ID" = "${{ github.run_id }}" ]; then continue; fi
+            JOB_ID=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs" \
+              --jq ".jobs[] | select(.name==\"$JOB_NAME\") | .id" | head -n1)
+            [ -z "$JOB_ID" ] && continue
+            LOG=$(gh api "repos/${{ github.repository }}/actions/jobs/$JOB_ID/logs" 2>/dev/null || echo "")
+            [ -z "$LOG" ] && continue
+
+            # Pull the lint duration marker
+            MS=$(echo "$LOG" | grep -oE 'METRIC lint_only_ms=[0-9]+' | head -n1 | cut -d= -f2)
+            [ -z "$MS" ] && continue
+
+            # Determine cache level from the cache status line
+            if echo "$LOG" | grep -q "ESLint cache: ✅ Exact hit"; then
+              echo "$MS" >> /tmp/L0.txt
+            elif echo "$LOG" | grep -q "L1 — same sources"; then
+              echo "$MS" >> /tmp/L1.txt
+            elif echo "$LOG" | grep -q "L2 — same config"; then
+              echo "$MS" >> /tmp/L2.txt
+            elif echo "$LOG" | grep -q "L3 — same ESLint version"; then
+              echo "$MS" >> /tmp/L3.txt
+            elif echo "$LOG" | grep -q "ESLint cache: ❌ Miss"; then
+              echo "$MS" >> /tmp/MISS.txt
+            fi
+          done
+
+          # Helper: avg + min + max + count for a bucket file
+          stats() {
+            local f="$1"
+            if [ ! -s "$f" ]; then echo "0|—|—|—"; return; fi
+            awk '
+              { sum += $1; n++; if (NR == 1 || $1 < min) min = $1; if ($1 > max) max = $1 }
+              END {
+                printf "%d|%.2fs|%.2fs|%.2fs", n, (sum/n)/1000, min/1000, max/1000
+              }
+            ' "$f"
+          }
+
+          L0=$(stats /tmp/L0.txt)
+          L1=$(stats /tmp/L1.txt)
+          L2=$(stats /tmp/L2.txt)
+          L3=$(stats /tmp/L3.txt)
+          MS=$(stats /tmp/MISS.txt)
+
+          # Baseline = miss avg (or L3 if no miss data)
+          BASELINE_MS=$(awk -F'|' '{print $2}' <<<"$MS" | sed 's/s//')
+          if [ -z "$BASELINE_MS" ] || [ "$BASELINE_MS" = "—" ]; then
+            BASELINE_MS=$(awk -F'|' '{print $2}' <<<"$L3" | sed 's/s//')
+          fi
+
+          # Speedup vs baseline
+          speedup() {
+            local avg_str="$1"
+            local avg=$(echo "$avg_str" | sed 's/s//')
+            if [ -z "$avg" ] || [ "$avg" = "—" ] || [ -z "$BASELINE_MS" ] || [ "$BASELINE_MS" = "—" ] || [ "$avg" = "0.00" ]; then
+              echo "—"; return
+            fi
+            awk -v b="$BASELINE_MS" -v a="$avg" 'BEGIN { if (a == 0) print "—"; else printf "%.2fx", b/a }'
+          }
+
+          row() {
+            local label="$1" data="$2"
+            local n=$(echo "$data" | cut -d'|' -f1)
+            local avg=$(echo "$data" | cut -d'|' -f2)
+            local mn=$(echo "$data" | cut -d'|' -f3)
+            local mx=$(echo "$data" | cut -d'|' -f4)
+            local sp=$(speedup "$avg")
+            echo "| $label | $n | $avg | $mn | $mx | $sp |"
+          }
+
+          # Annotate the current run's bucket
+          CURRENT_LEVEL="—"
+          CURRENT_LINE=""
+          CMS=${CURRENT_LINT_MS:-0}
+          CSEC=$(awk "BEGIN { printf \"%.2fs\", $CMS / 1000 }")
+          if [ "${{ steps.eslint-cache.outputs.cache-hit }}" = "true" ]; then
+            CURRENT_LEVEL="L0 (exact hit)"
+          elif [ -n "${{ steps.eslint-cache.outputs.cache-matched-key }}" ]; then
+            # Reuse the same level detection logic via the status line we already printed
+            if grep -q "L1 — same sources" <<<"${{ steps.eslint-cache.outputs.cache-matched-key }}"; then CURRENT_LEVEL="L1"; fi
+          fi
+
+          {
+            echo ""
+            echo "## Lint time vs cache level (last 20 runs on \`$BRANCH\`)"
+            echo ""
+            echo "Baseline (no cache) avg = **${BASELINE_MS:-—}s**"
+            echo ""
+            echo "| Cache level | Runs | Avg | Min | Max | Speedup vs miss |"
+            echo "| --- | ---: | ---: | ---: | ---: | ---: |"
+            row "✅ L0 — exact hit" "$L0"
+            row "♻️ L1 — same sources" "$L1"
+            row "♻️ L2 — same config" "$L2"
+            row "♻️ L3 — version only" "$L3"
+            row "❌ Miss" "$MS"
+            echo ""
+            echo "**This run:** lint = \`$CSEC\` (level: \`$CURRENT_LEVEL\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Lint-time-by-cache-level summary written."
 
       - name: Fail if ESLint reported errors
         if: steps.eslint.outcome == 'failure'
