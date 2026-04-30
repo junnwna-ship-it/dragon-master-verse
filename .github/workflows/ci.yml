@@ -376,22 +376,56 @@ jobs:
           CANDIDATE_RUNS=$(gh api -X GET \
             "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
             -f branch="$BRANCH" -f status=completed -f per_page=50 \
-            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)"')
+            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)\t\(.created_at)\t\(.event)\t\(.conclusion // "?")\t\(.html_url)"')
 
           # Filter: keep only runs whose workflow file content matches the current SHA.
           MATCHED_RUNS=""
+          MATCHED_JSONL=""
           KEPT=0
-          while IFS=$'\t' read -r RID HEAD_SHA; do
+          while IFS=$'\t' read -r RID HEAD_SHA CREATED EVENT CONCLUSION URL; do
             [ -z "$RID" ] && continue
             [ "$KEPT" -ge 20 ] && break
             WF_SHA_AT_RUN=$(git rev-parse "$HEAD_SHA:${WORKFLOW_PATH}" 2>/dev/null || echo "")
             if [ "$WF_SHA_AT_RUN" = "$CURRENT_WF_SHA" ]; then
               MATCHED_RUNS="$MATCHED_RUNS $RID"
+              MATCHED_JSONL="$MATCHED_JSONL$(jq -nc \
+                --arg id "$RID" --arg head_sha "$HEAD_SHA" \
+                --arg created_at "$CREATED" --arg event "$EVENT" \
+                --arg conclusion "$CONCLUSION" --arg url "$URL" \
+                --arg workflow_file_sha "$WF_SHA_AT_RUN" \
+                '{id:$id, head_sha:$head_sha, created_at:$created_at, event:$event, conclusion:$conclusion, workflow_file_sha:$workflow_file_sha, html_url:$url}')\n"
               KEPT=$((KEPT + 1))
             fi
           done <<< "$CANDIDATE_RUNS"
           RUNS="$MATCHED_RUNS"
           echo "Kept $KEPT runs matching current workflow version (out of up to 50 candidates)."
+
+          # Persist debug metadata + matched runs for the artifact upload.
+          mkdir -p reports
+          MATCHED_JSON=$(printf '%s' "$MATCHED_JSONL" | jq -s '.' 2>/dev/null || echo '[]')
+          jq -n \
+            --arg current_workflow_file_sha "$CURRENT_WF_SHA" \
+            --arg workflow_path "$WORKFLOW_PATH" \
+            --arg current_run_id "${{ github.run_id }}" \
+            --arg current_head_sha "${{ github.sha }}" \
+            --arg branch "$BRANCH" \
+            --arg generated_at "$(date -u +%FT%TZ)" \
+            --argjson matched "$MATCHED_JSON" \
+            --argjson candidates_scanned 50 \
+            --argjson matched_count "$KEPT" \
+            '{
+              source: "compute-cache-hit-rate",
+              branch: $branch,
+              workflow_path: $workflow_path,
+              current_workflow_file_sha: $current_workflow_file_sha,
+              current_run_id: $current_run_id,
+              current_head_sha: $current_head_sha,
+              generated_at: $generated_at,
+              candidates_scanned: $candidates_scanned,
+              matched_count: $matched_count,
+              matched_runs: $matched
+            }' > reports/cache-history-debug.json
+          echo "Wrote reports/cache-history-debug.json (matched=$KEPT)"
 
           TOTAL=0; EXACT=0; PARTIAL=0; MISS=0
           for RUN_ID in $RUNS; do
@@ -467,20 +501,49 @@ jobs:
           CANDIDATE_RUNS=$(gh api -X GET \
             "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
             -f branch="$BRANCH" -f status=completed -f per_page=50 \
-            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)"')
+            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)\t\(.created_at)\t\(.event)\t\(.html_url)"')
 
           RUNS=""
+          MATCHED_JSONL=""
           KEPT=0
-          while IFS=$'\t' read -r RID HEAD_SHA; do
+          while IFS=$'\t' read -r RID HEAD_SHA CREATED EVENT URL; do
             [ -z "$RID" ] && continue
             [ "$KEPT" -ge 20 ] && break
             WF_SHA_AT_RUN=$(git rev-parse "$HEAD_SHA:${WORKFLOW_PATH}" 2>/dev/null || echo "")
             if [ "$WF_SHA_AT_RUN" = "$CURRENT_WF_SHA" ]; then
               RUNS="$RUNS $RID"
+              MATCHED_JSONL="$MATCHED_JSONL$(jq -nc \
+                --arg id "$RID" --arg head_sha "$HEAD_SHA" \
+                --arg created_at "$CREATED" --arg event "$EVENT" \
+                --arg url "$URL" --arg workflow_file_sha "$WF_SHA_AT_RUN" \
+                '{id:$id, head_sha:$head_sha, created_at:$created_at, event:$event, workflow_file_sha:$workflow_file_sha, html_url:$url}')\n"
               KEPT=$((KEPT + 1))
             fi
           done <<< "$CANDIDATE_RUNS"
           echo "Comparing $KEPT runs matching workflow ${CURRENT_WF_SHA:0:7}."
+
+          mkdir -p reports
+          MATCHED_JSON=$(printf '%s' "$MATCHED_JSONL" | jq -s '.' 2>/dev/null || echo '[]')
+          jq -n \
+            --arg current_workflow_file_sha "$CURRENT_WF_SHA" \
+            --arg workflow_path "$WORKFLOW_PATH" \
+            --arg current_run_id "${{ github.run_id }}" \
+            --arg branch "$BRANCH" \
+            --arg generated_at "$(date -u +%FT%TZ)" \
+            --argjson matched "$MATCHED_JSON" \
+            --argjson matched_count "$KEPT" \
+            '{
+              source: "compare-lint-time-by-cache",
+              branch: $branch,
+              workflow_path: $workflow_path,
+              current_workflow_file_sha: $current_workflow_file_sha,
+              current_run_id: $current_run_id,
+              generated_at: $generated_at,
+              candidates_scanned: 50,
+              matched_count: $matched_count,
+              matched_runs: $matched
+            }' > reports/lint-time-history-debug.json
+          echo "Wrote reports/lint-time-history-debug.json (matched=$KEPT)"
 
           # Buckets: tab-separated lists of "ms" values per level
           : > /tmp/L0.txt; : > /tmp/L1.txt; : > /tmp/L2.txt; : > /tmp/L3.txt; : > /tmp/MISS.txt
@@ -696,6 +759,8 @@ jobs:
             reports/eslint-rule-timing.txt
             reports/lint-time-by-cache.svg
             reports/lint-time-by-cache.png
+            reports/cache-history-debug.json
+            reports/lint-time-history-debug.json
           retention-days: 14
           if-no-files-found: warn
 
