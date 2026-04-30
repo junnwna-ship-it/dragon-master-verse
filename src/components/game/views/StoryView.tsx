@@ -148,6 +148,17 @@ export function StoryView() {
   // Helper: which node id is the player currently allowed to enter?
   const activeNodeId = run?.currentNodeId ?? FIRST_NODE_ID;
 
+  // Trigger a brief shake on the newly-active node whenever activeNodeId changes
+  // (e.g. right after onResolved auto-advances the run). Bumping shakeKey
+  // re-runs the CSS animation reliably.
+  useEffect(() => {
+    const prevId = prevActiveIdRef.current;
+    if (prevId !== null && prevId !== activeNodeId) {
+      setShakeKey((k) => k + 1);
+    }
+    prevActiveIdRef.current = activeNodeId;
+  }, [activeNodeId]);
+
   /**
    * Single state-update pipeline used by BOTH battle resolution and event nodes.
    * Always uses the functional updater form so the preserved HP/MP merges into
