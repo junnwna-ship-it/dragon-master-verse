@@ -9,9 +9,11 @@ import { PvpView } from "@/components/game/views/PvpView";
 import { VaultView } from "@/components/game/views/VaultView";
 import { AdminView } from "@/components/game/views/AdminView";
 import { DebugView } from "@/components/game/views/DebugView";
+import { ShopView } from "@/components/game/views/ShopView";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/game/auth/AuthDialog";
+import { useProfile } from "@/hooks/useProfile";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -25,11 +27,11 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const view = useGameStore((s) => s.view);
-  const gold = useGameStore((s) => s.gold);
   const fetchDragons = useGameStore((s) => s.fetchDragons);
   const loadingDragons = useGameStore((s) => s.loadingDragons);
   const { user, loading: authLoading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
+  const { gold } = useProfile();
 
   // Initial cloud sync — re-fetch whenever the signed-in user changes so a
   // fresh login pulls the latest dragons list under the user's session.
@@ -74,6 +76,7 @@ function Index() {
           {view === "vault" && <VaultView />}
           {view === "story" && <StoryView />}
           {view === "pvp" && <PvpView />}
+          {view === "shop" && <ShopView />}
           {view === "admin" && <AdminView />}
           {view === "debug" && <DebugView />}
         </main>
