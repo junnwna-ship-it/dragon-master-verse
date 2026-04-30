@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { Element } from "@/store/dragons";
+import { Leaf } from "lucide-react";
 
 /** VFX 이펙트 종류 */
 export type EffectType =
@@ -181,6 +182,7 @@ export interface StatusFlags {
   burning?: boolean;
   feared?: boolean;
   stunned?: boolean;
+  frozen?: boolean;
 }
 
 /**
@@ -197,6 +199,7 @@ export function StatusOverlay({ flags }: { flags: StatusFlags }) {
       {flags.burning && <BurnStatus />}
       {flags.feared && <FearStatus />}
       {flags.stunned && <StunStatus />}
+      {flags.frozen && <FreezeStatus />}
     </div>
   );
 }
@@ -445,5 +448,193 @@ function DebuffFx() {
       animate={{ opacity: [0, 0.85, 0.5, 0], y: ["−20%", "0%", "0%", "0%"] }}
       transition={{ duration: 0.6, ease: "easeIn" }}
     />
+  );
+}
+
+function FreezeStatus() {
+  // 옅은 하늘색 빙결 — 엷은 푸른 필터 + 결정 모서리 글로우
+  return (
+    <>
+      <div className="absolute inset-0 bg-sky-200/25 mix-blend-screen" />
+      <div className="absolute inset-0 ring-2 ring-inset ring-sky-300/60 shadow-[inset_0_0_24px_rgba(125,211,252,0.55)]" />
+      {[0, 1, 2, 3].map((i) => (
+        <motion.div
+          key={i}
+          className="absolute h-1.5 w-1.5 rounded-full bg-sky-100 shadow-[0_0_8px_rgba(186,230,253,0.95)]"
+          style={{ left: `${20 + i * 20}%`, top: `${30 + (i % 2) * 30}%` }}
+          animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.2, 0.8] }}
+          transition={{ repeat: Infinity, duration: 2 + i * 0.3, ease: "easeInOut" }}
+        />
+      ))}
+    </>
+  );
+}
+
+/* ════════════════ 속성별 특수 공격 풀스크린 시네마틱 ════════════════ */
+
+/** 특수 공격 시 풀스크린에 깔리는 속성별 시네마틱 오버레이. */
+export function SpecialEffect({ element }: { element: Element | string }) {
+  const el = (element ?? "").toString();
+  switch (el) {
+    case "Fire":     return <FireSpecial />;
+    case "Water":    return <WaterSpecial />;
+    case "Wood":     return <WoodSpecial />;
+    case "Earth":    return <SoilSpecial />;
+    case "Light":
+    case "Metal":    return <MetalSpecial />;
+    default:         return <DefaultSpecial />;
+  }
+}
+
+/** Fire — 50개 불꽃 파티클이 화면 하단에서 위로 솟구침. */
+function FireSpecial() {
+  const parts = Array.from({ length: 50 });
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {parts.map((_, i) => {
+        const left = Math.random() * 100;
+        const size = 6 + Math.random() * 12;
+        const delay = Math.random() * 0.2;
+        const dur = 0.5 + Math.random() * 0.4;
+        return (
+          <motion.div
+            key={i}
+            className="absolute bottom-0 rounded-full bg-gradient-to-t from-red-600 to-orange-400 shadow-[0_0_14px_rgba(251,146,60,0.95)]"
+            style={{ left: `${left}%`, width: size, height: size * 1.4 }}
+            initial={{ y: 0, opacity: 0, scale: 0.6 }}
+            animate={{ y: -window.innerHeight * 0.9, opacity: [0, 1, 0], scale: [0.6, 1.2, 0.4] }}
+            transition={{ duration: dur, delay, ease: "easeOut" }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/** Water — 거대한 파란 원형 Ripple 3겹 연속 확산. */
+function WaterSpecial() {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+      {[0, 0.15, 0.3].map((delay, i) => (
+        <motion.div
+          key={i}
+          className="absolute h-40 w-40 rounded-full border-4 border-blue-400 shadow-[0_0_30px_rgba(96,165,250,0.7)]"
+          initial={{ scale: 0, opacity: 1 }}
+          animate={{ scale: 8, opacity: 0 }}
+          transition={{ duration: 0.5, delay, ease: "easeOut" }}
+        />
+      ))}
+      <div className="absolute inset-0 bg-gradient-radial from-blue-500/25 via-sky-400/10 to-transparent" />
+    </div>
+  );
+}
+
+/** Wood — 잎사귀가 적 카드(상단)를 중심으로 회오리치며 모여듦. */
+function WoodSpecial() {
+  const leaves = Array.from({ length: 24 });
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {leaves.map((_, i) => {
+        const angle = (i / leaves.length) * Math.PI * 2;
+        const radius = 220;
+        const startX = Math.cos(angle) * radius;
+        const startY = Math.sin(angle) * radius;
+        return (
+          <motion.div
+            key={i}
+            className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 text-green-600"
+            initial={{ x: startX, y: startY, opacity: 0, rotate: 0, scale: 1 }}
+            animate={{
+              x: [startX, startX * 0.4, 0],
+              y: [startY, startY * 0.4, 0],
+              opacity: [0, 1, 0],
+              rotate: [0, 360, 720],
+              scale: [1, 0.8, 0.4],
+            }}
+            transition={{ duration: 0.7, delay: i * 0.015, ease: "easeIn" }}
+          >
+            <Leaf className="h-5 w-5 drop-shadow-[0_0_6px_rgba(34,197,94,0.7)]" />
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Metal — 노란 직선들이 십자(+)로 빠르게 교차. */
+function MetalSpecial() {
+  // 4×3 = 12개 빔 (가로/세로 + 대각선 보강)
+  const beams = [
+    { rot: 0, delay: 0 },
+    { rot: 90, delay: 0.05 },
+    { rot: 0, delay: 0.12 },
+    { rot: 90, delay: 0.17 },
+    { rot: 45, delay: 0.22 },
+    { rot: -45, delay: 0.22 },
+  ];
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+      {beams.map((b, i) => (
+        <motion.div
+          key={i}
+          className="absolute h-2 w-[200%] origin-center rounded-full bg-yellow-200 shadow-[0_0_28px_rgba(254,240,138,1)]"
+          style={{ rotate: b.rot }}
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: [0, 1, 1, 0], opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 0.45, delay: b.delay, ease: "easeOut" }}
+        />
+      ))}
+      <motion.div
+        className="absolute inset-0 bg-gradient-radial from-yellow-100/40 via-amber-200/15 to-transparent"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.8, 0] }}
+        transition={{ duration: 0.5 }}
+      />
+    </div>
+  );
+}
+
+/** Soil/Earth — 화면 미세 흔들림 + 바닥에서 갈색 파편 튀어오름. */
+function SoilSpecial() {
+  const chunks = Array.from({ length: 24 });
+  return (
+    <motion.div
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      animate={{ y: [0, 2, -2, 2, -2, 1, -1, 0] }}
+      transition={{ duration: 0.5, ease: "linear" }}
+    >
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-amber-800/70 via-amber-700/30 to-transparent" />
+      {chunks.map((_, i) => {
+        const left = Math.random() * 100;
+        const size = 6 + Math.random() * 10;
+        const dy = -120 - Math.random() * 180;
+        const dx = (Math.random() - 0.5) * 80;
+        const delay = Math.random() * 0.15;
+        return (
+          <motion.div
+            key={i}
+            className="absolute bottom-0 rounded-md bg-gradient-to-br from-amber-700 to-amber-900 shadow-[0_0_10px_rgba(146,64,14,0.7)]"
+            style={{ left: `${left}%`, width: size, height: size }}
+            initial={{ y: 0, x: 0, opacity: 0, rotate: 0 }}
+            animate={{ y: dy, x: dx, opacity: [0, 1, 0], rotate: 360 }}
+            transition={{ duration: 0.6, delay, ease: "easeOut" }}
+          />
+        );
+      })}
+    </motion.div>
+  );
+}
+
+/** 기본 — 흰색 임팩트 링. */
+function DefaultSpecial() {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+      <motion.div
+        className="absolute h-32 w-32 rounded-full border-4 border-white"
+        initial={{ scale: 0, opacity: 1 }}
+        animate={{ scale: 6, opacity: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      />
+    </div>
   );
 }

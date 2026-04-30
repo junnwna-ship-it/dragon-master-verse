@@ -34,6 +34,7 @@ import {
 import {
   EffectOverlay,
   StatusOverlay,
+  SpecialEffect,
   elementToEffect,
   type ActiveEffect,
   type EffectType,
@@ -464,6 +465,7 @@ export function TagBattleEngine({
   // ===== Cinematic / Screen-shake / Onomatopoeia =====
   const [cinematicSide, setCinematicSide] = useState<"player" | "enemy" | null>(null);
   const [dimming, setDimming] = useState(false);
+  const [specialElement, setSpecialElement] = useState<string | null>(null);
   const [screenShakeKey, setScreenShakeKey] = useState(0);
   interface Onomatopoeia { id: number; text: string; tone: "boom" | "hiss" | "crit"; }
   const [onomats, setOnomats] = useState<Onomatopoeia[]>([]);
@@ -473,14 +475,16 @@ export function TagBattleEngine({
     setOnomats((prev) => [...prev, { id, text, tone }]);
     setTimeout(() => setOnomats((prev) => prev.filter((o) => o.id !== id)), 500);
   };
-  /** 스킬 시네마틱 시퀀스. dim → zoom (공격자) → 0.3초 뒤 풀림. */
-  const playSkillCinematic = (actor: "player" | "enemy") => {
+  /** 스킬 시네마틱 시퀀스. dim → zoom + 속성 풀스크린 VFX → 0.5초 뒤 풀림. */
+  const playSkillCinematic = (actor: "player" | "enemy", element?: string) => {
     setDimming(true);
     setCinematicSide(actor);
+    if (element) setSpecialElement(element);
     setTimeout(() => {
       setDimming(false);
       setCinematicSide(null);
-    }, 350);
+      setSpecialElement(null);
+    }, 500);
   };
   /** 큰 데미지 임팩트: 화면 전체 흔들림 + 의성어. */
   const playBigImpact = (target: "player" | "enemy", word = "콰광!") => {
@@ -695,8 +699,8 @@ export function TagBattleEngine({
     const d = curE.members[curE.activeIdx];
     if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
     if (a.mp < a.maxMp * MP_SKILL_THRESHOLD_PCT) return;
-    // ── 시네마틱: dim + zoom (공격자) ──
-    playSkillCinematic("player");
+    // ── 시네마틱: dim + zoom + 속성별 풀스크린 VFX ──
+    playSkillCinematic("player", a.base.element);
     const r = performAttack(a, d, { turnNumber, skill: true });
     pushLogs(r.logs);
     const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
@@ -783,6 +787,14 @@ export function TagBattleEngine({
       animate={screenShakeKey > 0 ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 2, -2, 0, 0, 0] } : { x: 0, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      {/* Color Isolation — 시네마틱 동안 배경 채도를 0으로 (공격자 카드 + SpecialEffect만 컬러) */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-20"
+        animate={{ backdropFilter: specialElement ? "grayscale(1) contrast(1.1)" : "grayscale(0)" }}
+        transition={{ duration: 0.2 }}
+        style={{ backdropFilter: specialElement ? "grayscale(1) contrast(1.1)" : "none" }}
+      />
+
       {/* 스킬 시전 중 화면 디밍 — 공격자만 도드라지게 */}
       <AnimatePresence>
         {dimming && (
@@ -793,6 +805,22 @@ export function TagBattleEngine({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* 속성별 풀스크린 VFX (시네마틱 동안만) */}
+      <AnimatePresence>
+        {specialElement && (
+          <motion.div
+            key={specialElement}
+            className="pointer-events-none absolute inset-0 z-40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <SpecialEffect element={specialElement} />
+          </motion.div>
         )}
       </AnimatePresence>
 
