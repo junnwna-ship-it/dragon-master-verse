@@ -183,11 +183,13 @@ export function StoryView() {
         initialPlayerHp={run.playerHp}
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
-          setBattleResult({
-            outcome,
-            nodeTitle: activeBattleNode.title,
-            enemyName: activeBattleNode.enemyName,
-          });
+          if (bannerDuration !== "off") {
+            setBattleResult({
+              outcome,
+              nodeTitle: activeBattleNode.title,
+              enemyName: activeBattleNode.enemyName,
+            });
+          }
           if (outcome === "lose") {
             setDefeatStats({ hp: finalState.playerHp, mp: finalState.playerMp });
             setDefeated(true);
