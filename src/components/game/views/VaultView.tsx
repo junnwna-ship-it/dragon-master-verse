@@ -1,16 +1,8 @@
 import { useMemo } from "react";
-import { Heart, Sword, Shield, Droplet, X, Swords, Plus } from "lucide-react";
+import { X, Swords, Plus } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
-
-const elementTone: Record<string, string> = {
-  Wood: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-  Water: "border-sky-500/40 bg-sky-500/10 text-sky-300",
-  Fire: "border-rose-500/40 bg-rose-500/10 text-rose-300",
-  Earth: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-  Light: "border-yellow-400/40 bg-yellow-400/10 text-yellow-200",
-  Dark: "border-violet-500/40 bg-violet-500/10 text-violet-300",
-};
+import { GlassDragonCard } from "../GlassDragonCard";
 
 /**
  * 내 카드 저장소 — 보유 드래곤 그리드와 출전 덱(0/3) 슬롯.
