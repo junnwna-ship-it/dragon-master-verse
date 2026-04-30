@@ -384,8 +384,14 @@ export function TagBattleEngine({
     nextSelfTeam = advanceIfDead(nextSelfTeam, actor === "player" ? "내" : "적");
     nextOppTeam = advanceIfDead(nextOppTeam, actor === "player" ? "적" : "내");
 
-    nextSelfTeam = tickBenchMp(nextSelfTeam);
-    nextOppTeam = tickBenchMp(nextOppTeam);
+    {
+      const r1 = tickBenchMp(nextSelfTeam);
+      nextSelfTeam = r1.team;
+      pushLogs(r1.logs);
+      const r2 = tickBenchMp(nextOppTeam);
+      nextOppTeam = r2.team;
+      pushLogs(r2.logs);
+    }
 
     const finalP = actor === "player" ? nextSelfTeam : nextOppTeam;
     const finalE = actor === "player" ? nextOppTeam : nextSelfTeam;
