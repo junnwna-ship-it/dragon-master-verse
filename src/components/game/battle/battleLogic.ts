@@ -348,6 +348,23 @@ export function endTurnDrain(
     text: `${self.base.name}의 MP -${turnDrain} (MaxMp 5%, 잔량 ${Math.max(0, self.mp)}/${self.maxMp})`,
     tone: "system",
   });
+
+  // 방어 디버프 자연 감쇠: 턴 종료마다 1스택씩 회복 (양측 모두)
+  const decay = (c: Combatant): Combatant => {
+    if (c.defDebuffStacks <= 0) return c;
+    const prevStacks = c.defDebuffStacks;
+    const prevDef = c.engineDef;
+    const newStacks = prevStacks - 1;
+    const newDef = Math.max(0, Math.round(c.base.def * (1 - newStacks * 0.1)));
+    logs.push({
+      text: `[디버프 감쇠] ${c.base.name} DEF ${prevDef} → ${newDef} (+${newDef - prevDef}) | 스택 ${prevStacks}/3 → ${newStacks}/3`,
+      tone: "system",
+    });
+    return { ...c, defDebuffStacks: newStacks, engineDef: newDef };
+  };
+  self = decay(self);
+  opponent = decay(opponent);
+
   if (self.mp <= 0 && !self.exhausted) {
     self.exhausted = true;
     logs.push({
