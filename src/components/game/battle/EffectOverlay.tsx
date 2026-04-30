@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { Element } from "@/store/dragons";
+import { Leaf } from "lucide-react";
 
 /** VFX 이펙트 종류 */
 export type EffectType =
@@ -197,6 +198,7 @@ export function StatusOverlay({ flags }: { flags: StatusFlags }) {
       {flags.burning && <BurnStatus />}
       {flags.feared && <FearStatus />}
       {flags.stunned && <StunStatus />}
+      {flags.frozen && <FreezeStatus />}
     </div>
   );
 }
