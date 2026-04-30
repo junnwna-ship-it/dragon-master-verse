@@ -90,6 +90,9 @@ export function PvpView() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [opponent, setOpponent] = useState<GhostOpponent | null>(null);
   const [player, setPlayer] = useState<Dragon | null>(null);
+  // Confirm modal shown after the user taps "전투 시작"; cancelling closes the
+  // modal but preserves the selected player so the picker state is intact.
+  const [confirmStart, setConfirmStart] = useState(false);
   const [lastResult, setLastResult] = useState<{
     outcome: "win" | "lose" | "draw";
     delta: number;
