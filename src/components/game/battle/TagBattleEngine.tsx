@@ -425,6 +425,21 @@ export function TagBattleEngine({
     finishTurn("player");
   };
 
+  const handleSkill = () => {
+    if (winner || turn !== "player" || pickingSwap) return;
+    const curP = pTeamRef.current;
+    const curE = eTeamRef.current;
+    const a = curP.members[curP.activeIdx];
+    const d = curE.members[curE.activeIdx];
+    if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
+    if (a.mp < a.maxMp * MP_SKILL_THRESHOLD_PCT) return;
+    const r = performAttack(a, d, { turnNumber, skill: true });
+    pushLogs(r.logs);
+    const nextP = setActive(curP, curP.activeIdx, r.attacker);
+    const nextE = setActive(curE, curE.activeIdx, r.defender);
+    finishTurn("player", nextP, nextE);
+  };
+
   const handleSwapTo = (idx: number) => {
     if (winner || turn !== "player") return;
     const curP = pTeamRef.current;
