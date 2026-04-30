@@ -10,6 +10,7 @@ import { VaultView } from "@/components/game/views/VaultView";
 import { AdminView } from "@/components/game/views/AdminView";
 import { DebugView } from "@/components/game/views/DebugView";
 import { ShopView } from "@/components/game/views/ShopView";
+import { TrainingView } from "@/components/game/views/TrainingView";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/game/auth/AuthDialog";
@@ -80,6 +81,11 @@ function Index() {
           {view === "shop" && (
             <ErrorBoundary label="Shop">
               <ShopView />
+            </ErrorBoundary>
+          )}
+          {view === "training" && (
+            <ErrorBoundary label="훈련소">
+              <TrainingView />
             </ErrorBoundary>
           )}
           {view === "admin" && <AdminView />}

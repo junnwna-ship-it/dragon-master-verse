@@ -31,7 +31,7 @@ export interface Dragon {
   statPoints?: number;
 }
 
-export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "admin" | "debug";
+export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "training" | "admin" | "debug";
 
 export type BattleOutcome = "win" | "lose" | "draw";
 
