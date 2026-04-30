@@ -58,6 +58,14 @@ export function DragonDetailModal({ dragon, onClose }: { dragon: Dragon; onClose
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-slate-700/70 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-300"
       >
+        {/* Inner content is keyed by dragon.id so swapping the globally
+            selected dragon while the modal is open re-runs a quick
+            cross-fade animation on every section — no close/reopen needed. */}
+        <div
+          key={dragon.id}
+          className="animate-in fade-in duration-200"
+          aria-live="polite"
+        >
         <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-5 py-4">
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-widest text-slate-500">Dragon</p>
@@ -143,6 +151,7 @@ export function DragonDetailModal({ dragon, onClose }: { dragon: Dragon; onClose
           >
             닫기
           </button>
+        </div>
         </div>
       </div>
     </div>
