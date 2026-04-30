@@ -41,7 +41,7 @@ export function useAppSettings() {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       channel = supabase
-        .channel("app-settings")
+        .channel(`app-settings-${Math.random().toString(36).slice(2, 8)}`)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "app_settings" },
