@@ -137,11 +137,20 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
   return (
     <div className="snap-center shrink-0 w-[78vw] max-w-[320px] rounded-3xl border border-slate-700/60 bg-gradient-to-b from-slate-800/90 to-slate-900/90 p-4 shadow-2xl shadow-black/40">
       <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-2xl border bg-gradient-to-br ${tone}`}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-700/60 text-slate-400">
-            <Sparkles className="h-10 w-10" />
+        {dragon.image ? (
+          <img
+            src={dragon.image}
+            alt={`${dragon.name} 일러스트`}
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-700/60 text-slate-400">
+              <Sparkles className="h-10 w-10" />
+            </div>
           </div>
-        </div>
+        )}
         <span className={`absolute left-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}>
           {dragon.element}
         </span>
