@@ -1,16 +1,8 @@
 import { useMemo } from "react";
-import { Heart, Sword, Shield, Droplet, X, Swords, Plus } from "lucide-react";
+import { X, Swords, Plus } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
-
-const elementTone: Record<string, string> = {
-  Wood: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-  Water: "border-sky-500/40 bg-sky-500/10 text-sky-300",
-  Fire: "border-rose-500/40 bg-rose-500/10 text-rose-300",
-  Earth: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-  Light: "border-yellow-400/40 bg-yellow-400/10 text-yellow-200",
-  Dark: "border-violet-500/40 bg-violet-500/10 text-violet-300",
-};
+import { GlassDragonCard } from "../GlassDragonCard";
 
 /**
  * 내 카드 저장소 — 보유 드래곤 그리드와 출전 덱(0/3) 슬롯.
@@ -173,56 +165,15 @@ export function VaultView() {
             const slotIdx = selectedDeck.indexOf(d.id);
             const sel = slotIdx >= 0;
             const dim = full && !sel;
-            const tone = elementTone[d.element] ?? elementTone.Wood;
             return (
-              <button
+              <GlassDragonCard
                 key={d.id}
-                type="button"
+                dragon={d}
                 onClick={() => toggleDeckMember(d.id)}
-                aria-pressed={sel}
-                className={`group relative overflow-hidden rounded-xl border text-left transition active:scale-[0.97] ${
-                  sel
-                    ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-400/50 shadow-lg shadow-amber-900/30"
-                    : dim
-                      ? "border-slate-800 bg-slate-900/40 opacity-50 hover:opacity-90"
-                      : "border-slate-700/60 bg-slate-800/60 hover:border-slate-500"
-                }`}
-              >
-                <div className="relative aspect-square">
-                  <DragonImage dragon={d} className="h-full w-full" />
-                  {sel ? (
-                    // 선택됨 → 슬롯 번호 배지 (#1/#2/#3)
-                    <span className="vault-dot-fill absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-slate-950 shadow ring-2 ring-amber-300/50">
-                      {slotIdx + 1}
-                    </span>
-                  ) : (
-                    !dim && (
-                      <span className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/80 text-slate-300 opacity-0 ring-1 ring-slate-600 transition group-hover:opacity-100">
-                        <Plus className="h-3.5 w-3.5" />
-                      </span>
-                    )
-                  )}
-                  {sel && (
-                    <span className="absolute inset-x-0 bottom-0 bg-amber-500/90 px-1.5 py-0.5 text-center text-[9px] font-bold uppercase tracking-wider text-slate-950">
-                      출전 #{slotIdx + 1}
-                    </span>
-                  )}
-                </div>
-                <div className="p-2">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="truncate text-xs font-bold text-slate-100">{d.name}</span>
-                    <span className={`shrink-0 rounded-full border px-1.5 py-0 text-[9px] font-bold uppercase ${tone}`}>
-                      {d.element}
-                    </span>
-                  </div>
-                  <div className="mt-1 grid grid-cols-2 gap-x-1 gap-y-0.5 text-[10px] text-slate-300">
-                    <span className="flex items-center gap-1"><Heart className="h-2.5 w-2.5 text-emerald-400" />{d.maxHp}</span>
-                    <span className="flex items-center gap-1"><Droplet className="h-2.5 w-2.5 text-sky-400" />{d.mp}</span>
-                    <span className="flex items-center gap-1"><Sword className="h-2.5 w-2.5" />{d.atk}</span>
-                    <span className="flex items-center gap-1"><Shield className="h-2.5 w-2.5" />{d.def}</span>
-                  </div>
-                </div>
-              </button>
+                selected={sel}
+                dim={dim}
+                slotIndex={sel ? slotIdx + 1 : undefined}
+              />
             );
           })}
         </div>

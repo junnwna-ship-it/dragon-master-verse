@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
   Droplet,
@@ -162,22 +162,114 @@ function MiniBenchCard({
   );
 }
 
-function ActivePanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
+interface DamagePop {
+  id: number;
+  value: number;
+  /** "damage" → 빨강, "skill" → 보라+크게, "heal" → 초록 */
+  variant?: "damage" | "skill" | "heal";
+}
+
+/**
+ * 필드 액티브 패널 — 이미지를 메인으로 보여주는 글래스 카드.
+ * - idle: y축 둥둥 floating
+ * - attacking: 적 방향으로 lunge 후 복귀 (player는 위쪽, enemy는 아래쪽)
+ * - hitFlashKey가 바뀌면 빨간 필터 + 좌우 흔들림
+ * - damagePops 큐를 받아 -N 텍스트가 떠오르며 사라짐
+ */
+function ActivePanel({
+  c,
+  side,
+  attacking = false,
+  hitFlashKey = 0,
+  damagePops = [],
+}: {
+  c: Combatant;
+  side: "player" | "enemy";
+  attacking?: boolean;
+  hitFlashKey?: number;
+  damagePops?: DamagePop[];
+}) {
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
   const mpPct = Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100));
   const tone = elementTone[c.base.element] ?? elementTone.Wood;
+  // player는 위쪽으로 돌진(-), enemy는 아래쪽으로 돌진(+)
+  const lungeY = side === "player" ? -28 : 28;
   return (
     <div
-      className={`flex-1 rounded-2xl border border-slate-700/60 bg-slate-800/70 p-2.5 ${
+      className={`relative flex-1 overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-2.5 backdrop-blur-md ${
         side === "enemy" ? "text-right" : ""
       }`}
     >
-      <div className={`flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
-        <span className={`rounded-full border px-1.5 py-0 text-[9px] font-bold uppercase ${tone}`}>
+      {/* 이미지 캔버스 — 핵심 시각 요소 */}
+      <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-slate-950/80">
+        <motion.div
+          className="absolute inset-0"
+          // Idle: 둥둥 floating; Attacking: 돌진 후 복귀
+          animate={
+            attacking
+              ? { y: [0, lungeY, 0] }
+              : { y: [0, -10, 0] }
+          }
+          transition={
+            attacking
+              ? { duration: 0.45, ease: "easeOut" }
+              : { repeat: Infinity, duration: 2, ease: "easeInOut" }
+          }
+        >
+          <DragonImage dragon={c.base} className="h-full w-full" />
+        </motion.div>
+
+        {/* Hit flash (빨간 오버레이 + 좌우 흔들림은 부모에서 적용) */}
+        <AnimatePresence>
+          {hitFlashKey > 0 && (
+            <motion.div
+              key={hitFlashKey}
+              className="pointer-events-none absolute inset-0 bg-rose-500/45 mix-blend-multiply"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* 데미지 파티클 텍스트 */}
+        <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-2">
+          <AnimatePresence>
+            {damagePops.map((p) => (
+              <motion.span
+                key={p.id}
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: -40, scale: 1 }}
+                exit={{ opacity: 0, y: -60 }}
+                transition={{ duration: 1.0, ease: "easeOut" }}
+                className={`absolute font-mono text-2xl font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${
+                  p.variant === "skill"
+                    ? "text-violet-300 text-3xl"
+                    : p.variant === "heal"
+                      ? "text-emerald-300"
+                      : "text-rose-400"
+                }`}
+                style={{ textShadow: "0 0 8px rgba(0,0,0,0.7)" }}
+              >
+                {p.variant === "heal" ? "+" : "-"}
+                {Math.abs(p.value)}
+              </motion.span>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        {/* 좌상단 원소 배지 / 우상단 슬롯 */}
+        <span
+          className={`absolute left-2 top-2 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}
+        >
           {c.base.element}
         </span>
-        <h3 className="text-xs font-bold text-slate-100">{c.base.name}</h3>
+      </div>
+
+      <div className={`flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
+        <h3 className="text-sm font-extrabold text-slate-100">{c.base.name}</h3>
         {c.exhausted && (
           <span className="flex items-center gap-0.5 rounded-full border border-rose-500/50 bg-rose-500/15 px-1 py-0 text-[9px] font-bold text-rose-300">
             <BatteryWarning className="h-2.5 w-2.5" /> 탈진
@@ -302,6 +394,55 @@ export function TagBattleEngine({
       for (const e of entries) next.push({ ...e, id: logIdRef.current++ });
       return next.slice(-60);
     });
+  };
+
+  // ===== Framer Motion 시각 연출 상태 =====
+  // 어느 쪽이 "지금" 공격 lunge 중인지 (null = idle 둥둥)
+  const [attackingSide, setAttackingSide] = useState<"player" | "enemy" | null>(null);
+  // 피격 빨강 플래시 트리거 키 — 키가 바뀌면 ActivePanel이 새로 깜빡임
+  const [pHitKey, setPHitKey] = useState(0);
+  const [eHitKey, setEHitKey] = useState(0);
+  // 좌우 흔들림 트리거 키
+  const [pShakeKey, setPShakeKey] = useState(0);
+  const [eShakeKey, setEShakeKey] = useState(0);
+  // 데미지 텍스트 파티클 큐
+  const [pPops, setPPops] = useState<DamagePop[]>([]);
+  const [ePops, setEPops] = useState<DamagePop[]>([]);
+  const popIdRef = useRef(1);
+
+  /** -dmg 텍스트 파티클을 한쪽에 띄우고 1.1초 후 제거. */
+  const popDamage = (target: "player" | "enemy", value: number, variant: DamagePop["variant"] = "damage") => {
+    if (value <= 0) return;
+    const id = popIdRef.current++;
+    const entry: DamagePop = { id, value, variant };
+    if (target === "player") setPPops((prev) => [...prev, entry]);
+    else setEPops((prev) => [...prev, entry]);
+    setTimeout(() => {
+      if (target === "player") setPPops((prev) => prev.filter((p) => p.id !== id));
+      else setEPops((prev) => prev.filter((p) => p.id !== id));
+    }, 1100);
+  };
+
+  /** 공격 시각 연출: 공격자 lunge + 피격자 flash/shake + 데미지 팝업. */
+  const playAttackFx = (
+    actor: "player" | "enemy",
+    targetHpDelta: number,
+    skill = false,
+  ) => {
+    setAttackingSide(actor);
+    setTimeout(() => setAttackingSide(null), 460);
+    if (targetHpDelta > 0) {
+      const target = actor === "player" ? "enemy" : "player";
+      // 피격 시각 효과
+      if (target === "player") {
+        setPHitKey((k) => k + 1);
+        setPShakeKey((k) => k + 1);
+      } else {
+        setEHitKey((k) => k + 1);
+        setEShakeKey((k) => k + 1);
+      }
+      popDamage(target, targetHpDelta, skill ? "skill" : "damage");
+    }
   };
 
   const winner = useMemo<"player" | "enemy" | null>(() => {
@@ -438,6 +579,10 @@ export function TagBattleEngine({
     if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
     const r = performAttack(a, d, { turnNumber });
     pushLogs(r.logs);
+    const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
+    const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
+    playAttackFx("player", dmgDealt);
+    if (reflect > 0) popDamage("player", reflect); // 상성 반사 피해
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
     finishTurn("player", nextP, nextE);
@@ -458,6 +603,10 @@ export function TagBattleEngine({
     if (a.mp < a.maxMp * MP_SKILL_THRESHOLD_PCT) return;
     const r = performAttack(a, d, { turnNumber, skill: true });
     pushLogs(r.logs);
+    const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
+    const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
+    playAttackFx("player", dmgDealt, true);
+    if (reflect > 0) popDamage("player", reflect);
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
     finishTurn("player", nextP, nextE);
@@ -507,6 +656,10 @@ export function TagBattleEngine({
       }
       const r = performAttack(a, d, { turnNumber });
       pushLogs(r.logs);
+      const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
+      const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
+      playAttackFx("enemy", dmgDealt);
+      if (reflect > 0) popDamage("enemy", reflect);
       const nextE = setActive(curE, curE.activeIdx, r.attacker);
       const nextP = setActive(curP, curP.activeIdx, r.defender);
       finishTurn("enemy", nextP, nextE);
@@ -549,9 +702,43 @@ export function TagBattleEngine({
 
       {/* 필드 */}
       <div className="flex gap-2">
-        {pActive ? <ActivePanel c={pActive} side="player" /> : <div className="flex-1" />}
+        {pActive ? (
+          <motion.div
+            key={`pwrap-${pShakeKey}`}
+            className="flex-1"
+            animate={pShakeKey > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <ActivePanel
+              c={pActive}
+              side="player"
+              attacking={attackingSide === "player"}
+              hitFlashKey={pHitKey}
+              damagePops={pPops}
+            />
+          </motion.div>
+        ) : (
+          <div className="flex-1" />
+        )}
         <div className="flex items-center text-xs font-bold text-slate-500">VS</div>
-        {eActive ? <ActivePanel c={eActive} side="enemy" /> : <div className="flex-1" />}
+        {eActive ? (
+          <motion.div
+            key={`ewrap-${eShakeKey}`}
+            className="flex-1"
+            animate={eShakeKey > 0 ? { x: [0, 6, -6, 4, -4, 0] } : { x: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <ActivePanel
+              c={eActive}
+              side="enemy"
+              attacking={attackingSide === "enemy"}
+              hitFlashKey={eHitKey}
+              damagePops={ePops}
+            />
+          </motion.div>
+        ) : (
+          <div className="flex-1" />
+        )}
       </div>
 
       {/* 내 벤치 */}
@@ -617,46 +804,53 @@ export function TagBattleEngine({
           pActive.mp >= pActive.maxMp * MP_SKILL_THRESHOLD_PCT &&
           turn === "player" &&
           !pickingSwap;
+        // 모바일 라운드-풀 액션 도크. 시야를 가리지 않게 슬림한 글래스 바.
         return (
-          <div className="grid grid-cols-4 gap-2">
-            <button
+          <div className="flex items-center justify-center gap-3 rounded-full border border-white/10 bg-slate-950/60 px-3 py-2 backdrop-blur-md shadow-lg shadow-black/40">
+            <motion.button
               onClick={handleAttack}
               disabled={turn !== "player" || pickingSwap}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-rose-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+              whileTap={{ scale: 0.92 }}
+              aria-label="공격"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-900/50 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
-              <Sword className="h-4 w-4" />
-              <span>공격</span>
-            </button>
-            <button
+              <Sword className="h-6 w-6" />
+            </motion.button>
+            <motion.button
               onClick={handleSkill}
               disabled={!canSkill}
+              whileTap={{ scale: 0.92 }}
               title={`MP ${skillCost} 소모, RawDamage x1.5 (하드캡 유지)`}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-violet-600 px-2 py-2.5 text-xs font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+              aria-label={`특수 스킬 (-${skillCost} MP)`}
+              className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white shadow-xl shadow-violet-900/50 transition hover:from-violet-400 hover:to-fuchsia-500 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
-              <Wand2 className="h-4 w-4" />
-              <span>스킬</span>
-              <span className="font-mono text-[9px] opacity-90">-{skillCost} MP</span>
-            </button>
-            <button
+              <Wand2 className="h-7 w-7" />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-slate-950/90 px-1.5 py-0 font-mono text-[9px] font-bold text-violet-200 ring-1 ring-violet-400/40">
+                -{skillCost}
+              </span>
+            </motion.button>
+            <motion.button
               onClick={() => setPickingSwap((v) => !v)}
               disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
-              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 ${
+              whileTap={{ scale: 0.92 }}
+              aria-label="교체"
+              className={`flex h-14 w-14 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 ${
                 pickingSwap
-                  ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                  : "bg-sky-600 text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500"
+                  ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-900/50 ring-2 ring-amber-200"
+                  : "bg-sky-600 text-white shadow-lg shadow-sky-900/50 hover:bg-sky-500"
               }`}
             >
-              <Repeat className="h-4 w-4" />
-              <span>교체</span>
-            </button>
-            <button
+              <Repeat className="h-6 w-6" />
+            </motion.button>
+            <motion.button
               onClick={handlePass}
               disabled={turn !== "player" || pickingSwap}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-700 px-2 py-2.5 text-xs font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+              whileTap={{ scale: 0.92 }}
+              aria-label="턴 넘기기"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-700 text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
             >
-              <Zap className="h-4 w-4" />
-              <span>넘기기</span>
-            </button>
+              <Zap className="h-6 w-6" />
+            </motion.button>
           </div>
         );
       })()}
