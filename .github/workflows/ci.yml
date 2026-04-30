@@ -552,6 +552,12 @@ jobs:
               generated_at: $generated_at,
               candidates_scanned: 50,
               matched_count: $matched_count,
+              workflow_version: {
+                sha_short: ($current_workflow_file_sha | .[0:7]),
+                sha_full: $current_workflow_file_sha,
+                candidates_scanned: 50,
+                matched_count: $matched_count
+              },
               matched_runs: $matched
             }' > reports/lint-time-history-debug.json
           echo "Wrote reports/lint-time-history-debug.json (matched=$KEPT)"
