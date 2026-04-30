@@ -281,8 +281,7 @@ export function PvpView() {
         <button
           onClick={() => {
             setLastResult(null);
-            resetMatchUi();
-            setPhase("searching");
+            startMatchmaking();
           }}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800"
         >
