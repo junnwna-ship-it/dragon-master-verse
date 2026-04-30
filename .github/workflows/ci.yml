@@ -111,20 +111,36 @@ jobs:
       - name: Run ESLint (JSON report)
         id: eslint
         continue-on-error: true
+        env:
+          # Emit ESLint's per-rule timing breakdown to stderr.
+          TIMING: "20"
         run: |
           mkdir -p reports
-          bun run lint:report
+          START=$(date +%s%3N)
+          # Capture rule timing to a separate file; preserve stdout/exit code.
+          bun run lint:report 2> reports/eslint-rule-timing.txt
+          STATUS=$?
+          END=$(date +%s%3N)
+          echo "duration_ms=$((END - START))" >> "$GITHUB_OUTPUT"
+          exit $STATUS
 
       - name: Generate HTML report
+        id: eslint-html
         if: always()
         continue-on-error: true
-        run: bun run lint:report:html
+        run: |
+          START=$(date +%s%3N)
+          bun run lint:report:html
+          END=$(date +%s%3N)
+          echo "duration_ms=$((END - START))" >> "$GITHUB_OUTPUT"
 
       - name: Extract failed-files summary
+        id: eslint-extract
         if: always()
         continue-on-error: true
         run: |
           mkdir -p reports
+          START=$(date +%s%3N)
           node -e "
             const fs = require('fs');
             const path = 'reports/eslint-report.json';
@@ -160,6 +176,102 @@ jobs:
               );
             }
           "
+          END=$(date +%s%3N)
+          echo "duration_ms=$((END - START))" >> "$GITHUB_OUTPUT"
+
+      - name: Write ESLint timing metrics
+        if: always()
+        continue-on-error: true
+        env:
+          LINT_MS: ${{ steps.eslint.outputs.duration_ms }}
+          HTML_MS: ${{ steps.eslint-html.outputs.duration_ms }}
+          EXTRACT_MS: ${{ steps.eslint-extract.outputs.duration_ms }}
+          CACHE_STATUS: ${{ steps.eslint-cache.outputs.cache-hit && 'exact-hit' || (steps.eslint-cache.outputs.cache-matched-key && 'partial' || 'miss') }}
+          ESLINT_VERSION: ${{ steps.eslint-version.outputs.version }}
+        run: |
+          mkdir -p reports
+          LINT_MS_VAL=${LINT_MS:-0}
+          HTML_MS_VAL=${HTML_MS:-0}
+          EXTRACT_MS_VAL=${EXTRACT_MS:-0}
+          TOTAL_MS=$((LINT_MS_VAL + HTML_MS_VAL + EXTRACT_MS_VAL))
+
+          fmt() { awk "BEGIN { printf \"%.2fs\", $1 / 1000 }"; }
+
+          # Pull top-5 slowest rules from ESLint TIMING output (if present)
+          TOP_RULES_JSON="[]"
+          if [ -s reports/eslint-rule-timing.txt ]; then
+            TOP_RULES_JSON=$(awk '
+              /^Rule/ { capture=1; next }
+              capture && /^[a-zA-Z@]/ {
+                rule=$1; time=$2;
+                gsub(/[^0-9.]/, "", time);
+                if (time != "" && rule != "") print rule"\t"time;
+              }
+            ' reports/eslint-rule-timing.txt | sort -k2 -gr | head -n 5 | \
+              node -e "
+                const lines = require('fs').readFileSync(0, 'utf8').trim().split('\n').filter(Boolean);
+                const out = lines.map(l => { const [r, t] = l.split('\t'); return { rule: r, ms: Number(t) }; });
+                process.stdout.write(JSON.stringify(out));
+              " 2>/dev/null || echo "[]")
+          fi
+
+          # Write JSON metrics artifact
+          node -e "
+            const fs = require('fs');
+            const metrics = {
+              eslintVersion: process.env.ESLINT_VERSION,
+              cacheStatus: process.env.CACHE_STATUS,
+              durations: {
+                lintMs: Number(process.env.LINT_MS_VAL),
+                htmlReportMs: Number(process.env.HTML_MS_VAL),
+                extractFailedMs: Number(process.env.EXTRACT_MS_VAL),
+                totalMs: Number(process.env.TOTAL_MS),
+              },
+              topSlowRules: ${TOP_RULES_JSON},
+              runId: process.env.GITHUB_RUN_ID,
+              sha: process.env.GITHUB_SHA,
+              branch: process.env.GITHUB_REF_NAME,
+              timestamp: new Date().toISOString(),
+            };
+            fs.writeFileSync('reports/eslint-timing.json', JSON.stringify(metrics, null, 2));
+          "
+        # shellcheck disable=SC2050
+
+      - name: Append timing metrics to summary
+        if: always()
+        continue-on-error: true
+        env:
+          LINT_MS: ${{ steps.eslint.outputs.duration_ms }}
+          HTML_MS: ${{ steps.eslint-html.outputs.duration_ms }}
+          EXTRACT_MS: ${{ steps.eslint-extract.outputs.duration_ms }}
+        run: |
+          fmt() { awk "BEGIN { printf \"%.2fs\", ${1:-0} / 1000 }"; }
+          LINT_MS_VAL=${LINT_MS:-0}
+          HTML_MS_VAL=${HTML_MS:-0}
+          EXTRACT_MS_VAL=${EXTRACT_MS:-0}
+          TOTAL_MS=$((LINT_MS_VAL + HTML_MS_VAL + EXTRACT_MS_VAL))
+
+          {
+            echo ""
+            echo "## ESLint timing"
+            echo ""
+            echo "| Step | Duration |"
+            echo "| --- | ---: |"
+            echo "| Lint + JSON report | $(fmt $LINT_MS_VAL) |"
+            echo "| HTML report | $(fmt $HTML_MS_VAL) |"
+            echo "| Failed-files extraction | $(fmt $EXTRACT_MS_VAL) |"
+            echo "| **Total** | **$(fmt $TOTAL_MS)** |"
+
+            if [ -s reports/eslint-rule-timing.txt ]; then
+              echo ""
+              echo "<details><summary>Top slowest rules (ESLint TIMING=20)</summary>"
+              echo ""
+              echo '```'
+              head -n 25 reports/eslint-rule-timing.txt
+              echo '```'
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Annotate PR with ESLint findings
         if: always()
@@ -179,6 +291,8 @@ jobs:
             reports/eslint-report.json
             reports/eslint-report.html
             reports/eslint-failed-files.json
+            reports/eslint-timing.json
+            reports/eslint-rule-timing.txt
           retention-days: 14
 
       - name: Compute cache hit-rate (last 20 runs)
