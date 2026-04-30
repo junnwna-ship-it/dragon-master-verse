@@ -521,6 +521,8 @@ export function TagBattleEngine({
     if (!cur || cur.engineHp <= 0) return;
     const { next, logs: l } = onTurnStart(cur);
     pushLogs(l);
+    // Bella가 회복했을 때 heal VFX
+    if (next.engineHp > cur.engineHp) triggerEffect("player", "heal");
     commit(setActive(t, t.activeIdx, next), eTeamRef.current);
   }, [turn, turnNumber, winner]);
 
@@ -575,6 +577,11 @@ export function TagBattleEngine({
 
     const drained = endTurnDrain(selfActive, oppActive, { turnNumber });
     pushLogs(drained.logs);
+    // 독 데미지 발생 시 poison VFX
+    if (selfActive.poisoned && drained.self.engineHp < selfActive.engineHp) {
+      const poisonTarget: "player" | "enemy" = actor === "player" ? "player" : "enemy";
+      triggerEffect(poisonTarget, "poison");
+    }
 
     let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
     let nextOppTeam = setActive(oppTeam, oppTeam.activeIdx, drained.opponent);
@@ -589,6 +596,9 @@ export function TagBattleEngine({
       const r2 = tickBenchMp(nextOppTeam);
       nextOppTeam = r2.team;
       pushLogs(r2.logs);
+      // 벤치 MP 회복 발생 시 heal VFX (자기 진영의 active에 노출)
+      const selfSide: "player" | "enemy" = actor === "player" ? "player" : "enemy";
+      if (r1.logs.length) triggerEffect(selfSide, "heal");
     }
 
     const finalP = actor === "player" ? nextSelfTeam : nextOppTeam;
@@ -615,7 +625,7 @@ export function TagBattleEngine({
     pushLogs(r.logs);
     const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
     const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-    playAttackFx("player", dmgDealt);
+    playAttackFx("player", dmgDealt, false, a.base.element);
     if (reflect > 0) popDamage("player", reflect); // 상성 반사 피해
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
@@ -639,7 +649,7 @@ export function TagBattleEngine({
     pushLogs(r.logs);
     const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
     const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-    playAttackFx("player", dmgDealt, true);
+    playAttackFx("player", dmgDealt, true, a.base.element);
     if (reflect > 0) popDamage("player", reflect);
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
@@ -674,6 +684,7 @@ export function TagBattleEngine({
       if (cur && cur.engineHp > 0) {
         const { next, logs: l } = onTurnStart(cur);
         if (l.length) pushLogs(l);
+        if (next.engineHp > cur.engineHp) triggerEffect("enemy", "heal");
         if (next !== cur) commit(pTeamRef.current, setActive(t, t.activeIdx, next));
       }
     }
@@ -692,7 +703,7 @@ export function TagBattleEngine({
       pushLogs(r.logs);
       const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
       const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-      playAttackFx("enemy", dmgDealt);
+      playAttackFx("enemy", dmgDealt, false, a.base.element);
       if (reflect > 0) popDamage("enemy", reflect);
       const nextE = setActive(curE, curE.activeIdx, r.attacker);
       const nextP = setActive(curP, curP.activeIdx, r.defender);
