@@ -204,6 +204,15 @@ export function DragonDetailModal({
         </div>
 
         <div className="space-y-4 px-5 py-4">
+          {dragon.image && (
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
+              <img
+                src={dragon.image}
+                alt={`${dragon.name} 일러스트`}
+                className="absolute inset-0 h-full w-full object-contain"
+              />
+            </div>
+          )}
           <section>
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">스탯</h4>

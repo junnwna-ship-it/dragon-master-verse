@@ -1,4 +1,10 @@
 import { create } from "zustand";
+import eliaImg from "@/assets/dragons/elia.png";
+import bellaImg from "@/assets/dragons/bella.png";
+import comiImg from "@/assets/dragons/comi.png";
+import snowyImg from "@/assets/dragons/snowy.png";
+import caminontImg from "@/assets/dragons/caminont.png";
+import younigonImg from "@/assets/dragons/younigon.png";
 
 export type Element = "Wood" | "Water" | "Fire" | "Earth" | "Light" | "Dark";
 
@@ -11,6 +17,7 @@ export interface Dragon {
   mp: number;
   atk: number;
   def: number;
+  image?: string;
 }
 
 export type View = "lobby" | "story" | "pvp";
@@ -66,9 +73,14 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set) => ({
   dragons: [
-    { id: 1, name: "Puri", element: "Wood", hp: 60, maxHp: 60, mp: 50, atk: 40, def: 50 },
-    { id: 2, name: "Spike", element: "Water", hp: 50, maxHp: 50, mp: 90, atk: 80, def: 20 },
-    { id: 3, name: "Bella", element: "Water", hp: 40, maxHp: 40, mp: 80, atk: 75, def: 35 },
+    // Stats taken from the hand-drawn cards, scaled down so the in-game
+    // bars (max 100) stay readable: HP/MP /20, ATK/DEF /20.
+    { id: 1, name: "Elia",     element: "Water", maxHp: 65, hp: 65, mp: 65, atk: 60, def: 60, image: eliaImg },
+    { id: 2, name: "Bella",    element: "Water", maxHp: 50, hp: 50, mp: 50, atk: 100, def: 50, image: bellaImg },
+    { id: 3, name: "Comi",     element: "Light", maxHp: 75, hp: 75, mp: 50, atk: 75, def: 50, image: comiImg },
+    { id: 4, name: "Snowy",    element: "Water", maxHp: 100, hp: 100, mp: 55, atk: 55, def: 40, image: snowyImg },
+    { id: 5, name: "Caminont", element: "Dark",  maxHp: 20, hp: 20, mp: 5,  atk: 100, def: 5,  image: caminontImg },
+    { id: 6, name: "Younigon", element: "Fire",  maxHp: 100, hp: 100, mp: 20, atk: 80, def: 50, image: younigonImg },
   ],
   addDragon: (d) =>
     set((state) => {
