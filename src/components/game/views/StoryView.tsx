@@ -1,187 +1,187 @@
-import { useState } from "react";
-import { BookOpen, ChevronRight, Lock, Check, Trophy, Coins, Package, Sparkles, Gift } from "lucide-react";
-import { useGameStore, type Dragon, type RewardDrop } from "@/store/dragons";
+import { useMemo, useState } from "react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles } from "lucide-react";
+import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
-const stages: { id: number; name: string; enemy: Dragon; reward: RewardDrop }[] = [
+type NodeKind = "battle" | "event" | "boss";
+interface MapNode {
+  id: number;
+  title: string;
+  subtitle: string;
+  kind: NodeKind;
+  enemyName?: string;
+  enemy?: Dragon;
+  /** rough position inside the SVG viewBox (0-100 horizontal, 0-100 vertical) */
+  x: number;
+  y: number;
+}
+
+const NODES: MapNode[] = [
   {
-    id: 1,
-    name: "Stage 1 — 고대의 숲",
-    enemy: { id: 101, name: "Rooten", element: "Earth", hp: 70, maxHp: 70, mp: 40, atk: 55, def: 35 },
-    reward: {
-      gold: 120,
-      items: [
-        { name: "체력 물약", kind: "consumable", quantity: 2 },
-        { name: "나무껍질 방패", kind: "equipment", quantity: 1 },
-      ],
-    },
+    id: 3,
+    title: "정령의 숲 보스",
+    subtitle: "최종 보스 · Puri",
+    kind: "boss",
+    enemyName: "Puri",
+    enemy: { id: 9003, name: "Puri", element: "Wood", hp: 90, maxHp: 90, mp: 60, atk: 60, def: 55 },
+    x: 50,
+    y: 12,
   },
   {
     id: 2,
-    name: "Stage 2 — 화염 협곡",
-    enemy: { id: 102, name: "Blaze", element: "Fire", hp: 60, maxHp: 60, mp: 60, atk: 78, def: 25 },
-    reward: {
-      gold: 220,
-      items: [
-        { name: "마나 결정", kind: "consumable", quantity: 3 },
-        { name: "화염 룬", kind: "equipment", quantity: 1 },
-      ],
-    },
+    title: "꽃의 휴식처",
+    subtitle: "이벤트 · HP +30",
+    kind: "event",
+    x: 28,
+    y: 50,
   },
   {
-    id: 3,
-    name: "Stage 3 — 강철 동굴",
-    enemy: { id: 103, name: "Ironclaw", element: "Wood", hp: 80, maxHp: 80, mp: 50, atk: 70, def: 60 },
-    reward: {
-      gold: 380,
-      items: [
-        { name: "강철 비늘 갑옷", kind: "equipment", quantity: 1 },
-        { name: "고급 체력 물약", kind: "consumable", quantity: 2 },
-      ],
-    },
+    id: 1,
+    title: "하늘의 무법자",
+    subtitle: "전투 · Spike",
+    kind: "battle",
+    enemyName: "Spike",
+    enemy: { id: 9001, name: "Spike", element: "Water", hp: 70, maxHp: 70, mp: 90, atk: 80, def: 20 },
+    x: 70,
+    y: 88,
   },
 ];
 
+// Edges connect adjacent nodes by id (ascending order: 1 → 2 → 3)
+const EDGES: Array<[number, number]> = [
+  [1, 2],
+  [2, 3],
+];
+
+const FIRST_NODE_ID = 1;
+const TOTAL_NODES = NODES.length;
+
+interface RunState {
+  currentNodeId: number; // the next node the player must clear
+  playerHp: number;
+  playerMp: number;
+  visited: number[]; // already-cleared node ids in this run
+}
+
+function nodeIcon(kind: NodeKind, cleared: boolean) {
+  const cls = cleared ? "h-5 w-5 text-emerald-300" : "h-5 w-5";
+  if (kind === "battle") return <Swords className={cleared ? cls : `${cls} text-rose-300`} />;
+  if (kind === "event") return <Flower2 className={cleared ? cls : `${cls} text-pink-300`} />;
+  return <Crown className={cleared ? cls : `${cls} text-amber-300`} />;
+}
+
 export function StoryView() {
   const dragons = useGameStore((s) => s.dragons);
-  const storyProgress = useGameStore((s) => s.storyProgress);
-  const clearedStages = useGameStore((s) => s.clearedStages);
-  const clearStage = useGameStore((s) => s.clearStage);
-  const addReward = useGameStore((s) => s.addReward);
-  const [stage, setStage] = useState<(typeof stages)[number] | null>(null);
-  const [picker, setPicker] = useState<(typeof stages)[number] | null>(null);
-  const [player, setPlayer] = useState<Dragon | null>(null);
-  const [lastResult, setLastResult] = useState<"win" | "lose" | "draw" | null>(null);
-  const [earnedReward, setEarnedReward] = useState<RewardDrop | null>(null);
-  const [firstClear, setFirstClear] = useState(false);
 
-  if (stage && player) {
-    if (lastResult === "win" && earnedReward) {
-      return (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/15 to-amber-500/5 p-5 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">
-              <Gift className="h-7 w-7" />
-            </div>
-            <h3 className="mt-3 text-lg font-bold text-amber-200">
-              {firstClear ? "스테이지 첫 클리어!" : "전투 승리!"}
-            </h3>
-            <p className="text-xs text-slate-400">
-              {firstClear ? "보상을 획득했습니다." : "재도전 보상을 획득했습니다."}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-widest text-slate-500">획득한 보상</p>
-            <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
-              <span className="flex items-center gap-2 text-sm font-semibold text-amber-200">
-                <Coins className="h-4 w-4" /> 골드
-              </span>
-              <span className="font-mono text-sm font-bold text-amber-300">+{earnedReward.gold}</span>
-            </div>
-            {earnedReward.items.map((it) => (
-              <div
-                key={it.name}
-                className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/70 px-3 py-2.5"
-              >
-                <span className="flex items-center gap-2 text-sm">
-                  {it.kind === "equipment" ? (
-                    <Sparkles className="h-4 w-4 text-sky-400" />
-                  ) : (
-                    <Package className="h-4 w-4 text-emerald-400" />
-                  )}
-                  <span className="font-semibold text-slate-100">{it.name}</span>
-                  <span className="text-[10px] uppercase text-slate-500">{it.kind}</span>
-                </span>
-                <span className="font-mono text-sm text-slate-300">×{it.quantity}</span>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => {
-              const nextStage = stages.find((s) => s.id === stage.id + 1) ?? null;
-              setStage(null);
-              setPlayer(null);
-              setLastResult(null);
-              setEarnedReward(null);
-              setFirstClear(false);
-              if (nextStage) setPicker(nextStage);
-            }}
-            className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
-          >
-            {stages.find((s) => s.id === stage.id + 1) ? "다음 스테이지로" : "확인"}
-          </button>
-        </div>
-      );
-    }
+  const [run, setRun] = useState<RunState | null>(null);
+  const [picker, setPicker] = useState(false);
+  const [selectedDragon, setSelectedDragon] = useState<Dragon | null>(null);
+  const [activeBattleNode, setActiveBattleNode] = useState<MapNode | null>(null);
+  const [eventMessage, setEventMessage] = useState<string | null>(null);
+  const [defeated, setDefeated] = useState(false);
+
+  // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
+  const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
+
+  // Helper: which node id is the player currently allowed to enter?
+  const activeNodeId = run?.currentNodeId ?? FIRST_NODE_ID;
+
+  // ----- Battle screen -----
+  if (run && selectedDragon && activeBattleNode && activeBattleNode.enemy) {
     return (
       <BattleEngine
-        player={player}
-        enemy={stage.enemy}
+        player={selectedDragon}
+        enemy={activeBattleNode.enemy}
         context="story"
-        onResolved={(outcome) => {
-          setLastResult(outcome);
+        initialPlayerHp={run.playerHp}
+        initialPlayerMp={run.playerMp}
+        onResolved={(outcome, finalState) => {
           if (outcome === "win") {
-            const isFirst = !clearedStages.includes(stage.id);
-            // First clear gives full reward, replays give half gold and no items
-            const reward: RewardDrop = isFirst
-              ? stage.reward
-              : { gold: Math.floor(stage.reward.gold / 2), items: [] };
-            clearStage(stage.id, isFirst ? stage.reward : undefined);
-            addReward(reward);
-            setEarnedReward(reward);
-            setFirstClear(isFirst);
+            // Persist player HP/MP, advance to next node
+            const nextNodeId = activeBattleNode.id + 1;
+            const isLast = activeBattleNode.id >= TOTAL_NODES;
+            setRun({
+              currentNodeId: isLast ? activeBattleNode.id : nextNodeId,
+              playerHp: finalState.playerHp,
+              playerMp: finalState.playerMp,
+              visited: [...run.visited, activeBattleNode.id],
+            });
+          } else if (outcome === "lose") {
+            setDefeated(true);
+          } else {
+            // draw: keep state as-is, allow retry of the same node
+            setRun({ ...run, playerHp: finalState.playerHp, playerMp: finalState.playerMp });
           }
         }}
         onExit={() => {
-          setStage(null);
-          setPlayer(null);
-          setLastResult(null);
-          setEarnedReward(null);
-          setFirstClear(false);
+          setActiveBattleNode(null);
         }}
       />
     );
   }
 
+  // ----- Defeat modal -----
+  if (defeated && selectedDragon) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-rose-500/40 bg-gradient-to-b from-rose-500/15 to-rose-500/5 p-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
+            <Skull className="h-8 w-8" />
+          </div>
+          <h3 className="mt-3 text-xl font-bold text-rose-200">여정 실패</h3>
+          <p className="mt-1 text-xs text-slate-400">
+            {selectedDragon.name}이(가) 쓰러졌습니다. 처음부터 다시 도전하세요.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setDefeated(false);
+            setActiveBattleNode(null);
+            setRun({
+              currentNodeId: FIRST_NODE_ID,
+              playerHp: selectedDragon.maxHp,
+              playerMp: selectedDragon.mp,
+              visited: [],
+            });
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-rose-400"
+        >
+          <RotateCcw className="h-4 w-4" /> 1단계부터 다시 시작
+        </button>
+        <button
+          onClick={() => {
+            setDefeated(false);
+            setActiveBattleNode(null);
+            setRun(null);
+            setSelectedDragon(null);
+          }}
+          className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
+        >
+          드래곤 다시 선택
+        </button>
+      </div>
+    );
+  }
+
+  // ----- Dragon picker (run not started yet) -----
   if (picker) {
     return (
       <div className="space-y-3">
-        <p className="text-xs uppercase tracking-widest text-slate-500">{picker.name}</p>
+        <p className="text-xs uppercase tracking-widest text-slate-500">정령의 숲 여정</p>
         <h2 className="text-xl font-bold text-slate-100">출전할 드래곤 선택</h2>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
-          <p className="mb-1.5 text-[10px] uppercase tracking-widest text-amber-400/80">예상 보상</p>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-1 font-semibold text-amber-300">
-              <Coins className="h-3 w-3" /> {picker.reward.gold} G
-            </span>
-            {picker.reward.items.map((it) => (
-              <span
-                key={it.name}
-                className="flex items-center gap-1 rounded-md bg-slate-800/70 px-2 py-1 text-slate-300"
-              >
-                {it.kind === "equipment" ? (
-                  <Sparkles className="h-3 w-3 text-sky-400" />
-                ) : (
-                  <Package className="h-3 w-3 text-emerald-400" />
-                )}
-                {it.name} ×{it.quantity}
-              </span>
-            ))}
-          </div>
-          {clearedStages.includes(picker.id) && (
-            <p className="mt-1.5 text-[10px] text-slate-500">
-              ※ 재도전 시 골드 50%만 획득, 아이템은 첫 클리어 한정
-            </p>
-          )}
-        </div>
         <div className="grid gap-2">
           {dragons.map((d) => (
             <button
               key={d.id}
               onClick={() => {
-                setPlayer(d);
-                setStage(picker);
-                setPicker(null);
+                setSelectedDragon(d);
+                setRun({
+                  currentNodeId: FIRST_NODE_ID,
+                  playerHp: d.maxHp,
+                  playerMp: d.mp,
+                  visited: [],
+                });
+                setPicker(false);
               }}
               className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/70 px-3 py-3 text-left hover:border-amber-500/50"
             >
@@ -196,7 +196,7 @@ export function StoryView() {
           ))}
         </div>
         <button
-          onClick={() => setPicker(null)}
+          onClick={() => setPicker(false)}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
         >
           취소
@@ -205,66 +205,209 @@ export function StoryView() {
     );
   }
 
-  const allCleared = storyProgress >= stages[stages.length - 1].id;
+  // ----- Map view -----
+  const allCleared = run && run.visited.length >= TOTAL_NODES;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <BookOpen className="h-5 w-5 text-amber-400" />
-        <h2 className="text-xl font-bold text-slate-100">Story Mode</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MapIcon className="h-5 w-5 text-amber-400" />
+          <h2 className="text-xl font-bold text-slate-100">Story · 여정의 맵</h2>
+        </div>
+        {run && selectedDragon && (
+          <button
+            onClick={() => {
+              setRun(null);
+              setSelectedDragon(null);
+            }}
+            className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+          >
+            여정 포기
+          </button>
+        )}
       </div>
-      <div className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/40 px-3 py-2 text-xs">
-        <span className="text-slate-400">진행도</span>
-        <span className="font-mono font-bold text-amber-300">
-          {storyProgress} / {stages.length}
-        </span>
-      </div>
-      {allCleared && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300">
-          <Trophy className="h-4 w-4" /> 모든 스테이지를 클리어했습니다!
+
+      {/* Player status (only during a run) */}
+      {run && selectedDragon && (
+        <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-slate-100">{selectedDragon.name}</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+              진행 {Math.min(run.visited.length, TOTAL_NODES)} / {TOTAL_NODES}
+            </span>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+            <div>
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
+                <span className="font-mono text-slate-200">{run.playerHp}/{selectedDragon.maxHp}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+                <div
+                  className="h-full bg-emerald-500 transition-all"
+                  style={{ width: `${(run.playerHp / selectedDragon.maxHp) * 100}%` }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="flex items-center gap-1"><Droplet className="h-3 w-3 text-sky-400" /> MP</span>
+                <span className="font-mono text-slate-200">{Math.max(0, run.playerMp)}/{selectedDragon.mp}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+                <div
+                  className="h-full bg-sky-500 transition-all"
+                  style={{ width: `${Math.max(0, Math.min(100, (run.playerMp / Math.max(1, selectedDragon.mp)) * 100))}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
-      <div className="grid gap-2">
-        {stages.map((s) => {
-          const cleared = storyProgress >= s.id;
-          const locked = s.id > storyProgress + 1;
-          return (
-            <button
-              key={s.id}
-              onClick={() => !locked && setPicker(s)}
-              disabled={locked}
-              className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left transition ${
-                locked
-                  ? "cursor-not-allowed border-slate-800 bg-slate-900/40 opacity-60"
-                  : "border-slate-700/60 bg-slate-800/70 hover:border-amber-500/50"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {cleared ? (
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-                    <Check className="h-4 w-4" />
-                  </span>
-                ) : locked ? (
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-slate-500">
-                    <Lock className="h-4 w-4" />
-                  </span>
-                ) : (
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
-                    {s.id}
-                  </span>
-                )}
-                <div>
-                  <p className="text-sm font-bold text-slate-100">{s.name}</p>
-                  <p className="text-[11px] text-slate-400">
-                    vs {s.enemy.name} ({s.enemy.element})
+
+      {/* Event message banner */}
+      {eventMessage && (
+        <div className="flex items-start gap-2 rounded-xl border border-pink-500/40 bg-pink-500/10 px-3 py-2 text-xs text-pink-200">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-pink-300" />
+          <p>{eventMessage}</p>
+          <button
+            onClick={() => setEventMessage(null)}
+            className="ml-auto rounded px-2 text-[10px] text-pink-300/70 hover:text-pink-200"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* All-cleared banner */}
+      {allCleared && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300">
+          <Crown className="h-4 w-4" /> 모든 노드를 클리어했습니다!
+        </div>
+      )}
+
+      {/* Start CTA when no run is active */}
+      {!run && (
+        <button
+          onClick={() => setPicker(true)}
+          className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
+        >
+          여정 시작하기
+        </button>
+      )}
+
+      {/* Vertical scroll node map */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-gradient-to-b from-slate-900 via-slate-900/80 to-slate-950 p-2">
+        <div className="relative mx-auto h-[520px] w-full max-w-md">
+          {/* Background SVG: connectors */}
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            className="absolute inset-0 h-full w-full"
+            aria-hidden
+          >
+            {EDGES.map(([fromId, toId]) => {
+              const from = NODES.find((n) => n.id === fromId)!;
+              const to = NODES.find((n) => n.id === toId)!;
+              const fromCleared = run?.visited.includes(fromId);
+              const reachable = run ? activeNodeId >= toId : false;
+              const stroke = fromCleared && reachable
+                ? "rgb(252 211 77)"
+                : fromCleared
+                  ? "rgb(148 163 184)"
+                  : "rgb(71 85 105)";
+              return (
+                <line
+                  key={`${fromId}-${toId}`}
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke={stroke}
+                  strokeWidth={0.6}
+                  strokeDasharray={fromCleared ? undefined : "1.5 1.5"}
+                  strokeLinecap="round"
+                />
+              );
+            })}
+          </svg>
+
+          {/* Nodes (positioned absolutely over the SVG) */}
+          {orderedNodes.map((node) => {
+            const cleared = run?.visited.includes(node.id) ?? false;
+            const isActive = run ? activeNodeId === node.id : node.id === FIRST_NODE_ID;
+            const locked = run ? node.id > activeNodeId : node.id !== FIRST_NODE_ID;
+
+            const ring =
+              node.kind === "boss"
+                ? "border-amber-400/70 bg-amber-500/15"
+                : node.kind === "event"
+                  ? "border-pink-400/60 bg-pink-500/10"
+                  : "border-rose-400/60 bg-rose-500/10";
+            const stateRing = cleared
+              ? "border-emerald-400/70 bg-emerald-500/15 ring-2 ring-emerald-400/40"
+              : isActive
+                ? "ring-2 ring-amber-300/60 shadow-lg shadow-amber-500/30"
+                : locked
+                  ? "opacity-50 grayscale"
+                  : "";
+
+            const handleClick = () => {
+              if (!run || !selectedDragon) {
+                setPicker(true);
+                return;
+              }
+              if (locked || cleared) return;
+              if (node.kind === "event") {
+                // Heal +30 HP, no battle
+                const healed = Math.min(selectedDragon.maxHp, run.playerHp + 30);
+                setRun({
+                  ...run,
+                  playerHp: healed,
+                  visited: [...run.visited, node.id],
+                  currentNodeId: node.id + 1,
+                });
+                setEventMessage(`Bella의 장미꽃 향기로 HP 30 회복! (${run.playerHp} → ${healed})`);
+                return;
+              }
+              // battle / boss → open battle
+              setActiveBattleNode(node);
+            };
+
+            return (
+              <button
+                key={node.id}
+                onClick={handleClick}
+                disabled={locked && !cleared}
+                className={`group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 ${
+                  locked && !cleared ? "cursor-not-allowed" : "cursor-pointer"
+                }`}
+                style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                aria-label={node.title}
+              >
+                <span
+                  className={`flex h-14 w-14 items-center justify-center rounded-full border-2 backdrop-blur transition ${ring} ${stateRing} ${
+                    !locked && !cleared ? "group-hover:scale-105" : ""
+                  }`}
+                >
+                  {nodeIcon(node.kind, cleared)}
+                </span>
+                <div className="rounded-md bg-slate-950/80 px-2 py-0.5 text-center">
+                  <p className="text-[11px] font-bold text-slate-100">{node.title}</p>
+                  <p className="text-[9px] uppercase tracking-widest text-slate-400">
+                    {cleared ? "Cleared" : node.subtitle}
                   </p>
                 </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-500" />
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      <p className="text-center text-[10px] text-slate-500">
+        노드를 따라 위로 진행하세요 · 전투 종료 시 HP/MP는 그대로 유지됩니다
+      </p>
     </div>
   );
 }
