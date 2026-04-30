@@ -10,6 +10,11 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    env:
+      # Render scale for the cache-level chart (1, 2, 3 …).
+      # Affects both the SVG `width`/`height` attributes and the PNG raster width.
+      # Override per-run via repo/workflow env if you need denser PNGs.
+      CHART_RENDER_SCALE: "2"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
