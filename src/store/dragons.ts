@@ -35,7 +35,7 @@ export interface Dragon {
   imageUrl?: string;
 }
 
-export type View = "lobby" | "story" | "pvp" | "vault";
+export type View = "lobby" | "story" | "pvp" | "vault" | "admin";
 
 export type BattleOutcome = "win" | "lose" | "draw";
 
@@ -95,23 +95,78 @@ interface GameState {
   toggleDeckMember: (id: number) => void;
   clearDeck: () => void;
   setEnemyDeck: (ids: number[]) => void;
+  // ===== Admin / Custom Dragons =====
+  /** localStorage에 저장되는 사용자 정의 드래곤 (lore 포함). */
+  customDragons: (Dragon & { lore?: string; isCustom: true })[];
+  addCustomDragon: (d: Omit<Dragon, "id"> & { lore?: string }) => void;
+  removeCustomDragon: (id: number) => void;
 }
 
+const CUSTOM_KEY = "customDragons";
+
+function loadCustomDragons(): (Dragon & { lore?: string; isCustom: true })[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.map((d) => ({ ...d, isCustom: true as const }));
+  } catch {
+    return [];
+  }
+}
+
+function persistCustomDragons(list: (Dragon & { lore?: string; isCustom: true })[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+const BASE_DRAGONS: Dragon[] = [
+  { id: 1, name: "Elia",     element: "Water", maxHp: 1300, hp: 1300, mp: 1300, atk: 1200, def: 1200, image: elia480,     imageLarge: elia800,     imageUrl: "/Ain.jpg" },
+  { id: 2, name: "Bella",    element: "Water", maxHp: 1000, hp: 1000, mp: 1000, atk: 2000, def: 1000, image: bella480,    imageLarge: bella800,    imageUrl: "/Ajin.jpg" },
+  { id: 3, name: "Comi",     element: "Light", maxHp: 1500, hp: 1500, mp: 1000, atk: 1500, def: 1000, image: comi480,     imageLarge: comi800,     imageUrl: "/Comi.jpg" },
+  { id: 4, name: "Snowy",    element: "Water", maxHp: 2000, hp: 2000, mp: 1100, atk: 1100, def: 800,  image: snowy480,    imageLarge: snowy800,    imageUrl: "/Sua.jpg" },
+  { id: 5, name: "Caminont", element: "Dark",  maxHp: 770,  hp: 770,  mp: 190,  atk: 3850, def: 190,  image: caminont480, imageLarge: caminont800, imageUrl: "/Yisul.jpg" },
+  { id: 6, name: "Younigon", element: "Fire",  maxHp: 2000, hp: 2000, mp: 400,  atk: 1600, def: 1000, image: younigon480, imageLarge: younigon800, imageUrl: "/Younigon.jpg" },
+  { id: 7, name: "Puri",     element: "Wood",  maxHp: 1500, hp: 1500, mp: 1000, atk: 1300, def: 1200, imageUrl: "/image_9b1c9b.png" },
+  { id: 8, name: "Spike",    element: "Water", maxHp: 1400, hp: 1400, mp: 900,  atk: 1500, def: 1200, imageUrl: "/image_9b19b0.png" },
+];
+
+const INITIAL_CUSTOM = loadCustomDragons();
+const INITIAL_DRAGONS: Dragon[] = [...BASE_DRAGONS, ...INITIAL_CUSTOM];
+const INITIAL_OWNED = INITIAL_DRAGONS.map((d) => d.id);
+
 export const useGameStore = create<GameState>((set) => ({
-  dragons: [
-    // 원본 카드 스탯 — HP + MP + ATK + DEF = 5000 (총합 보장).
-    // 카드의 비율을 유지하며 스케일 업한 값. 전투 엔진은 별도의
-    // Engine_HP/ATK/DEF 변환 룰을 따른다 (battleLogic 참조).
-    { id: 1, name: "Elia",     element: "Water", maxHp: 1300, hp: 1300, mp: 1300, atk: 1200, def: 1200, image: elia480,     imageLarge: elia800,     imageUrl: "/Ain.jpg" },
-    { id: 2, name: "Bella",    element: "Water", maxHp: 1000, hp: 1000, mp: 1000, atk: 2000, def: 1000, image: bella480,    imageLarge: bella800,    imageUrl: "/Ajin.jpg" },
-    { id: 3, name: "Comi",     element: "Light", maxHp: 1500, hp: 1500, mp: 1000, atk: 1500, def: 1000, image: comi480,     imageLarge: comi800,     imageUrl: "/Comi.jpg" },
-    { id: 4, name: "Snowy",    element: "Water", maxHp: 2000, hp: 2000, mp: 1100, atk: 1100, def: 800,  image: snowy480,    imageLarge: snowy800,    imageUrl: "/Sua.jpg" },
-    { id: 5, name: "Caminont", element: "Dark",  maxHp: 770,  hp: 770,  mp: 190,  atk: 3850, def: 190,  image: caminont480, imageLarge: caminont800, imageUrl: "/Yisul.jpg" },
-    { id: 6, name: "Younigon", element: "Fire",  maxHp: 2000, hp: 2000, mp: 400,  atk: 1600, def: 1000, image: younigon480, imageLarge: younigon800, imageUrl: "/Younigon.jpg" },
-    // 추가 드래곤 — 외부 이미지 자산 기반 (총합 5000 유지)
-    { id: 7, name: "Puri",     element: "Wood",  maxHp: 1500, hp: 1500, mp: 1000, atk: 1300, def: 1200, imageUrl: "/image_9b1c9b.png" },
-    { id: 8, name: "Spike",    element: "Water", maxHp: 1400, hp: 1400, mp: 900,  atk: 1500, def: 1200, imageUrl: "/image_9b19b0.png" },
-  ],
+  dragons: INITIAL_DRAGONS,
+  customDragons: INITIAL_CUSTOM,
+  addCustomDragon: (d) =>
+    set((state) => {
+      const nextId = state.dragons.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+      const created = { ...d, id: nextId, isCustom: true as const };
+      const customs = [...state.customDragons, created];
+      persistCustomDragons(customs);
+      return {
+        customDragons: customs,
+        dragons: [...state.dragons, created],
+        ownedDragonIds: [...state.ownedDragonIds, nextId],
+      };
+    }),
+  removeCustomDragon: (id) =>
+    set((state) => {
+      const customs = state.customDragons.filter((d) => d.id !== id);
+      persistCustomDragons(customs);
+      return {
+        customDragons: customs,
+        dragons: state.dragons.filter((d) => d.id !== id),
+        ownedDragonIds: state.ownedDragonIds.filter((x) => x !== id),
+        selectedDeck: state.selectedDeck.filter((x) => x !== id),
+      };
+    }),
   addDragon: (d) =>
     set((state) => {
       const id = state.dragons.reduce((m, x) => Math.max(m, x.id), 0) + 1;
@@ -163,7 +218,7 @@ export const useGameStore = create<GameState>((set) => ({
   pvpDraws: 0,
   pvpSelectedDragonId: null,
   setPvpSelectedDragonId: (id) => set({ pvpSelectedDragonId: id }),
-  ownedDragonIds: [1, 2, 3, 4, 5, 6, 7, 8],
+  ownedDragonIds: INITIAL_OWNED,
   selectedDeck: [],
   enemyDeck: [],
   toggleDeckMember: (id) =>
