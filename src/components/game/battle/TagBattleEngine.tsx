@@ -499,7 +499,11 @@ export function TagBattleEngine({
       </div>
 
       {/* 내 벤치 */}
-      <div className="flex gap-1.5">
+      <div
+        className={`flex gap-1.5 rounded-xl p-1 transition ${
+          pickingSwap ? "ring-2 ring-amber-400/60 bg-amber-500/5 animate-pulse" : ""
+        }`}
+      >
         {playerBench.map(({ m, i }) => (
           <MiniBenchCard
             key={i}
