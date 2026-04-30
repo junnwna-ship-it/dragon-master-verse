@@ -748,17 +748,29 @@ jobs:
             echo "No SVG to convert."
             exit 0
           fi
+          # Match the SVG render scale so PNG resolution stays consistent.
+          RAW_SCALE="${CHART_RENDER_SCALE:-2}"
+          case "$RAW_SCALE" in
+            ''|*[!0-9]*) SCALE=2 ;;
+            *) SCALE=$RAW_SCALE ;;
+          esac
+          if [ "$SCALE" -lt 1 ]; then SCALE=1; fi
+          if [ "$SCALE" -gt 6 ]; then SCALE=6; fi
+          BASE_W=720
+          PNG_W=$((BASE_W * SCALE))
+          # ImageMagick density: 96 DPI baseline × scale
+          IM_DENSITY=$((96 * SCALE))
+          echo "PNG render: width=${PNG_W}px (scale=${SCALE}x)"
           # rsvg-convert is preinstalled on ubuntu-latest runners (librsvg2-bin).
           # Fall back to apt install on stripped images, then ImageMagick as a last resort.
           if ! command -v rsvg-convert >/dev/null 2>&1; then
             sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin || true
           fi
           if command -v rsvg-convert >/dev/null 2>&1; then
-            # 2× pixel density for crisp rendering in GitHub UI
-            rsvg-convert -w 1440 reports/lint-time-by-cache.svg -o reports/lint-time-by-cache.png
+            rsvg-convert -w "$PNG_W" reports/lint-time-by-cache.svg -o reports/lint-time-by-cache.png
             echo "Converted via rsvg-convert: $(du -h reports/lint-time-by-cache.png | cut -f1)"
           elif command -v convert >/dev/null 2>&1; then
-            convert -density 200 -background white reports/lint-time-by-cache.svg reports/lint-time-by-cache.png
+            convert -density "$IM_DENSITY" -background white reports/lint-time-by-cache.svg reports/lint-time-by-cache.png
             echo "Converted via ImageMagick: $(du -h reports/lint-time-by-cache.png | cut -f1)"
           else
             echo "::warning::No SVG→PNG converter available (rsvg-convert / convert); skipping PNG."
