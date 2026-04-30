@@ -1,15 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
-
-const elementGradient: Record<string, string> = {
-  Wood: "from-emerald-500/40 via-emerald-700/20 to-slate-900",
-  Water: "from-sky-500/40 via-sky-700/20 to-slate-900",
-  Fire: "from-rose-500/40 via-rose-700/20 to-slate-900",
-  Earth: "from-amber-500/40 via-amber-700/20 to-slate-900",
-  Light: "from-yellow-300/40 via-yellow-600/20 to-slate-900",
-  Dark: "from-violet-500/40 via-violet-800/20 to-slate-900",
-};
 
 /**
  * Renders a dragon's artwork with graceful fallback handling.
@@ -51,23 +41,17 @@ export function DragonImage({
   // 그 외에는 기존 webp 변형(작은/큰)을 사용.
   const primary = dragon.imageUrl
     ?? (preferLarge ? dragon.imageLarge ?? dragon.image : dragon.image);
-  const tone = elementGradient[dragon.element] ?? elementGradient.Wood;
 
   if (!primary || failed) {
     return (
       <div
         role="img"
         aria-label={`${dragon.name} 일러스트 (이미지 없음)`}
-        className={`flex items-center justify-center bg-gradient-to-br ${tone} ${className}`}
+        className={`flex items-center justify-center bg-slate-700 ${className}`}
       >
-        <div className="flex flex-col items-center gap-2 text-slate-300/80">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-900/40 ring-1 ring-slate-100/10 backdrop-blur-sm">
-            <Sparkles className="h-9 w-9" />
-          </div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-200/70">
-            {dragon.element}
-          </span>
-        </div>
+        <span className="px-2 text-center text-sm font-bold tracking-wide text-slate-100">
+          {dragon.name}
+        </span>
       </div>
     );
   }
