@@ -1,5 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2, HeartHandshake } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2, HeartHandshake, Star } from "lucide-react";
+/**
+ * BondingSection이 성공할 때 모달 내 다른 컴포넌트(카드 이미지 영역, EXP 게이지)에
+ * 동시에 VFX를 트리거하기 위한 가벼운 이벤트 버스.
+ * payload: { dragonId, expGain }
+ */
+export const BOND_SUCCESS_EVENT = "dragon:bond-success";
+export interface BondSuccessDetail { dragonId: number; expGain: number }
+
+function emitBondSuccess(detail: BondSuccessDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<BondSuccessDetail>(BOND_SUCCESS_EVENT, { detail }));
+}
+
+function useBondSuccess(dragonId: number, handler: (detail: BondSuccessDetail) => void) {
+  useEffect(() => {
+    const fn = (e: Event) => {
+      const ce = e as CustomEvent<BondSuccessDetail>;
+      if (ce.detail?.dragonId === dragonId) handler(ce.detail);
+    };
+    window.addEventListener(BOND_SUCCESS_EVENT, fn);
+    return () => window.removeEventListener(BOND_SUCCESS_EVENT, fn);
+  }, [dragonId, handler]);
+}
+
 import type { Dragon, Element } from "@/store/dragons";
 import { useGameStore } from "@/store/dragons";
 import { DragonImage } from "./DragonImage";
@@ -215,17 +239,8 @@ export function DragonDetailModal({
         </div>
 
         <div className="space-y-4 px-5 py-4">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
-            <DragonImage
-              dragon={dragon}
-              preferLarge
-              fit="contain"
-              className="absolute inset-0 h-full w-full"
-              sizes="(max-width: 640px) 100vw, 448px"
-              loading="eager"
-              fetchPriority="high"
-            />
-          </div>
+          <BondableCardImage dragon={dragon} />
+          <ExpGauge dragon={dragon} />
           <section>
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">스탯</h4>
@@ -454,6 +469,180 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
 }
 
 /**
+ * 카드 이미지 영역 — 교감 성공 시 핑크 오라/하트 폭발/카드 살짝 펄스 연출.
+ * 자체적으로 BOND_SUCCESS_EVENT를 듣고 일치하는 dragon.id에만 반응.
+ */
+function BondableCardImage({ dragon }: { dragon: Dragon }) {
+  const [burst, setBurst] = useState(0); // bump key to retrigger animation
+  const burstHandler = useCallback(() => setBurst((k) => k + 1), []);
+  useBondSuccess(dragon.id, burstHandler);
+
+  return (
+    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/40">
+      <DragonImage
+        dragon={dragon}
+        preferLarge
+        fit="contain"
+        className={`absolute inset-0 h-full w-full transition ${burst ? "bond-card-pulse" : ""}`}
+        sizes="(max-width: 640px) 100vw, 448px"
+        loading="eager"
+        fetchPriority="high"
+      />
+      {burst > 0 && (
+        <div key={burst} className="pointer-events-none absolute inset-0">
+          {/* 핑크 오라 — 카드 전체를 덮는 라디얼 글로우 */}
+          <div className="absolute inset-0 bond-aura" />
+          {/* 회전하는 하트 링 */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {Array.from({ length: 8 }).map((_, i) => {
+              const a = (i / 8) * Math.PI * 2;
+              const x = Math.cos(a) * 110;
+              const y = Math.sin(a) * 80;
+              return (
+                <Heart
+                  key={i}
+                  className="absolute h-5 w-5 fill-pink-400 text-pink-300 drop-shadow-[0_0_8px_rgba(244,114,182,0.9)]"
+                  style={{
+                    animation: `bond-heart-fly 1.1s cubic-bezier(0.22,0.61,0.36,1) forwards`,
+                    animationDelay: `${i * 0.04}s`,
+                    ["--bx" as string]: `${x}px`,
+                    ["--by" as string]: `${y}px`,
+                  }}
+                />
+              );
+            })}
+          </div>
+          {/* 중앙 큰 하트 + 별 — 임팩트 프레임 */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Heart className="h-24 w-24 fill-pink-500 text-pink-400 drop-shadow-[0_0_24px_rgba(236,72,153,0.95)] bond-impact" />
+            <Star className="absolute h-10 w-10 fill-amber-300 text-amber-200 bond-star" />
+          </div>
+          {/* 위로 떠오르는 작은 입자 */}
+          {Array.from({ length: 18 }).map((_, i) => (
+            <span
+              key={`p-${i}`}
+              className="absolute bottom-0 h-1.5 w-1.5 rounded-full bg-pink-300 shadow-[0_0_6px_rgba(244,114,182,0.9)]"
+              style={{
+                left: `${5 + Math.random() * 90}%`,
+                animation: `bond-rise 1.2s ease-out forwards`,
+                animationDelay: `${Math.random() * 0.3}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+      <style>{`
+        @keyframes bond-heart-fly {
+          0%   { transform: translate(0,0) scale(0.4); opacity: 0; }
+          25%  { opacity: 1; }
+          100% { transform: translate(var(--bx), var(--by)) scale(1.1); opacity: 0; }
+        }
+        @keyframes bond-impact {
+          0%   { transform: scale(0.2); opacity: 0; }
+          35%  { transform: scale(1.3); opacity: 1; }
+          70%  { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+        .bond-impact { animation: bond-impact 1.1s ease-out forwards; }
+        @keyframes bond-star {
+          0%   { transform: rotate(-30deg) scale(0); opacity: 0; }
+          50%  { transform: rotate(0deg) scale(1.3); opacity: 1; }
+          100% { transform: rotate(40deg) scale(0.6); opacity: 0; }
+        }
+        .bond-star { animation: bond-star 1.1s ease-out forwards; }
+        @keyframes bond-aura {
+          0%   { background: radial-gradient(circle at 50% 50%, rgba(244,114,182,0.0) 0%, transparent 60%); opacity: 0; }
+          30%  { background: radial-gradient(circle at 50% 50%, rgba(244,114,182,0.55) 0%, rgba(236,72,153,0.25) 35%, transparent 70%); opacity: 1; }
+          100% { background: radial-gradient(circle at 50% 50%, rgba(244,114,182,0.0) 0%, transparent 60%); opacity: 0; }
+        }
+        .bond-aura { animation: bond-aura 1.1s ease-out forwards; mix-blend-mode: screen; }
+        @keyframes bond-card-pulse {
+          0%, 100% { transform: scale(1); filter: brightness(1) saturate(1); }
+          40%      { transform: scale(1.04); filter: brightness(1.15) saturate(1.25); }
+        }
+        .bond-card-pulse { animation: bond-card-pulse 0.9s ease-out 1; }
+        @keyframes bond-rise {
+          0%   { transform: translateY(0) scale(1); opacity: 0; }
+          15%  { opacity: 1; }
+          100% { transform: translateY(-180px) scale(0.4); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/**
+ * EXP 게이지 — Lv/EXP 표시 + 진행 바.
+ * 교감 성공 시 게이지가 부드럽게 채워지며, +EXP 숫자가 위로 떠오르고 골드 펄스가 진행바를 훑고 지나간다.
+ * (다음 레벨까지 필요한 EXP는 단순 계산: nextExp = level * 1000)
+ */
+function ExpGauge({ dragon }: { dragon: Dragon }) {
+  const level = dragon.level ?? 1;
+  const exp = dragon.exp ?? 0;
+  const nextExp = Math.max(100, level * 1000);
+  const pct = Math.min(100, (exp / nextExp) * 100);
+
+  const [pop, setPop] = useState<{ key: number; gain: number } | null>(null);
+  const [shimmer, setShimmer] = useState(0);
+
+  const onBond = useCallback((d: BondSuccessDetail) => {
+    setPop({ key: Date.now(), gain: d.expGain });
+    setShimmer((k) => k + 1);
+    setTimeout(() => setPop(null), 1400);
+  }, []);
+  useBondSuccess(dragon.id, onBond);
+
+  return (
+    <section className="relative overflow-hidden rounded-xl border border-amber-500/30 bg-slate-900/60 px-3 py-2.5">
+      <div className="mb-1 flex items-center justify-between text-[11px]">
+        <span className="flex items-center gap-1 font-bold text-amber-300">
+          <Star className="h-3 w-3 fill-amber-300" /> Lv.{level}
+        </span>
+        <span className="font-mono text-slate-400">
+          EXP <span className="text-slate-200">{exp.toLocaleString()}</span> / {nextExp.toLocaleString()}
+        </span>
+      </div>
+      <div className="relative h-2 overflow-hidden rounded-full bg-slate-800">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-amber-400 via-pink-400 to-rose-400 shadow-[0_0_8px_rgba(244,114,182,0.7)] transition-[width] duration-700 ease-out"
+          style={{ width: `${pct}%` }}
+        />
+        {shimmer > 0 && (
+          <span
+            key={shimmer}
+            className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/80 to-transparent"
+            style={{ animation: "exp-shimmer 0.9s ease-out 1" }}
+          />
+        )}
+      </div>
+      {/* +EXP 숫자 팝업 */}
+      {pop && (
+        <span
+          key={pop.key}
+          className="pointer-events-none absolute right-3 top-1 select-none text-sm font-extrabold text-pink-300 drop-shadow-[0_0_6px_rgba(244,114,182,0.9)]"
+          style={{ animation: "exp-pop 1.3s ease-out forwards" }}
+        >
+          +{pop.gain} EXP
+        </span>
+      )}
+      <style>{`
+        @keyframes exp-shimmer {
+          0%   { transform: translateX(0); opacity: 0; }
+          20%  { opacity: 1; }
+          100% { transform: translateX(450%); opacity: 0; }
+        }
+        @keyframes exp-pop {
+          0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+          25%  { transform: translateY(-4px) scale(1.2); opacity: 1; }
+          75%  { transform: translateY(-22px) scale(1); opacity: 1; }
+          100% { transform: translateY(-40px) scale(0.85); opacity: 0; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/**
  * 교감하기(Bonding) 섹션.
  * - 인벤토리에서 'bonding_token' 1개를 소모해 드래곤에게 EXP +500 제공.
  * - 토큰이 없으면 안내 메시지와 함께 비활성화.
@@ -485,6 +674,8 @@ export function BondingSection({ dragon }: { dragon: Dragon }) {
     setBusy(false);
     if (error) { toast.error(`교감 실패: ${error.message}`); return; }
     setVfx(true);
+    // 카드 이미지 / EXP 게이지에서 동시에 VFX 재생
+    emitBondSuccess({ dragonId: dragon.id, expGain: 500 });
     toast.success(`${dragon.name}와(과)의 친밀도 상승! EXP +500`);
     setTimeout(() => setVfx(false), 1200);
     await Promise.all([loadTokens(), refetchDragons()]);
