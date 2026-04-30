@@ -31,6 +31,7 @@ import {
   MP_SKILL_COST_PCT,
   MP_SKILL_THRESHOLD_PCT,
 } from "./battleLogic";
+import { EffectOverlay, elementToEffect, type ActiveEffect, type EffectType } from "./EffectOverlay";
 
 /** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
 function uiHp(c: Combatant): number {
@@ -182,12 +183,14 @@ function ActivePanel({
   attacking = false,
   hitFlashKey = 0,
   damagePops = [],
+  effects = [],
 }: {
   c: Combatant;
   side: "player" | "enemy";
   attacking?: boolean;
   hitFlashKey?: number;
   damagePops?: DamagePop[];
+  effects?: ActiveEffect[];
 }) {
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
@@ -233,6 +236,9 @@ function ActivePanel({
             />
           )}
         </AnimatePresence>
+
+        {/* VFX 이펙트 오버레이 — 이미지 위에 덮임 */}
+        <EffectOverlay effects={effects} target={side} />
 
         {/* 데미지 파티클 텍스트 */}
         <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-2">
@@ -422,6 +428,18 @@ export function TagBattleEngine({
   const [ePops, setEPops] = useState<DamagePop[]>([]);
   const popIdRef = useRef(1);
 
+  // ===== VFX 전역 이펙트 큐 =====
+  const [activeEffects, setActiveEffects] = useState<ActiveEffect[]>([]);
+  const effectIdRef = useRef(1);
+  /** 이펙트 트리거: 큐에 추가하고 0.6초 뒤 자동 제거. */
+  const triggerEffect = (target: "player" | "enemy", type: EffectType) => {
+    const id = effectIdRef.current++;
+    setActiveEffects((prev) => [...prev, { id, target, type }]);
+    setTimeout(() => {
+      setActiveEffects((prev) => prev.filter((e) => e.id !== id));
+    }, 600);
+  };
+
   /** -dmg 텍스트 파티클을 한쪽에 띄우고 1.1초 후 제거. */
   const popDamage = (target: "player" | "enemy", value: number, variant: DamagePop["variant"] = "damage") => {
     if (value <= 0) return;
@@ -440,6 +458,7 @@ export function TagBattleEngine({
     actor: "player" | "enemy",
     targetHpDelta: number,
     skill = false,
+    attackerElement?: string,
   ) => {
     setAttackingSide(actor);
     setTimeout(() => setAttackingSide(null), 460);
@@ -454,6 +473,9 @@ export function TagBattleEngine({
         setEShakeKey((k) => k + 1);
       }
       popDamage(target, targetHpDelta, skill ? "skill" : "damage");
+      // 공격자의 원소에 맞춘 VFX (없으면 slash)
+      const fx: EffectType = attackerElement ? elementToEffect(attackerElement) : "slash";
+      triggerEffect(target, fx);
     }
   };
 
@@ -499,6 +521,8 @@ export function TagBattleEngine({
     if (!cur || cur.engineHp <= 0) return;
     const { next, logs: l } = onTurnStart(cur);
     pushLogs(l);
+    // Bella가 회복했을 때 heal VFX
+    if (next.engineHp > cur.engineHp) triggerEffect("player", "heal");
     commit(setActive(t, t.activeIdx, next), eTeamRef.current);
   }, [turn, turnNumber, winner]);
 
@@ -553,6 +577,11 @@ export function TagBattleEngine({
 
     const drained = endTurnDrain(selfActive, oppActive, { turnNumber });
     pushLogs(drained.logs);
+    // 독 데미지 발생 시 poison VFX
+    if (selfActive.poisoned && drained.self.engineHp < selfActive.engineHp) {
+      const poisonTarget: "player" | "enemy" = actor === "player" ? "player" : "enemy";
+      triggerEffect(poisonTarget, "poison");
+    }
 
     let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
     let nextOppTeam = setActive(oppTeam, oppTeam.activeIdx, drained.opponent);
@@ -567,6 +596,9 @@ export function TagBattleEngine({
       const r2 = tickBenchMp(nextOppTeam);
       nextOppTeam = r2.team;
       pushLogs(r2.logs);
+      // 벤치 MP 회복 발생 시 heal VFX (자기 진영의 active에 노출)
+      const selfSide: "player" | "enemy" = actor === "player" ? "player" : "enemy";
+      if (r1.logs.length) triggerEffect(selfSide, "heal");
     }
 
     const finalP = actor === "player" ? nextSelfTeam : nextOppTeam;
@@ -593,7 +625,7 @@ export function TagBattleEngine({
     pushLogs(r.logs);
     const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
     const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-    playAttackFx("player", dmgDealt);
+    playAttackFx("player", dmgDealt, false, a.base.element);
     if (reflect > 0) popDamage("player", reflect); // 상성 반사 피해
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
@@ -617,7 +649,7 @@ export function TagBattleEngine({
     pushLogs(r.logs);
     const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
     const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-    playAttackFx("player", dmgDealt, true);
+    playAttackFx("player", dmgDealt, true, a.base.element);
     if (reflect > 0) popDamage("player", reflect);
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
@@ -652,6 +684,7 @@ export function TagBattleEngine({
       if (cur && cur.engineHp > 0) {
         const { next, logs: l } = onTurnStart(cur);
         if (l.length) pushLogs(l);
+        if (next.engineHp > cur.engineHp) triggerEffect("enemy", "heal");
         if (next !== cur) commit(pTeamRef.current, setActive(t, t.activeIdx, next));
       }
     }
@@ -670,7 +703,7 @@ export function TagBattleEngine({
       pushLogs(r.logs);
       const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
       const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-      playAttackFx("enemy", dmgDealt);
+      playAttackFx("enemy", dmgDealt, false, a.base.element);
       if (reflect > 0) popDamage("enemy", reflect);
       const nextE = setActive(curE, curE.activeIdx, r.attacker);
       const nextP = setActive(curP, curP.activeIdx, r.defender);
@@ -727,6 +760,7 @@ export function TagBattleEngine({
               attacking={attackingSide === "player"}
               hitFlashKey={pHitKey}
               damagePops={pPops}
+              effects={activeEffects}
             />
           </motion.div>
         ) : (
@@ -746,6 +780,7 @@ export function TagBattleEngine({
               attacking={attackingSide === "enemy"}
               hitFlashKey={eHitKey}
               damagePops={ePops}
+              effects={activeEffects}
             />
           </motion.div>
         ) : (
