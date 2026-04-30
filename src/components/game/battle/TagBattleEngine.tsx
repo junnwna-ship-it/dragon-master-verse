@@ -34,6 +34,7 @@ import {
 import {
   EffectOverlay,
   StatusOverlay,
+  SpecialEffect,
   elementToEffect,
   type ActiveEffect,
   type EffectType,
