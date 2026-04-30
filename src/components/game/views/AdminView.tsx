@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud, ToggleRight, Settings2 } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud, ToggleRight, Settings2, HelpCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useGameStore, type Element } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
@@ -655,6 +655,9 @@ export function AdminView() {
         )}
       </section>
 
+      {/* Quiz manager — admin only */}
+      {isAdmin && <QuizManager />}
+
       {/* Manage list */}
       <section>
         <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
@@ -734,5 +737,178 @@ export function AdminView() {
         </ul>
       </section>
     </div>
+  );
+}
+
+/**
+ * 퀴즈 매니저 — 관리자가 'quizzes' 테이블에 최대 30개 문항을 등록·수정·삭제.
+ * 각 문제: 질문, 보기 4개, 정답 인덱스(0–3).
+ * RLS는 admin role에 한해 INSERT/UPDATE/DELETE 허용.
+ */
+const MAX_QUIZZES = 30;
+
+interface QuizRow {
+  id: string;
+  question: string;
+  choices: string[];
+  answer_index: number;
+  category: string;
+}
+
+function QuizManager() {
+  const [rows, setRows] = useState<QuizRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [question, setQuestion] = useState("");
+  const [choices, setChoices] = useState<[string, string, string, string]>(["", "", "", ""]);
+  const [answerIdx, setAnswerIdx] = useState(0);
+  const [category, setCategory] = useState("general");
+
+  const load = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("quizzes")
+      .select("id, question, choices, answer_index, category")
+      .order("created_at", { ascending: false });
+    setLoading(false);
+    if (error) { toast.error(`퀴즈 로드 실패: ${error.message}`); return; }
+    setRows((data ?? []).map((r) => ({
+      id: r.id, question: r.question, choices: r.choices as string[],
+      answer_index: r.answer_index, category: r.category,
+    })));
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const reset = () => {
+    setEditingId(null); setQuestion(""); setChoices(["", "", "", ""]);
+    setAnswerIdx(0); setCategory("general");
+  };
+
+  const startEdit = (q: QuizRow) => {
+    setEditingId(q.id); setQuestion(q.question);
+    const c = [...q.choices, "", "", "", ""].slice(0, 4) as [string, string, string, string];
+    setChoices(c); setAnswerIdx(q.answer_index); setCategory(q.category || "general");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!question.trim()) { toast.error("질문을 입력하세요"); return; }
+    if (choices.some((c) => !c.trim())) { toast.error("보기 4개를 모두 입력하세요"); return; }
+    if (answerIdx < 0 || answerIdx > 3) { toast.error("정답 인덱스가 잘못되었습니다"); return; }
+    if (!editingId && rows.length >= MAX_QUIZZES) {
+      toast.error(`최대 ${MAX_QUIZZES}개까지 등록할 수 있습니다`); return;
+    }
+    setBusy(true);
+    const payload = {
+      question: question.trim(),
+      choices: choices.map((c) => c.trim()),
+      answer_index: answerIdx,
+      category: category.trim() || "general",
+    };
+    const { error } = editingId
+      ? await supabase.from("quizzes").update(payload).eq("id", editingId)
+      : await supabase.from("quizzes").insert(payload);
+    setBusy(false);
+    if (error) { toast.error(`저장 실패: ${error.message}`); return; }
+    toast.success(editingId ? "수정 완료" : "퀴즈 등록 완료");
+    reset(); await load();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("이 퀴즈를 삭제할까요?")) return;
+    const { error } = await supabase.from("quizzes").delete().eq("id", id);
+    if (error) { toast.error(`삭제 실패: ${error.message}`); return; }
+    toast.success("삭제됨"); await load();
+    if (editingId === id) reset();
+  };
+
+  return (
+    <section className="space-y-3 rounded-2xl border border-purple-500/40 bg-slate-900/60 p-4">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-300">
+          <HelpCircle className="h-3 w-3" /> 퀴즈 관리 ({rows.length}/{MAX_QUIZZES})
+        </p>
+        {editingId && (
+          <button type="button" onClick={reset}
+            className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-700">
+            <X className="h-3 w-3" /> 취소
+          </button>
+        )}
+      </div>
+
+      <form onSubmit={save} className="space-y-2">
+        <label className="block text-xs">
+          <span className="mb-1 block text-slate-400">질문</span>
+          <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={2}
+            placeholder="예) 드래곤은 어떤 알에서 부화할까요?"
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500" />
+        </label>
+        <div className="grid grid-cols-1 gap-2">
+          {choices.map((c, i) => (
+            <label key={i} className="flex items-center gap-2 text-xs">
+              <input type="radio" name="answer" checked={answerIdx === i}
+                onChange={() => setAnswerIdx(i)}
+                className="h-4 w-4 accent-emerald-500" aria-label={`보기 ${String.fromCharCode(65 + i)} 정답으로 선택`} />
+              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                answerIdx === i ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400"
+              }`}>{String.fromCharCode(65 + i)}</span>
+              <input value={c} onChange={(e) => {
+                const next = [...choices] as [string, string, string, string];
+                next[i] = e.target.value; setChoices(next);
+              }} placeholder={`보기 ${i + 1}`}
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 outline-none focus:border-purple-500" />
+            </label>
+          ))}
+        </div>
+        <label className="block text-xs">
+          <span className="mb-1 block text-slate-400">카테고리</span>
+          <input value={category} onChange={(e) => setCategory(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500" />
+        </label>
+        <button type="submit" disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-400 disabled:opacity-50">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {editingId ? "변경사항 저장" : "퀴즈 등록"}
+        </button>
+      </form>
+
+      {loading ? (
+        <div className="flex justify-center py-4 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
+      ) : rows.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-slate-700 px-3 py-4 text-center text-xs text-slate-500">
+          아직 등록된 퀴즈가 없습니다
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.map((q) => (
+            <li key={q.id}
+              className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-100">{q.question}</p>
+                <p className="truncate text-[10px] text-slate-400">
+                  정답: <span className="font-bold text-emerald-300">{String.fromCharCode(65 + q.answer_index)}. {q.choices[q.answer_index]}</span>
+                  {" · "}{q.category}
+                </p>
+              </div>
+              <button type="button" onClick={() => startEdit(q)}
+                aria-label="편집"
+                className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                  editingId === q.id ? "bg-amber-500/20 text-amber-300" : "bg-sky-500/10 text-sky-400 hover:bg-sky-500/20"
+                }`}>
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" onClick={() => remove(q.id)}
+                aria-label="삭제"
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
