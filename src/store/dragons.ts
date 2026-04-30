@@ -1,10 +1,17 @@
 import { create } from "zustand";
-import eliaImg from "@/assets/dragons/elia.png";
-import bellaImg from "@/assets/dragons/bella.png";
-import comiImg from "@/assets/dragons/comi.png";
-import snowyImg from "@/assets/dragons/snowy.png";
-import caminontImg from "@/assets/dragons/caminont.png";
-import younigonImg from "@/assets/dragons/younigon.png";
+// Optimized WebP variants (small for cards, large for the modal hero).
+import elia480 from "@/assets/dragons/elia-480.webp";
+import elia800 from "@/assets/dragons/elia-800.webp";
+import bella480 from "@/assets/dragons/bella-480.webp";
+import bella800 from "@/assets/dragons/bella-800.webp";
+import comi480 from "@/assets/dragons/comi-480.webp";
+import comi800 from "@/assets/dragons/comi-800.webp";
+import snowy480 from "@/assets/dragons/snowy-480.webp";
+import snowy800 from "@/assets/dragons/snowy-800.webp";
+import caminont480 from "@/assets/dragons/caminont-480.webp";
+import caminont800 from "@/assets/dragons/caminont-800.webp";
+import younigon480 from "@/assets/dragons/younigon-480.webp";
+import younigon800 from "@/assets/dragons/younigon-800.webp";
 
 export type Element = "Wood" | "Water" | "Fire" | "Earth" | "Light" | "Dark";
 
@@ -17,7 +24,10 @@ export interface Dragon {
   mp: number;
   atk: number;
   def: number;
+  /** ~480px wide WebP — used by the lobby card grid. */
   image?: string;
+  /** ~800px wide WebP — used by the detail modal hero. */
+  imageLarge?: string;
 }
 
 export type View = "lobby" | "story" | "pvp";
@@ -75,12 +85,12 @@ export const useGameStore = create<GameState>((set) => ({
   dragons: [
     // Stats taken from the hand-drawn cards, scaled down so the in-game
     // bars (max 100) stay readable: HP/MP /20, ATK/DEF /20.
-    { id: 1, name: "Elia",     element: "Water", maxHp: 65, hp: 65, mp: 65, atk: 60, def: 60, image: eliaImg },
-    { id: 2, name: "Bella",    element: "Water", maxHp: 50, hp: 50, mp: 50, atk: 100, def: 50, image: bellaImg },
-    { id: 3, name: "Comi",     element: "Light", maxHp: 75, hp: 75, mp: 50, atk: 75, def: 50, image: comiImg },
-    { id: 4, name: "Snowy",    element: "Water", maxHp: 100, hp: 100, mp: 55, atk: 55, def: 40, image: snowyImg },
-    { id: 5, name: "Caminont", element: "Dark",  maxHp: 20, hp: 20, mp: 5,  atk: 100, def: 5,  image: caminontImg },
-    { id: 6, name: "Younigon", element: "Fire",  maxHp: 100, hp: 100, mp: 20, atk: 80, def: 50, image: younigonImg },
+    { id: 1, name: "Elia",     element: "Water", maxHp: 65,  hp: 65,  mp: 65, atk: 60,  def: 60, image: elia480,     imageLarge: elia800 },
+    { id: 2, name: "Bella",    element: "Water", maxHp: 50,  hp: 50,  mp: 50, atk: 100, def: 50, image: bella480,    imageLarge: bella800 },
+    { id: 3, name: "Comi",     element: "Light", maxHp: 75,  hp: 75,  mp: 50, atk: 75,  def: 50, image: comi480,     imageLarge: comi800 },
+    { id: 4, name: "Snowy",    element: "Water", maxHp: 100, hp: 100, mp: 55, atk: 55,  def: 40, image: snowy480,    imageLarge: snowy800 },
+    { id: 5, name: "Caminont", element: "Dark",  maxHp: 20,  hp: 20,  mp: 5,  atk: 100, def: 5,  image: caminont480, imageLarge: caminont800 },
+    { id: 6, name: "Younigon", element: "Fire",  maxHp: 100, hp: 100, mp: 20, atk: 80,  def: 50, image: younigon480, imageLarge: younigon800 },
   ],
   addDragon: (d) =>
     set((state) => {
