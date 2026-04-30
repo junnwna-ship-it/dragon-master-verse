@@ -345,6 +345,25 @@ export function DragonDetailModal({
           </button>
         </div>
         </div>
+        {/* Neighbor preloading. Render hidden <img> tags for the previous
+            and next dragons so swiping/arrow-key navigation gets a
+            decoded bitmap from cache instead of a fresh network round-trip.
+            We preload the small variant (480w) which is what the modal
+            falls back to when the large one isn't yet decoded. */}
+        <div aria-hidden="true" className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0">
+          {nextDragon?.image && (
+            <img src={nextDragon.image} alt="" decoding="async" loading="eager" />
+          )}
+          {nextDragon?.imageLarge && (
+            <img src={nextDragon.imageLarge} alt="" decoding="async" loading="eager" />
+          )}
+          {prevDragon?.image && (
+            <img src={prevDragon.image} alt="" decoding="async" loading="eager" />
+          )}
+          {prevDragon?.imageLarge && (
+            <img src={prevDragon.imageLarge} alt="" decoding="async" loading="eager" />
+          )}
+        </div>
       </div>
     </div>
   );
