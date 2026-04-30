@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Coins, Flame } from "lucide-react";
 import { useGameStore } from "@/store/dragons";
 import { BottomNav } from "@/components/game/BottomNav";
@@ -12,7 +12,6 @@ import { DebugView } from "@/components/game/views/DebugView";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/game/auth/AuthDialog";
-import { useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
