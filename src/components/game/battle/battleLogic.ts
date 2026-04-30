@@ -109,7 +109,7 @@ export interface AttackResult {
  * 통합 마스터 전투 엔진의 단일 공격 처리.
  * - RawDamage = atk*atkBuff - def*defDebuff
  * - 최소 데미지 = engineAtk * 10%
- * - 하드캡 = defender.engineMaxHp * 18%
+ * - 하드캡 = defender.engineMaxHp * 22%
  * - 5행 상성 우위/열위 처리 (스택/반사)
  * - 패시브 분기 (Comi 피격 경감, Snowy 회피·데미지감, Caminont 독)
  */
