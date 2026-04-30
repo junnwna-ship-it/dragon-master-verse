@@ -110,29 +110,20 @@ export function StoryView() {
         initialPlayerHp={run.playerHp}
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
-          // Use the functional updater so we always merge into the latest run
-          // (avoids stale-closure bugs across rapid back-to-back battles).
           if (outcome === "lose") {
             setDefeated(true);
             return;
           }
-          setRun((prev) => {
-            if (!prev) return prev;
-            if (outcome === "win") {
-              const nextNodeId = activeBattleNode.id + 1;
-              const isLast = activeBattleNode.id >= TOTAL_NODES;
-              return {
-                currentNodeId: isLast ? activeBattleNode.id : nextNodeId,
-                playerHp: finalState.playerHp,
-                playerMp: finalState.playerMp,
-                visited: prev.visited.includes(activeBattleNode.id)
-                  ? prev.visited
-                  : [...prev.visited, activeBattleNode.id],
-              };
-            }
+          if (outcome === "win") {
+            applyRunUpdate({
+              hp: finalState.playerHp,
+              mp: finalState.playerMp,
+              clearNodeId: activeBattleNode.id,
+            });
+          } else {
             // draw: keep position, persist HP/MP for retry
-            return { ...prev, playerHp: finalState.playerHp, playerMp: finalState.playerMp };
-          });
+            applyRunUpdate({ hp: finalState.playerHp, mp: finalState.playerMp });
+          }
         }}
         onExit={() => {
           setActiveBattleNode(null);
