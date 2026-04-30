@@ -760,6 +760,7 @@ export function TagBattleEngine({
               attacking={attackingSide === "player"}
               hitFlashKey={pHitKey}
               damagePops={pPops}
+              effects={activeEffects}
             />
           </motion.div>
         ) : (
@@ -779,6 +780,7 @@ export function TagBattleEngine({
               attacking={attackingSide === "enemy"}
               hitFlashKey={eHitKey}
               damagePops={ePops}
+              effects={activeEffects}
             />
           </motion.div>
         ) : (
