@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud, ToggleRight, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useGameStore, type Element } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppSettings, type AppSettings } from "@/hooks/useAppSettings";
 
 /**
  * Admin Dashboard — cloud-backed.
