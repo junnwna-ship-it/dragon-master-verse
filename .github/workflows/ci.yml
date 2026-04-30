@@ -785,12 +785,42 @@ jobs:
           if command -v rsvg-convert >/dev/null 2>&1; then
             rsvg-convert -w "$PNG_W" reports/lint-time-by-cache.svg -o reports/lint-time-by-cache.png
             echo "Converted via rsvg-convert: $(du -h reports/lint-time-by-cache.png | cut -f1)"
+            CONVERTER="rsvg-convert"
           elif command -v convert >/dev/null 2>&1; then
             convert -density "$IM_DENSITY" -background white reports/lint-time-by-cache.svg reports/lint-time-by-cache.png
             echo "Converted via ImageMagick: $(du -h reports/lint-time-by-cache.png | cut -f1)"
+            CONVERTER="imagemagick"
           else
             echo "::warning::No SVG→PNG converter available (rsvg-convert / convert); skipping PNG."
+            CONVERTER="none"
           fi
+
+          # Persist the chart-render configuration alongside the diff artifact
+          # so downstream debugging can correlate PNG dimensions with the run.
+          mkdir -p reports
+          PNG_BYTES=$([ -s reports/lint-time-by-cache.png ] && stat -c%s reports/lint-time-by-cache.png || echo 0)
+          jq -n \
+            --arg raw_scale "${CHART_RENDER_SCALE:-2}" \
+            --argjson scale "$SCALE" \
+            --argjson base_width_px "$BASE_W" \
+            --argjson png_width_px "$PNG_W" \
+            --argjson imagemagick_density "$IM_DENSITY" \
+            --arg converter "${CONVERTER:-unknown}" \
+            --argjson png_bytes "$PNG_BYTES" \
+            --arg generated_at "$(date -u +%FT%TZ)" \
+            '{
+              source: "chart-render-config",
+              env: { CHART_RENDER_SCALE: $raw_scale },
+              effective_scale: $scale,
+              base_width_px: $base_width_px,
+              png_width_px: $png_width_px,
+              imagemagick_density_dpi: $imagemagick_density,
+              converter: $converter,
+              png_bytes: $png_bytes,
+              generated_at: $generated_at
+            }' > reports/chart-render-config.json
+          echo "Wrote reports/chart-render-config.json"
+          cat reports/chart-render-config.json
 
       - name: Compare matched_runs between history debug files
         if: always()
@@ -941,6 +971,7 @@ jobs:
             reports/cache-history-debug.json
             reports/lint-time-history-debug.json
             reports/history-debug-diff.json
+            reports/chart-render-config.json
           retention-days: 14
           if-no-files-found: warn
 
