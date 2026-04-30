@@ -365,3 +365,89 @@ export function DragonDetailModal({
     </div>
   );
 }
+
+/**
+ * 훈련소(Training) 섹션.
+ * - statPoints 1점당 [ATK +10 / HP +50 / DEF +5 / MP +20]
+ * - `isTrainingOpen === false` 또는 보유 포인트가 없으면 버튼 비활성화.
+ * - 잠금 시 회색 + 툴팁("드래곤 훈련소 공사 중") 표시.
+ */
+function TrainingSection({ dragon }: { dragon: Dragon }) {
+  const { settings } = useAppSettings();
+  const refetchDragons = useGameStore((s) => s.fetchDragons);
+  const [busyStat, setBusyStat] = useState<string | null>(null);
+  const open = settings.isTrainingOpen;
+  const points = dragon.statPoints ?? 0;
+
+  const buttons: { stat: "atk" | "hp" | "def" | "mp"; label: string; gain: string }[] = [
+    { stat: "atk", label: "ATK", gain: "+10" },
+    { stat: "hp",  label: "HP",  gain: "+50" },
+    { stat: "def", label: "DEF", gain: "+5"  },
+    { stat: "mp",  label: "MP",  gain: "+20" },
+  ];
+
+  const spend = async (stat: "atk" | "hp" | "def" | "mp") => {
+    if (!dragon.uuid) {
+      toast.error("이 드래곤은 클라우드에 저장되어 있지 않습니다");
+      return;
+    }
+    setBusyStat(stat);
+    const { error } = await supabase.rpc("spend_stat_point", {
+      _dragon_uuid: dragon.uuid,
+      _stat: stat,
+    });
+    setBusyStat(null);
+    if (error) {
+      console.error("[training] spend failed:", error);
+      toast.error(`스탯 분배 실패: ${error.message}`);
+      return;
+    }
+    toast.success(`${stat.toUpperCase()} 강화 완료!`);
+    void refetchDragons();
+  };
+
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+          <Dumbbell className="h-3 w-3" /> 훈련소
+          {!open && <Lock className="h-3 w-3 text-slate-500" />}
+        </h4>
+        <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-mono font-bold text-amber-300">
+          Lv.{dragon.level ?? 1} · EXP {dragon.exp ?? 0}
+        </span>
+      </div>
+      <div className="mb-2 flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5">
+        <span className="text-[11px] text-slate-400">남은 스탯 포인트</span>
+        <span className="font-mono text-sm font-bold text-amber-300">{points}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {buttons.map((b) => {
+          const disabled = !open || points < 1 || busyStat !== null;
+          return (
+            <button
+              key={b.stat}
+              type="button"
+              onClick={() => spend(b.stat)}
+              disabled={disabled}
+              title={!open ? "드래곤 훈련소 공사 중" : points < 1 ? "스탯 포인트 없음" : `${b.label} ${b.gain}`}
+              className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                open
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                  : "border-slate-700 bg-slate-800/40 text-slate-500"
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              <span>{b.label}</span>
+              <span className="font-mono">
+                {busyStat === b.stat ? <Loader2 className="h-3 w-3 animate-spin" /> : b.gain}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {!open && (
+        <p className="mt-2 text-center text-[11px] text-slate-500">🔧 드래곤 훈련소 공사 중</p>
+      )}
+    </section>
+  );
+}
