@@ -345,20 +345,82 @@ export function PvpView() {
       </div>
 
       {/* MMR / RP header */}
-      <div className={`rounded-2xl border p-4 ${tier.tone}`}>
+      <div
+        className={`relative overflow-hidden rounded-2xl border p-4 transition-colors duration-500 ease-out ${tier.tone} ${
+          tierShift === "promote"
+            ? "ring-2 ring-emerald-400/60 shadow-lg shadow-emerald-500/30"
+            : tierShift === "demote"
+              ? "ring-2 ring-rose-400/60 shadow-lg shadow-rose-500/30"
+              : ""
+        }`}
+        // Inline keyframes scoped to this card for the pulse + sweep effects.
+        style={
+          tierShift
+            ? ({ animation: "pvp-tier-flash 1.2s ease-out 1" } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <style>{`
+          @keyframes pvp-tier-flash {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.03); }
+            60% { transform: scale(0.995); }
+            100% { transform: scale(1); }
+          }
+          @keyframes pvp-rp-pulse {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.12); }
+            100% { transform: scale(1); }
+          }
+          .pvp-rp-pulse { animation: pvp-rp-pulse 0.45s ease-out 1; }
+        `}</style>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5" />
+            <Crown
+              className={`h-5 w-5 transition-colors duration-500 ${
+                tierShift === "promote"
+                  ? "text-emerald-300"
+                  : tierShift === "demote"
+                    ? "text-rose-300"
+                    : ""
+              }`}
+            />
             <div>
               <p className="text-[10px] uppercase tracking-widest opacity-70">랭크</p>
-              <p className="text-sm font-bold">{tier.label}</p>
+              <p className="text-sm font-bold transition-colors duration-500">{tier.label}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-widest opacity-70">랭크 점수</p>
-            <p className="text-2xl font-bold tabular-nums">{rp} <span className="text-xs opacity-70">RP</span></p>
+            <p
+              key={pulseKey}
+              className="pvp-rp-pulse flex items-center justify-end gap-1 text-2xl font-bold tabular-nums origin-right"
+            >
+              {direction === "up" && (
+                <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden />
+              )}
+              {direction === "down" && (
+                <TrendingDown className="h-4 w-4 text-rose-300" aria-hidden />
+              )}
+              <span>{rp}</span>
+              <span className="text-xs opacity-70">RP</span>
+            </p>
           </div>
         </div>
+        {tierShift && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mt-2 rounded-md px-2 py-1 text-center text-[11px] font-bold ${
+              tierShift === "promote"
+                ? "bg-emerald-500/20 text-emerald-200"
+                : "bg-rose-500/20 text-rose-200"
+            }`}
+          >
+            {tierShift === "promote" ? "🎉 승급! " : "⬇ 강등 "}
+            <span className="font-mono">{tier.label}</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2">
