@@ -135,24 +135,40 @@ function StatBar({
 
 export function DragonCard({ dragon }: { dragon: Dragon }) {
   const tone = elementColors[dragon.element] ?? elementColors.Wood;
+  const total = dragon.maxHp + dragon.mp + dragon.atk + dragon.def;
   return (
-    <div className="snap-center shrink-0 w-[78vw] max-w-[320px] rounded-3xl border border-slate-700/60 bg-gradient-to-b from-slate-800/90 to-slate-900/90 p-4 shadow-2xl shadow-black/40">
-      <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-2xl border bg-gradient-to-br ${tone}`}>
+    <div className="snap-center shrink-0 w-[78vw] max-w-[320px] rounded-3xl border border-white/15 bg-white/5 p-4 shadow-2xl shadow-black/40 backdrop-blur-md">
+      <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${tone}`}>
         <DragonImage
           dragon={dragon}
-          className="absolute inset-0 h-full w-full"
+          className="absolute inset-0 h-full w-full object-cover"
           fit="cover"
           sizes="(max-width: 480px) 78vw, 320px"
           width={480}
           height={600}
         />
+        {/* 하단 비네팅 — 텍스트 가독성 */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-transparent" />
         <span className={`absolute left-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}>
           {dragon.element}
         </span>
+        {/* 이미지 위에 이름 + 합계 — 글래스 스타일 */}
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-xl font-extrabold tracking-wide text-white drop-shadow-lg">
+              {dragon.name}
+            </h3>
+            <span className="font-mono text-[11px] font-bold text-white/80">
+              ∑ {total.toLocaleString()}
+            </span>
+          </div>
+        </div>
       </div>
       <div className="mt-3 flex items-baseline justify-between">
-        <h3 className="text-xl font-bold text-slate-100">{dragon.name}</h3>
         <span className="text-[10px] font-mono text-slate-500">#{String(dragon.id).padStart(3, "0")}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          {dragon.element} Class
+        </span>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2.5">
         <StatBar label="ATK" value={dragon.atk} icon={<Sword className="h-3.5 w-3.5" />} color="bg-rose-500" />
