@@ -343,20 +343,6 @@ jobs:
           fail-on-error: false
           markdown-report-on-step-summary: true
 
-      - name: Upload ESLint reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: eslint-reports
-          path: |
-            reports/eslint-report.json
-            reports/eslint-report.html
-            reports/eslint-failed-files.json
-            reports/eslint-timing.json
-            reports/eslint-rule-timing.txt
-            reports/lint-time-by-cache.svg
-          retention-days: 14
-
       - name: Compute cache hit-rate (last 20 runs)
         if: always()
         continue-on-error: true
@@ -672,6 +658,46 @@ jobs:
               echo "<img alt='Average lint time by cache level' src='$DATA_URI' />"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Convert chart SVG to PNG
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ ! -s reports/lint-time-by-cache.svg ]; then
+            echo "No SVG to convert."
+            exit 0
+          fi
+          # rsvg-convert is preinstalled on ubuntu-latest runners (librsvg2-bin).
+          # Fall back to apt install on stripped images, then ImageMagick as a last resort.
+          if ! command -v rsvg-convert >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin || true
+          fi
+          if command -v rsvg-convert >/dev/null 2>&1; then
+            # 2× pixel density for crisp rendering in GitHub UI
+            rsvg-convert -w 1440 reports/lint-time-by-cache.svg -o reports/lint-time-by-cache.png
+            echo "Converted via rsvg-convert: $(du -h reports/lint-time-by-cache.png | cut -f1)"
+          elif command -v convert >/dev/null 2>&1; then
+            convert -density 200 -background white reports/lint-time-by-cache.svg reports/lint-time-by-cache.png
+            echo "Converted via ImageMagick: $(du -h reports/lint-time-by-cache.png | cut -f1)"
+          else
+            echo "::warning::No SVG→PNG converter available (rsvg-convert / convert); skipping PNG."
+          fi
+
+      - name: Upload ESLint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-reports
+          path: |
+            reports/eslint-report.json
+            reports/eslint-report.html
+            reports/eslint-failed-files.json
+            reports/eslint-timing.json
+            reports/eslint-rule-timing.txt
+            reports/lint-time-by-cache.svg
+            reports/lint-time-by-cache.png
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Fail if ESLint reported errors
         if: steps.eslint.outcome == 'failure'
