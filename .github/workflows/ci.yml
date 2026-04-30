@@ -759,6 +759,8 @@ jobs:
             reports/eslint-rule-timing.txt
             reports/lint-time-by-cache.svg
             reports/lint-time-by-cache.png
+            reports/cache-history-debug.json
+            reports/lint-time-history-debug.json
           retention-days: 14
           if-no-files-found: warn
 
