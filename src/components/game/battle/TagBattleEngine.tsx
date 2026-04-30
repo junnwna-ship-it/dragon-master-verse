@@ -787,6 +787,14 @@ export function TagBattleEngine({
       animate={screenShakeKey > 0 ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 2, -2, 0, 0, 0] } : { x: 0, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      {/* Color Isolation — 시네마틱 동안 배경 채도를 0으로 (공격자 카드 + SpecialEffect만 컬러) */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-20"
+        animate={{ backdropFilter: specialElement ? "grayscale(1) contrast(1.1)" : "grayscale(0)" }}
+        transition={{ duration: 0.2 }}
+        style={{ backdropFilter: specialElement ? "grayscale(1) contrast(1.1)" : "none" }}
+      />
+
       {/* 스킬 시전 중 화면 디밍 — 공격자만 도드라지게 */}
       <AnimatePresence>
         {dimming && (
@@ -797,6 +805,22 @@ export function TagBattleEngine({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* 속성별 풀스크린 VFX (시네마틱 동안만) */}
+      <AnimatePresence>
+        {specialElement && (
+          <motion.div
+            key={specialElement}
+            className="pointer-events-none absolute inset-0 z-40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <SpecialEffect element={specialElement} />
+          </motion.div>
         )}
       </AnimatePresence>
 
