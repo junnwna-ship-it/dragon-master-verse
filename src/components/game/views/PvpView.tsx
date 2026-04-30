@@ -219,14 +219,18 @@ export function PvpView() {
           });
         }}
         onExit={() => {
+          // Battle is over — selection is finalized. Always clear the player
+          // selection and confirm-modal flag so re-entering the picker (via
+          // 다시 매칭) starts clean. Opponent stays only while the result
+          // popup needs to display its info.
+          setPlayer(null);
+          setConfirmStart(false);
           if (lastResult) {
             setPhase("result");
           } else {
             resetMatchUi();
             setPhase("idle");
           }
-          // Clear the selected dragon so the picker doesn't keep stale highlight.
-          setPlayer(null);
         }}
       />
     );
