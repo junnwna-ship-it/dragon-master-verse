@@ -54,10 +54,14 @@ function StatBar({
 
   const desc = STAT_DESCRIPTIONS[label] ?? "";
   const tooltipId = `stat-${label.toLowerCase()}-tooltip`;
+  // Full sentence used as the accessible name so screen readers announce
+  // the stat label, current/max values, and the explanatory description in
+  // one go (e.g. "공격력 ATK 80 of 100. 공격력. 한 번의 공격으로 ...").
+  const srLabel = `${label} ${value}${max !== 100 ? ` of ${max}` : " of 100"}. ${desc}`;
 
   return (
     <div
-      className="group relative space-y-1"
+      className="group relative space-y-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
@@ -71,27 +75,41 @@ function StatBar({
       onTouchMove={clearLongPress}
       tabIndex={0}
       role="group"
-      aria-label={`${label} ${value}${max !== 100 ? ` / ${max}` : ""}. ${desc}`}
+      aria-label={srLabel}
       aria-describedby={tooltipId}
     >
       <div className="flex items-center justify-between text-xs text-slate-300">
         <span className="flex items-center gap-1.5 font-medium">
-          {icon}
+          <span aria-hidden="true">{icon}</span>
           {label}
         </span>
-        <span className="font-mono text-slate-200">
+        <span className="font-mono text-slate-200" aria-hidden="true">
           {value}
           {max !== 100 && <span className="text-slate-500">/{max}</span>}
         </span>
       </div>
       <div
         className="h-2 w-full overflow-hidden rounded-full bg-slate-700/60"
+        role="progressbar"
+        aria-label={`${label} 진행도`}
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        aria-valuetext={`${value} / ${max}`}
         // Native browser tooltip as a last-resort fallback (e.g. desktop
         // assistive tech or environments that suppress our custom popup).
         title={`${label}: ${value}${max !== 100 ? `/${max}` : ""} — ${desc}`}
       >
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+        <div
+          aria-hidden="true"
+          className={`h-full rounded-full ${color} transition-[width] duration-300 ease-out`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
+
+      {/* Screen-reader-only sentence repeating the full description, so
+          even AT that ignores aria-label on grouping containers picks it up. */}
+      <span className="sr-only">{srLabel}</span>
 
       {/* Custom tooltip — shown on hover/focus (desktop) or long-press (touch). */}
       <span
