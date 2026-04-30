@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Trash2, Upload, Plus, Pencil, X } from "lucide-react";
 import { useGameStore, type Element } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
@@ -33,6 +33,7 @@ export function AdminView() {
   const updateCustomDragon = useGameStore((s) => s.updateCustomDragon);
 
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [justUpdatedId, setJustUpdatedId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [lore, setLore] = useState("");
   const [maxHp, setMaxHp] = useState(1500);
@@ -108,6 +109,7 @@ export function AdminView() {
         imageUrl: imageData || undefined,
         lore: lore.trim() || undefined,
       });
+      setJustUpdatedId(editingId);
     } else {
       addCustomDragon({
         name: name.trim(),
@@ -123,6 +125,12 @@ export function AdminView() {
     }
     resetForm();
   }
+
+  useEffect(() => {
+    if (justUpdatedId == null) return;
+    const t = setTimeout(() => setJustUpdatedId(null), 1400);
+    return () => clearTimeout(t);
+  }, [justUpdatedId]);
 
   return (
     <div className="space-y-5">
@@ -252,7 +260,11 @@ export function AdminView() {
             return (
               <li
                 key={d.id}
-                className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-2"
+                className={`flex items-center gap-3 rounded-xl border bg-slate-900/60 p-2 transition-colors ${
+                  justUpdatedId === d.id
+                    ? "border-amber-400/70 ring-1 ring-amber-400/40"
+                    : "border-slate-800"
+                }`}
               >
                 <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg">
                   <DragonImage dragon={d} className="h-full w-full" />
