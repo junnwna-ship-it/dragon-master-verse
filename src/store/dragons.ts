@@ -25,12 +25,30 @@ export interface PvpRecord {
   timestamp: number;
 }
 
+export type ItemKind = "equipment" | "consumable";
+export interface InventoryItem {
+  id: string;
+  name: string;
+  kind: ItemKind;
+  quantity: number;
+}
+
+export interface RewardDrop {
+  gold: number;
+  items: { name: string; kind: ItemKind; quantity: number }[];
+}
+
 interface GameState {
   dragons: Dragon[];
   view: View;
   setView: (v: View) => void;
   storyProgress: number; // highest cleared stage id (0 = none)
-  clearStage: (stageId: number) => void;
+  clearedStages: number[];
+  stageRewards: Record<number, RewardDrop>; // first-clear rewards by stage id
+  clearStage: (stageId: number, reward?: RewardDrop) => void;
+  gold: number;
+  inventory: InventoryItem[];
+  addReward: (reward: RewardDrop) => void;
   pvpRecords: PvpRecord[];
   pvpWins: number;
   pvpLosses: number;
@@ -47,10 +65,42 @@ export const useGameStore = create<GameState>((set) => ({
   view: "lobby",
   setView: (view) => set({ view }),
   storyProgress: 0,
-  clearStage: (stageId) =>
-    set((state) => ({
-      storyProgress: Math.max(state.storyProgress, stageId),
-    })),
+  clearedStages: [],
+  stageRewards: {},
+  gold: 1250,
+  inventory: [],
+  clearStage: (stageId, reward) =>
+    set((state) => {
+      const alreadyCleared = state.clearedStages.includes(stageId);
+      const cleared = alreadyCleared ? state.clearedStages : [...state.clearedStages, stageId];
+      const stageRewards =
+        reward && !alreadyCleared
+          ? { ...state.stageRewards, [stageId]: reward }
+          : state.stageRewards;
+      return {
+        storyProgress: Math.max(state.storyProgress, stageId),
+        clearedStages: cleared,
+        stageRewards,
+      };
+    }),
+  addReward: (reward) =>
+    set((state) => {
+      const inventory = [...state.inventory];
+      for (const drop of reward.items) {
+        const idx = inventory.findIndex((i) => i.name === drop.name);
+        if (idx >= 0) {
+          inventory[idx] = { ...inventory[idx], quantity: inventory[idx].quantity + drop.quantity };
+        } else {
+          inventory.push({
+            id: `${drop.name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: drop.name,
+            kind: drop.kind,
+            quantity: drop.quantity,
+          });
+        }
+      }
+      return { gold: state.gold + reward.gold, inventory };
+    }),
   pvpRecords: [],
   pvpWins: 0,
   pvpLosses: 0,
