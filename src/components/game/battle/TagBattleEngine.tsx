@@ -31,7 +31,13 @@ import {
   MP_SKILL_COST_PCT,
   MP_SKILL_THRESHOLD_PCT,
 } from "./battleLogic";
-import { EffectOverlay, elementToEffect, type ActiveEffect, type EffectType } from "./EffectOverlay";
+import {
+  EffectOverlay,
+  StatusOverlay,
+  elementToEffect,
+  type ActiveEffect,
+  type EffectType,
+} from "./EffectOverlay";
 
 /** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
 function uiHp(c: Combatant): number {
@@ -184,6 +190,7 @@ function ActivePanel({
   hitFlashKey = 0,
   damagePops = [],
   effects = [],
+  cinematic = false,
 }: {
   c: Combatant;
   side: "player" | "enemy";
@@ -191,6 +198,8 @@ function ActivePanel({
   hitFlashKey?: number;
   damagePops?: DamagePop[];
   effects?: ActiveEffect[];
+  /** 스킬 시전 중인 공격자: 화면 중앙으로 zoom + 확대 */
+  cinematic?: boolean;
 }) {
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
@@ -199,10 +208,12 @@ function ActivePanel({
   // player는 위쪽으로 돌진(-), enemy는 아래쪽으로 돌진(+)
   const lungeY = side === "player" ? -28 : 28;
   return (
-    <div
+    <motion.div
       className={`relative flex-1 overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-2.5 backdrop-blur-md ${
         side === "enemy" ? "text-right" : ""
-      }`}
+      } ${cinematic ? "z-40" : ""}`}
+      animate={cinematic ? { scale: 1.2 } : { scale: 1 }}
+      transition={{ type: "spring", stiffness: 260, damping: 18 }}
     >
       {/* 이미지 캔버스 — 핵심 시각 요소 */}
       <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-slate-950/80">
@@ -237,11 +248,21 @@ function ActivePanel({
           )}
         </AnimatePresence>
 
+        {/* 상태 이상 상시 오버레이 (poison/burn/fear/stun) */}
+        <StatusOverlay
+          flags={{
+            poisoned: c.poisoned,
+            burning: c.base.name === "Younigon" && c.rageUsed,
+            feared: c.defDebuffStacks >= 3,
+            stunned: c.exhausted,
+          }}
+        />
+
         {/* VFX 이펙트 오버레이 — 이미지 위에 덮임 */}
         <EffectOverlay effects={effects} target={side} />
 
-        {/* 데미지 파티클 텍스트 */}
-        <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-2">
+        {/* 데미지 파티클 텍스트 — 항상 최상단 */}
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-start justify-center pt-2">
           <AnimatePresence>
             {damagePops.map((p) => (
               <motion.span
@@ -268,13 +289,13 @@ function ActivePanel({
 
         {/* 좌상단 원소 배지 / 우상단 슬롯 */}
         <span
-          className={`absolute left-2 top-2 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}
+          className={`absolute left-2 top-2 z-20 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}
         >
           {c.base.element}
         </span>
       </div>
 
-      <div className={`flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
+      <div className={`relative z-20 flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
         <h3 className="text-sm font-extrabold text-slate-100">{c.base.name}</h3>
         {c.exhausted && (
           <span className="flex items-center gap-0.5 rounded-full border border-rose-500/50 bg-rose-500/15 px-1 py-0 text-[9px] font-bold text-rose-300">
@@ -292,7 +313,7 @@ function ActivePanel({
           </span>
         )}
       </div>
-      <div className="mt-2 space-y-1.5">
+      <div className="relative z-20 mt-2 space-y-1.5">
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
             <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
@@ -322,7 +343,7 @@ function ActivePanel({
           </div>
         </div>
       </div>
-      <div className={`mt-1.5 flex flex-wrap gap-2 text-[10px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
+      <div className={`relative z-20 mt-1.5 flex flex-wrap gap-2 text-[10px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
           <Sword className="h-3 w-3" /> {stats.atk}
         </span>
@@ -352,7 +373,7 @@ function ActivePanel({
           </span>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -432,12 +453,40 @@ export function TagBattleEngine({
   const [activeEffects, setActiveEffects] = useState<ActiveEffect[]>([]);
   const effectIdRef = useRef(1);
   /** 이펙트 트리거: 큐에 추가하고 0.6초 뒤 자동 제거. */
-  const triggerEffect = (target: "player" | "enemy", type: EffectType) => {
+  const triggerEffect = (target: "player" | "enemy", type: EffectType, intensity = 1) => {
     const id = effectIdRef.current++;
-    setActiveEffects((prev) => [...prev, { id, target, type }]);
+    setActiveEffects((prev) => [...prev, { id, target, type, intensity }]);
     setTimeout(() => {
       setActiveEffects((prev) => prev.filter((e) => e.id !== id));
     }, 600);
+  };
+
+  // ===== Cinematic / Screen-shake / Onomatopoeia =====
+  const [cinematicSide, setCinematicSide] = useState<"player" | "enemy" | null>(null);
+  const [dimming, setDimming] = useState(false);
+  const [screenShakeKey, setScreenShakeKey] = useState(0);
+  interface Onomatopoeia { id: number; text: string; tone: "boom" | "hiss" | "crit"; }
+  const [onomats, setOnomats] = useState<Onomatopoeia[]>([]);
+  const onoIdRef = useRef(1);
+  const popOno = (text: string, tone: Onomatopoeia["tone"] = "boom") => {
+    const id = onoIdRef.current++;
+    setOnomats((prev) => [...prev, { id, text, tone }]);
+    setTimeout(() => setOnomats((prev) => prev.filter((o) => o.id !== id)), 500);
+  };
+  /** 스킬 시네마틱 시퀀스. dim → zoom (공격자) → 0.3초 뒤 풀림. */
+  const playSkillCinematic = (actor: "player" | "enemy") => {
+    setDimming(true);
+    setCinematicSide(actor);
+    setTimeout(() => {
+      setDimming(false);
+      setCinematicSide(null);
+    }, 350);
+  };
+  /** 큰 데미지 임팩트: 화면 전체 흔들림 + 의성어. */
+  const playBigImpact = (target: "player" | "enemy", word = "콰광!") => {
+    setScreenShakeKey((k) => k + 1);
+    triggerEffect(target, "burst", 3);
+    popOno(word, "boom");
   };
 
   /** -dmg 텍스트 파티클을 한쪽에 띄우고 1.1초 후 제거. */
@@ -581,6 +630,7 @@ export function TagBattleEngine({
     if (selfActive.poisoned && drained.self.engineHp < selfActive.engineHp) {
       const poisonTarget: "player" | "enemy" = actor === "player" ? "player" : "enemy";
       triggerEffect(poisonTarget, "poison");
+      popOno("치익-", "hiss");
     }
 
     let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
@@ -645,15 +695,20 @@ export function TagBattleEngine({
     const d = curE.members[curE.activeIdx];
     if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
     if (a.mp < a.maxMp * MP_SKILL_THRESHOLD_PCT) return;
+    // ── 시네마틱: dim + zoom (공격자) ──
+    playSkillCinematic("player");
     const r = performAttack(a, d, { turnNumber, skill: true });
     pushLogs(r.logs);
     const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
     const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-    playAttackFx("player", dmgDealt, true, a.base.element);
+    setTimeout(() => {
+      playAttackFx("player", dmgDealt, true, a.base.element);
+      if (dmgDealt > 0) playBigImpact("enemy", "콰광!");
+    }, 320);
     if (reflect > 0) popDamage("player", reflect);
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
-    finishTurn("player", nextP, nextE);
+    setTimeout(() => finishTurn("player", nextP, nextE), 360);
   };
 
   const handleSwapTo = (idx: number) => {
@@ -722,7 +777,50 @@ export function TagBattleEngine({
     .filter(({ i }) => i !== eTeam.activeIdx);
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <motion.div
+      key={`shake-${screenShakeKey}`}
+      className="relative flex h-full flex-col gap-3"
+      animate={screenShakeKey > 0 ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 2, -2, 0, 0, 0] } : { x: 0, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      {/* 스킬 시전 중 화면 디밍 — 공격자만 도드라지게 */}
+      <AnimatePresence>
+        {dimming && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-30 bg-slate-950"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.7 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 의성어 (콰광!, 치익-) — 만화적 오버레이 */}
+      <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+        <AnimatePresence>
+          {onomats.map((o) => (
+            <motion.span
+              key={o.id}
+              initial={{ opacity: 0, scale: 0.5, rotate: -8 }}
+              animate={{ opacity: 1, scale: [0.5, 1.4, 1.1], rotate: [-8, 6, -3] }}
+              exit={{ opacity: 0, scale: 1.6 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className={`absolute select-none text-5xl font-black tracking-tight drop-shadow-[0_4px_0_rgba(0,0,0,0.85)] ${
+                o.tone === "boom"
+                  ? "text-amber-300"
+                  : o.tone === "hiss"
+                    ? "text-lime-300"
+                    : "text-rose-400"
+              }`}
+              style={{ WebkitTextStroke: "2px #0f172a" }}
+            >
+              {o.text}
+            </motion.span>
+          ))}
+        </AnimatePresence>
+      </div>
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100">
           3:3 Tag Battle
@@ -761,6 +859,7 @@ export function TagBattleEngine({
               hitFlashKey={pHitKey}
               damagePops={pPops}
               effects={activeEffects}
+              cinematic={cinematicSide === "player"}
             />
           </motion.div>
         ) : (
@@ -781,6 +880,7 @@ export function TagBattleEngine({
               hitFlashKey={eHitKey}
               damagePops={ePops}
               effects={activeEffects}
+              cinematic={cinematicSide === "enemy"}
             />
           </motion.div>
         ) : (
@@ -987,6 +1087,6 @@ export function TagBattleEngine({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

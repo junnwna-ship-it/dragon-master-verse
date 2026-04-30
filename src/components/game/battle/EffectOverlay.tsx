@@ -2,12 +2,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Element } from "@/store/dragons";
 
 /** VFX 이펙트 종류 */
-export type EffectType = "slash" | "fire" | "water" | "wood" | "earth" | "metal" | "poison" | "heal" | "buff" | "debuff";
+export type EffectType =
+  | "slash"
+  | "fire"
+  | "water"
+  | "wood"
+  | "earth"
+  | "metal"
+  | "poison"
+  | "heal"
+  | "buff"
+  | "debuff"
+  | "burst";
 
 export interface ActiveEffect {
   id: number;
   target: "player" | "enemy";
   type: EffectType;
+  /** burst/파티클 계열에서 강도 배수 (스킬은 3) */
+  intensity?: number;
 }
 
 /** Element → EffectType 매핑 (공격 타격 시 사용) */
@@ -51,7 +64,7 @@ function EffectRenderer({ effect }: { effect: ActiveEffect }) {
     case "slash":
       return <SlashFx />;
     case "fire":
-      return <FireFx />;
+      return <FireFx intensity={effect.intensity ?? 1} />;
     case "water":
       return <WaterFx />;
     case "wood":
@@ -68,6 +81,8 @@ function EffectRenderer({ effect }: { effect: ActiveEffect }) {
       return <BuffFx />;
     case "debuff":
       return <DebuffFx />;
+    case "burst":
+      return <BurstFx intensity={effect.intensity ?? 3} />;
     default:
       return null;
   }
@@ -89,9 +104,10 @@ function SlashFx() {
   );
 }
 
-function FireFx() {
+function FireFx({ intensity = 1 }: { intensity?: number }) {
   // 5개 파티클이 중앙에서 사방으로 터지듯 퍼지며 위로 솟구침
-  const parts = Array.from({ length: 5 });
+  const count = Math.round(5 * intensity);
+  const parts = Array.from({ length: count });
   return (
     <>
       <motion.div
@@ -101,7 +117,7 @@ function FireFx() {
         transition={{ duration: 0.5 }}
       />
       {parts.map((_, i) => {
-        const angle = (i / parts.length) * Math.PI * 2;
+        const angle = (i / count) * Math.PI * 2;
         const dx = Math.cos(angle) * 60;
         const dy = Math.sin(angle) * 60 - 30;
         return (
@@ -115,6 +131,134 @@ function FireFx() {
         );
       })}
     </>
+  );
+}
+
+/**
+ * BurstFx — 스킬 적중용 화이트/골드 폭발.
+ * 기본 5개 × intensity (스킬=3 → 15개) 파티클 + 화면 잔상 링.
+ */
+function BurstFx({ intensity = 3 }: { intensity?: number }) {
+  const count = Math.max(6, Math.round(5 * intensity));
+  const parts = Array.from({ length: count });
+  return (
+    <>
+      <motion.div
+        className="absolute inset-0 bg-gradient-radial from-white/70 via-amber-300/40 to-transparent"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 0] }}
+        transition={{ duration: 0.45 }}
+      />
+      <motion.div
+        className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-amber-200"
+        initial={{ scale: 0, opacity: 1 }}
+        animate={{ scale: 3, opacity: 0 }}
+        transition={{ duration: 0.55, ease: "easeOut" }}
+      />
+      {parts.map((_, i) => {
+        const angle = (i / count) * Math.PI * 2 + Math.random() * 0.2;
+        const dist = 60 + Math.random() * 50;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+        return (
+          <motion.div
+            key={i}
+            className="absolute left-1/2 top-1/2 h-3 w-3 rounded-full bg-amber-200 shadow-[0_0_14px_rgba(253,224,71,1)]"
+            initial={{ x: -6, y: -6, scale: 0.4, opacity: 0 }}
+            animate={{ x: -6 + dx, y: -6 + dy, scale: [0.4, 1.6, 0.4], opacity: [0, 1, 0] }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+/* ════════════════ 상태 이상 상시 오버레이 ════════════════ */
+
+export interface StatusFlags {
+  poisoned?: boolean;
+  burning?: boolean;
+  feared?: boolean;
+  stunned?: boolean;
+}
+
+/**
+ * 카드 이미지 위에 상시 깔리는 디버프 오버레이.
+ * - poison: 보라 필터 + 부유하는 녹색 방울
+ * - burn: 주황 필터 + 깜박이는 불꽃
+ * - fear: (떨림은 부모 wrapper에서 적용) — 어두운 비네트
+ * - stun: 머리 위 회전하는 💫
+ */
+export function StatusOverlay({ flags }: { flags: StatusFlags }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {flags.poisoned && <PoisonStatus />}
+      {flags.burning && <BurnStatus />}
+      {flags.feared && <FearStatus />}
+      {flags.stunned && <StunStatus />}
+    </div>
+  );
+}
+
+function PoisonStatus() {
+  const drops = [0, 1, 2, 3];
+  return (
+    <>
+      <div className="absolute inset-0 bg-purple-600/20 mix-blend-multiply" />
+      {drops.map((i) => (
+        <motion.div
+          key={i}
+          className="absolute h-2 w-2 rounded-full bg-gradient-to-br from-lime-400 to-green-700 shadow-[0_0_8px_rgba(132,204,22,0.8)]"
+          style={{ left: `${15 + i * 20}%`, top: `${50 + (i % 2) * 15}%` }}
+          animate={{ y: [0, -5, 0], opacity: [0.6, 1, 0.6] }}
+          transition={{ repeat: Infinity, duration: 1.6 + i * 0.2, ease: "easeInOut", delay: i * 0.15 }}
+        />
+      ))}
+    </>
+  );
+}
+
+function BurnStatus() {
+  const flames = [0, 1, 2];
+  return (
+    <>
+      <div className="absolute inset-0 bg-orange-500/15 mix-blend-screen" />
+      {flames.map((i) => (
+        <motion.div
+          key={i}
+          className="absolute bottom-1 h-3 w-3 rounded-full bg-gradient-to-t from-rose-600 via-orange-400 to-yellow-200 shadow-[0_0_10px_rgba(251,146,60,0.9)]"
+          style={{ left: `${25 + i * 25}%` }}
+          animate={{ y: [0, -8, 0], scale: [0.8, 1.1, 0.8], opacity: [0.7, 1, 0.7] }}
+          transition={{ repeat: Infinity, duration: 1.2 + i * 0.15, ease: "easeInOut", delay: i * 0.1 }}
+        />
+      ))}
+    </>
+  );
+}
+
+function FearStatus() {
+  return (
+    <>
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-transparent to-slate-900/50 mix-blend-multiply" />
+      <motion.div
+        className="absolute inset-0 ring-2 ring-inset ring-purple-900/40"
+        animate={{ opacity: [0.3, 0.7, 0.3] }}
+        transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+      />
+    </>
+  );
+}
+
+function StunStatus() {
+  return (
+    <motion.div
+      className="absolute left-1/2 top-1 -translate-x-1/2 select-none text-2xl"
+      animate={{ rotate: 360 }}
+      transition={{ repeat: Infinity, duration: 1.6, ease: "linear" }}
+    >
+      💫
+    </motion.div>
   );
 }
 
