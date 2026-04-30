@@ -777,7 +777,50 @@ export function TagBattleEngine({
     .filter(({ i }) => i !== eTeam.activeIdx);
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <motion.div
+      key={`shake-${screenShakeKey}`}
+      className="relative flex h-full flex-col gap-3"
+      animate={screenShakeKey > 0 ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 2, -2, 0, 0, 0] } : { x: 0, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      {/* 스킬 시전 중 화면 디밍 — 공격자만 도드라지게 */}
+      <AnimatePresence>
+        {dimming && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-30 bg-slate-950"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.7 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 의성어 (콰광!, 치익-) — 만화적 오버레이 */}
+      <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+        <AnimatePresence>
+          {onomats.map((o) => (
+            <motion.span
+              key={o.id}
+              initial={{ opacity: 0, scale: 0.5, rotate: -8 }}
+              animate={{ opacity: 1, scale: [0.5, 1.4, 1.1], rotate: [-8, 6, -3] }}
+              exit={{ opacity: 0, scale: 1.6 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className={`absolute select-none text-5xl font-black tracking-tight drop-shadow-[0_4px_0_rgba(0,0,0,0.85)] ${
+                o.tone === "boom"
+                  ? "text-amber-300"
+                  : o.tone === "hiss"
+                    ? "text-lime-300"
+                    : "text-rose-400"
+              }`}
+              style={{ WebkitTextStroke: "2px #0f172a" }}
+            >
+              {o.text}
+            </motion.span>
+          ))}
+        </AnimatePresence>
+      </div>
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100">
           3:3 Tag Battle
@@ -816,6 +859,7 @@ export function TagBattleEngine({
               hitFlashKey={pHitKey}
               damagePops={pPops}
               effects={activeEffects}
+              cinematic={cinematicSide === "player"}
             />
           </motion.div>
         ) : (
@@ -836,6 +880,7 @@ export function TagBattleEngine({
               hitFlashKey={eHitKey}
               damagePops={ePops}
               effects={activeEffects}
+              cinematic={cinematicSide === "enemy"}
             />
           </motion.div>
         ) : (
