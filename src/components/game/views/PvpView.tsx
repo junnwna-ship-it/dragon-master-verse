@@ -11,6 +11,7 @@ import {
   Search,
   TrendingUp,
   TrendingDown,
+  Check,
 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
@@ -98,6 +99,13 @@ export function PvpView() {
     trainer: string;
   } | null>(null);
 
+  // Centralized reset so cancel / 다시 매칭 / 확인 always land in the same
+  // clean idle state (no leftover opponent, player, or selection highlight).
+  const resetMatchUi = () => {
+    setOpponent(null);
+    setPlayer(null);
+  };
+
   // Async matchmaking: show spinner for exactly MATCH_SEARCH_MS, then pick a
   // ghost opponent and continue. No network call — pure setTimeout.
   useEffect(() => {
@@ -143,7 +151,13 @@ export function PvpView() {
           });
         }}
         onExit={() => {
-          setPhase(lastResult ? "result" : "idle");
+          if (lastResult) {
+            setPhase("result");
+          } else {
+            resetMatchUi();
+            setPhase("idle");
+          }
+          // Clear the selected dragon so the picker doesn't keep stale highlight.
           setPlayer(null);
         }}
       />
@@ -198,7 +212,7 @@ export function PvpView() {
         <button
           onClick={() => {
             setLastResult(null);
-            setOpponent(null);
+            resetMatchUi();
             setPhase("idle");
           }}
           className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
@@ -208,7 +222,7 @@ export function PvpView() {
         <button
           onClick={() => {
             setLastResult(null);
-            setOpponent(null);
+            resetMatchUi();
             setPhase("searching");
           }}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800"
@@ -234,28 +248,59 @@ export function PvpView() {
         </div>
         <h2 className="text-xl font-bold text-slate-100">출전할 드래곤 선택</h2>
         <div className="grid gap-2">
-          {dragons.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => {
-                setPlayer(d);
-                setPhase("battle");
-              }}
-              className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/70 px-3 py-3 text-left hover:border-amber-500/50"
-            >
-              <div>
-                <p className="text-sm font-bold text-slate-100">{d.name}</p>
-                <p className="text-[11px] text-slate-400">
-                  {d.element} · ATK {d.atk} · DEF {d.def}
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-500" />
-            </button>
-          ))}
+          {dragons.map((d) => {
+            const selected = player?.id === d.id;
+            return (
+              <button
+                key={d.id}
+                onClick={() => setPlayer(selected ? null : d)}
+                aria-pressed={selected}
+                className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left transition ${
+                  selected
+                    ? "border-amber-400 bg-amber-500/10 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/20"
+                    : "border-slate-700/60 bg-slate-800/70 hover:border-amber-500/50"
+                }`}
+              >
+                <div>
+                  <p
+                    className={`text-sm font-bold ${
+                      selected ? "text-amber-200" : "text-slate-100"
+                    }`}
+                  >
+                    {d.name}
+                    {selected && (
+                      <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
+                        선택됨
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {d.element} · ATK {d.atk} · DEF {d.def}
+                  </p>
+                </div>
+                {selected ? (
+                  <Check className="h-4 w-4 text-amber-300" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-500" />
+                )}
+              </button>
+            );
+          })}
         </div>
         <button
           onClick={() => {
-            setOpponent(null);
+            if (!player) return;
+            setPhase("battle");
+          }}
+          disabled={!player}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+        >
+          <Swords className="h-4 w-4" />
+          {player ? `${player.name}(으)로 전투 시작` : "드래곤을 선택하세요"}
+        </button>
+        <button
+          onClick={() => {
+            resetMatchUi();
             setPhase("idle");
           }}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
@@ -316,7 +361,10 @@ export function PvpView() {
               비슷한 RP의 트레이너를 찾고 있습니다
             </p>
             <button
-              onClick={() => setPhase("idle")}
+              onClick={() => {
+                resetMatchUi();
+                setPhase("idle");
+              }}
               className="mt-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
             >
               취소
