@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2 } from "lucide-react";
 import type { Dragon, Element } from "@/store/dragons";
+import { useGameStore } from "@/store/dragons";
 import { DragonImage } from "./DragonImage";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const ELEMENT_META: Record<Element, { label: string; color: string; icon: React.ComponentType<{ className?: string }>; strong: Element; weak: Element }> = {
   Fire:  { label: "화염",   color: "text-rose-300",    icon: Flame,    strong: "Wood",  weak: "Water" },
