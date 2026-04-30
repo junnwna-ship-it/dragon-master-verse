@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock } from "lucide-react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
@@ -78,6 +78,10 @@ export function StoryView() {
   const [selectedDragon, setSelectedDragon] = useState<Dragon | null>(null);
   const [activeBattleNode, setActiveBattleNode] = useState<MapNode | null>(null);
   const [eventMessage, setEventMessage] = useState<string | null>(null);
+  const [battleResult, setBattleResult] = useState<
+    | { outcome: "win" | "draw" | "lose"; nodeTitle: string; enemyName?: string }
+    | null
+  >(null);
   const [defeated, setDefeated] = useState(false);
   const [defeatStats, setDefeatStats] = useState<{ hp: number; mp: number } | null>(null);
   // Pulse the HP/MP gauges briefly when state changes after a battle/event.
@@ -94,6 +98,13 @@ export function StoryView() {
     }
     prevStateRef.current = { hp: run.playerHp, mp: run.playerMp };
   }, [run]);
+
+  // Auto-dismiss the post-battle banner after a few seconds.
+  useEffect(() => {
+    if (!battleResult) return;
+    const t = setTimeout(() => setBattleResult(null), 3500);
+    return () => clearTimeout(t);
+  }, [battleResult]);
 
   // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
   const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
@@ -140,6 +151,11 @@ export function StoryView() {
         initialPlayerHp={run.playerHp}
         initialPlayerMp={run.playerMp}
         onResolved={(outcome, finalState) => {
+          setBattleResult({
+            outcome,
+            nodeTitle: activeBattleNode.title,
+            enemyName: activeBattleNode.enemyName,
+          });
           if (outcome === "lose") {
             setDefeatStats({ hp: finalState.playerHp, mp: finalState.playerMp });
             setDefeated(true);
@@ -331,6 +347,47 @@ export function StoryView() {
           <button
             onClick={() => setEventMessage(null)}
             className="ml-auto rounded px-2 text-[10px] text-pink-300/70 hover:text-pink-200"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Battle result banner — appears briefly after onResolved */}
+      {battleResult && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-xs animate-in fade-in slide-in-from-top-1 duration-300 ${
+            battleResult.outcome === "win"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+              : battleResult.outcome === "draw"
+                ? "border-slate-500/40 bg-slate-500/10 text-slate-200"
+                : "border-rose-500/40 bg-rose-500/10 text-rose-200"
+          }`}
+        >
+          {battleResult.outcome === "win" ? (
+            <Trophy className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+          ) : battleResult.outcome === "draw" ? (
+            <Handshake className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
+          ) : (
+            <Skull className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+          )}
+          <p className="leading-snug">
+            <span className="font-bold">
+              {battleResult.outcome === "win"
+                ? "승리!"
+                : battleResult.outcome === "draw"
+                  ? "무승부"
+                  : "패배..."}
+            </span>{" "}
+            {battleResult.nodeTitle}
+            {battleResult.enemyName ? ` · ${battleResult.enemyName}` : ""}
+            {battleResult.outcome === "win" && " — 다음 노드로 진행합니다"}
+          </p>
+          <button
+            onClick={() => setBattleResult(null)}
+            className="ml-auto rounded px-2 text-[10px] opacity-70 hover:opacity-100"
           >
             ✕
           </button>
