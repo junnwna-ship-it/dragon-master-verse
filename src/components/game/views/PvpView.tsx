@@ -161,6 +161,21 @@ export function PvpView() {
     };
   }, []);
 
+  // Defensive guarantee: any time the opponent identity changes (new match
+  // result lands, or it's cleared on reset), wipe any leftover dragon
+  // selection and close the confirm modal. This keeps the picker rule —
+  // "selection persists only until 전투 시작; auto-resets after 매칭/확인" —
+  // intact even if a future code path forgets to call resetMatchUi().
+  const lastOpponentIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const id = opponent?.id ?? null;
+    if (lastOpponentIdRef.current !== id) {
+      setPlayer(null);
+      setConfirmStart(false);
+      lastOpponentIdRef.current = id;
+    }
+  }, [opponent]);
+
   const tier = useMemo(() => {
     if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
     if (rp >= 1200) return { rank: 4, label: "Platinum", tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10" };
