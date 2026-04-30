@@ -38,6 +38,7 @@ jobs:
           echo "ESLint version: $VERSION"
 
       - name: Restore ESLint cache
+        id: eslint-cache
         uses: actions/cache@v4
         with:
           path: node_modules/.cache/eslint
@@ -53,6 +54,59 @@ jobs:
             ${{ runner.os }}-eslint-v${{ steps.eslint-version.outputs.version }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'bun.lockb', 'src/**/*.ts', 'src/**/*.tsx') }}-
             ${{ runner.os }}-eslint-v${{ steps.eslint-version.outputs.version }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'bun.lockb') }}-
             ${{ runner.os }}-eslint-v${{ steps.eslint-version.outputs.version }}-
+
+      - name: Report ESLint cache status
+        if: always()
+        env:
+          PRIMARY_KEY: ${{ runner.os }}-eslint-v${{ steps.eslint-version.outputs.version }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'bun.lockb', 'src/**/*.ts', 'src/**/*.tsx') }}-${{ github.sha }}
+          MATCHED_KEY: ${{ steps.eslint-cache.outputs.cache-matched-key }}
+          EXACT_HIT: ${{ steps.eslint-cache.outputs.cache-hit }}
+          SRC_KEY_PREFIX: ${{ runner.os }}-eslint-v${{ steps.eslint-version.outputs.version }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'bun.lockb', 'src/**/*.ts', 'src/**/*.tsx') }}-
+          CFG_KEY_PREFIX: ${{ runner.os }}-eslint-v${{ steps.eslint-version.outputs.version }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'bun.lockb') }}-
+          VER_KEY_PREFIX: ${{ runner.os }}-eslint-v${{ steps.eslint-version.outputs.version }}-
+        run: |
+          if [ "$EXACT_HIT" = "true" ]; then
+            STATUS="✅ Exact hit"
+            LEVEL="L0 — primary key (same commit)"
+          elif [ -z "$MATCHED_KEY" ]; then
+            STATUS="❌ Miss (no cache restored)"
+            LEVEL="—"
+          else
+            STATUS="♻️ Partial restore"
+            case "$MATCHED_KEY" in
+              "$SRC_KEY_PREFIX"*) LEVEL="L1 — same sources + config (different commit)" ;;
+              "$CFG_KEY_PREFIX"*) LEVEL="L2 — same config + deps (sources changed)" ;;
+              "$VER_KEY_PREFIX"*) LEVEL="L3 — same ESLint version only (config changed)" ;;
+              *)                  LEVEL="L? — unrecognized restore-key" ;;
+            esac
+          fi
+
+          # Cache size (if restored)
+          if [ -d node_modules/.cache/eslint ]; then
+            SIZE=$(du -sh node_modules/.cache/eslint 2>/dev/null | cut -f1)
+            FILES=$(find node_modules/.cache/eslint -type f 2>/dev/null | wc -l | tr -d ' ')
+          else
+            SIZE="0"
+            FILES="0"
+          fi
+
+          {
+            echo "## ESLint cache"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Status | $STATUS |"
+            echo "| Restore level | $LEVEL |"
+            echo "| ESLint version | ${{ steps.eslint-version.outputs.version }} |"
+            echo "| Primary key | \`$PRIMARY_KEY\` |"
+            echo "| Matched key | \`${MATCHED_KEY:-<none>}\` |"
+            echo "| Cache size | $SIZE ($FILES files) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "ESLint cache: $STATUS — $LEVEL"
+          echo "  primary key : $PRIMARY_KEY"
+          echo "  matched key : ${MATCHED_KEY:-<none>}"
+          echo "  cache size  : $SIZE ($FILES files)"
 
       - name: Run ESLint (JSON report)
         id: eslint
