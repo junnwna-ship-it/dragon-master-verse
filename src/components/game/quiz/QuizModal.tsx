@@ -210,7 +210,7 @@ function CorrectFlash() {
     >
       <motion.div
         initial={{ scale: 0, rotate: -20 }}
-        animate={{ scale: [0, 1.4, 1], rotate: [−20, 8, 0] as never }}
+        animate={{ scale: [0, 1.4, 1], rotate: [-20, 8, 0] }}
         transition={{ duration: 0.5 }}
       >
         <CheckCircle2 className="h-32 w-32 text-emerald-400 drop-shadow-[0_0_24px_rgba(16,185,129,0.9)]" />
