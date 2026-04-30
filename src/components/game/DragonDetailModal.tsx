@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2 } from "lucide-react";
+import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2, HeartHandshake } from "lucide-react";
 import type { Dragon, Element } from "@/store/dragons";
 import { useGameStore } from "@/store/dragons";
 import { DragonImage } from "./DragonImage";
@@ -337,6 +337,7 @@ export function DragonDetailModal({
           </section>
 
           <TrainingSection dragon={dragon} />
+          <BondingSection dragon={dragon} />
         </div>
 
         <div className="border-t border-slate-800 px-5 py-3">
