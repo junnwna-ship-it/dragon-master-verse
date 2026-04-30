@@ -120,6 +120,47 @@ jobs:
         continue-on-error: true
         run: bun run lint:report:html
 
+      - name: Extract failed-files summary
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir -p reports
+          node -e "
+            const fs = require('fs');
+            const path = 'reports/eslint-report.json';
+            if (!fs.existsSync(path)) { console.log('No report'); process.exit(0); }
+            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const failed = data
+              .filter(f => f.errorCount > 0 || f.warningCount > 0)
+              .map(f => ({
+                filePath: f.filePath.replace(process.cwd() + '/', ''),
+                errorCount: f.errorCount,
+                warningCount: f.warningCount,
+                fixableErrorCount: f.fixableErrorCount,
+                fixableWarningCount: f.fixableWarningCount,
+                rules: [...new Set(f.messages.map(m => m.ruleId).filter(Boolean))],
+              }))
+              .sort((a, b) => (b.errorCount - a.errorCount) || (b.warningCount - a.warningCount));
+            fs.writeFileSync('reports/eslint-failed-files.json', JSON.stringify(failed, null, 2));
+            const totals = failed.reduce((acc, f) => ({
+              errors: acc.errors + f.errorCount,
+              warnings: acc.warnings + f.warningCount,
+            }), { errors: 0, warnings: 0 });
+            console.log('Failed files:', failed.length, 'errors:', totals.errors, 'warnings:', totals.warnings);
+            // Append top-10 to job summary
+            const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+            if (summaryPath && failed.length > 0) {
+              const top = failed.slice(0, 10).map(f =>
+                \`| \\\`\${f.filePath}\\\` | \${f.errorCount} | \${f.warningCount} | \${f.rules.slice(0, 3).join(', ')} |\`
+              ).join('\n');
+              fs.appendFileSync(summaryPath,
+                \`\n## ESLint failed files (top 10 of \${failed.length})\n\n\` +
+                \`Total: **\${totals.errors} errors**, **\${totals.warnings} warnings**\n\n\` +
+                \`| File | Errors | Warnings | Top rules |\n| --- | ---: | ---: | --- |\n\${top}\n\`
+              );
+            }
+          "
+
       - name: Annotate PR with ESLint findings
         if: always()
         uses: ataylorme/eslint-annotate-action@v3
@@ -134,8 +175,74 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: eslint-reports
-          path: reports/
+          path: |
+            reports/eslint-report.json
+            reports/eslint-report.html
+            reports/eslint-failed-files.json
           retention-days: 14
+
+      - name: Compute cache hit-rate (last 20 runs)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_FILE: ci.yml
+          JOB_NAME: Lint
+          STEP_NAME: Report ESLint cache status
+        run: |
+          set -e
+          # Pull last 20 completed runs of this workflow on the same branch
+          BRANCH="${{ github.ref_name }}"
+          RUNS=$(gh api -X GET \
+            "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
+            -f branch="$BRANCH" -f status=completed -f per_page=20 \
+            --jq '.workflow_runs[].id')
+
+          TOTAL=0; EXACT=0; PARTIAL=0; MISS=0
+          for RUN_ID in $RUNS; do
+            # Skip the current run (it isn't completed yet)
+            if [ "$RUN_ID" = "${{ github.run_id }}" ]; then continue; fi
+            JOB_ID=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs" \
+              --jq ".jobs[] | select(.name==\"$JOB_NAME\") | .id" | head -n1)
+            if [ -z "$JOB_ID" ]; then continue; fi
+            LOG=$(gh api "repos/${{ github.repository }}/actions/jobs/$JOB_ID/logs" 2>/dev/null || echo "")
+            if echo "$LOG" | grep -q "ESLint cache: ✅ Exact hit"; then
+              EXACT=$((EXACT + 1)); TOTAL=$((TOTAL + 1))
+            elif echo "$LOG" | grep -q "ESLint cache: ♻️ Partial restore"; then
+              PARTIAL=$((PARTIAL + 1)); TOTAL=$((TOTAL + 1))
+            elif echo "$LOG" | grep -q "ESLint cache: ❌ Miss"; then
+              MISS=$((MISS + 1)); TOTAL=$((TOTAL + 1))
+            fi
+          done
+
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No historical runs found yet."
+            {
+              echo ""
+              echo "## ESLint cache hit-rate (history)"
+              echo ""
+              echo "_No prior completed runs on \`$BRANCH\` yet — metrics will appear next run._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          HIT=$((EXACT + PARTIAL))
+          HIT_RATE=$(awk "BEGIN { printf \"%.1f\", ($HIT / $TOTAL) * 100 }")
+          EXACT_RATE=$(awk "BEGIN { printf \"%.1f\", ($EXACT / $TOTAL) * 100 }")
+
+          {
+            echo ""
+            echo "## ESLint cache hit-rate (last $TOTAL runs on \`$BRANCH\`)"
+            echo ""
+            echo "| Metric | Count | % |"
+            echo "| --- | ---: | ---: |"
+            echo "| ✅ Exact hit | $EXACT | ${EXACT_RATE}% |"
+            echo "| ♻️ Partial restore | $PARTIAL | $(awk "BEGIN { printf \"%.1f\", ($PARTIAL / $TOTAL) * 100 }")% |"
+            echo "| ❌ Miss | $MISS | $(awk "BEGIN { printf \"%.1f\", ($MISS / $TOTAL) * 100 }")% |"
+            echo "| **Overall hit-rate** | **$HIT / $TOTAL** | **${HIT_RATE}%** |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Cache hit-rate: ${HIT_RATE}% ($HIT/$TOTAL)"
 
       - name: Fail if ESLint reported errors
         if: steps.eslint.outcome == 'failure'
