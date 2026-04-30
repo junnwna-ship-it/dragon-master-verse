@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, Droplet, Sword, Shield, Zap, BatteryWarning, Flag } from "lucide-react";
+import { Heart, Droplet, Sword, Shield, Zap, BatteryWarning, Flag, Sparkles, Skull, Flame } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 import {
   type Combatant,
   type LogEntry,
   endTurnDrain,
   effectiveStats,
+  hpPercent,
   makeCombatant,
+  onTurnStart,
   performAttack,
 } from "./battleLogic";
 
@@ -19,14 +21,8 @@ interface BattleEngineProps {
     outcome: "win" | "lose" | "draw",
     finalState: { playerHp: number; playerMp: number; enemyHp: number; enemyMp: number },
   ) => void;
-  /** Optional starting HP/MP overrides so multi-battle runs preserve damage. */
   initialPlayerHp?: number;
   initialPlayerMp?: number;
-  /**
-   * If > 0, automatically invoke onExit this many ms after the battle resolves
-   * so the player returns to the map without clicking. Set to 0 to disable.
-   * Defaults to 1000ms (1s).
-   */
   autoExitMs?: number;
 }
 
@@ -35,13 +31,21 @@ const elementTone: Record<string, string> = {
   Water: "text-sky-300 border-sky-500/40 bg-sky-500/10",
   Fire: "text-rose-300 border-rose-500/40 bg-rose-500/10",
   Earth: "text-amber-300 border-amber-500/40 bg-amber-500/10",
+  Soil: "text-amber-300 border-amber-500/40 bg-amber-500/10",
   Metal: "text-slate-200 border-slate-400/40 bg-slate-400/10",
+  Light: "text-yellow-200 border-yellow-400/40 bg-yellow-400/10",
+  Dark: "text-purple-300 border-purple-500/40 bg-purple-500/10",
 };
+
+/** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
+function uiHp(c: Combatant): number {
+  return Math.round((c.engineHp / Math.max(1, c.engineMaxHp)) * c.base.maxHp);
+}
 
 function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
   const stats = effectiveStats(c);
-  const hpPct = (c.hp / c.base.maxHp) * 100;
-  const mpPct = Math.max(0, Math.min(100, (c.mp / Math.max(1, c.base.mp)) * 100));
+  const hpPct = hpPercent(c);
+  const mpPct = Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100));
   const tone = elementTone[c.base.element] ?? elementTone.Wood;
   return (
     <div
@@ -49,7 +53,7 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
         side === "enemy" ? "text-right" : ""
       }`}
     >
-      <div className={`flex items-center gap-2 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
+      <div className={`flex flex-wrap items-center gap-1.5 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${tone}`}>
           {c.base.element}
         </span>
@@ -59,12 +63,22 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
             <BatteryWarning className="h-3 w-3" /> 탈진
           </span>
         )}
+        {c.poisoned && (
+          <span className="flex items-center gap-1 rounded-full border border-purple-500/50 bg-purple-500/15 px-2 py-0.5 text-[10px] font-bold text-purple-300">
+            <Skull className="h-3 w-3" /> 독
+          </span>
+        )}
+        {c.rageUsed && c.base.name === "Younigon" && (
+          <span className="flex items-center gap-1 rounded-full border border-orange-500/60 bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300">
+            <Flame className="h-3 w-3" /> 격노
+          </span>
+        )}
       </div>
       <div className="mt-2 space-y-1.5">
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
             <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
-            <span className="font-mono text-slate-200">{c.hp}/{c.base.maxHp}</span>
+            <span className="font-mono text-slate-200">{uiHp(c)}/{c.base.maxHp}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
             <div className="h-full bg-emerald-500 transition-all" style={{ width: `${hpPct}%` }} />
@@ -73,20 +87,30 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
             <span className="flex items-center gap-1"><Droplet className="h-3 w-3 text-sky-400" /> MP</span>
-            <span className="font-mono text-slate-200">{Math.max(0, c.mp)}/{c.base.mp}</span>
+            <span className="font-mono text-slate-200">{Math.max(0, c.mp)}/{c.maxMp}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
             <div className="h-full bg-sky-500 transition-all" style={{ width: `${mpPct}%` }} />
           </div>
         </div>
       </div>
-      <div className={`mt-2 flex gap-2 text-[11px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
+      <div className={`mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
           <Sword className="h-3 w-3" /> {stats.atk}
         </span>
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
           <Shield className="h-3 w-3" /> {stats.def}
         </span>
+        {c.atkBuffStacks > 0 && (
+          <span className="flex items-center gap-1 text-emerald-300">
+            <Sparkles className="h-3 w-3" /> ATK x{c.atkBuffStacks}
+          </span>
+        )}
+        {c.defDebuffStacks > 0 && (
+          <span className="flex items-center gap-1 text-rose-300">
+            <Sparkles className="h-3 w-3" /> DEF -{c.defDebuffStacks}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -104,60 +128,37 @@ export function BattleEngine({
 }: BattleEngineProps) {
   const [pState, setPState] = useState<Combatant>(() => {
     const c = makeCombatant(player);
+    // initialPlayerHp/Mp는 UI 단위. 엔진으로 변환.
+    const eng = initialPlayerHp != null
+      ? 5000 + Math.max(0, initialPlayerHp) * 5
+      : c.engineHp;
+    const mp = initialPlayerMp ?? c.mp;
     return {
       ...c,
-      hp: initialPlayerHp ?? c.hp,
-      mp: initialPlayerMp ?? c.mp,
-      exhausted: (initialPlayerMp ?? c.mp) <= 0,
+      engineHp: Math.min(c.engineMaxHp, eng),
+      mp,
+      exhausted: mp <= 0,
     };
   });
   const [eState, setEState] = useState<Combatant>(() => makeCombatant(enemy));
   const [turn, setTurn] = useState<"player" | "enemy">("player");
-  // Turn counter (1-based). Useful for debugging and prevents stale-effect
-  // bugs where an enemy turn fires twice for the same logical turn.
   const [turnNumber, setTurnNumber] = useState(1);
   const [logs, setLogs] = useState<LogEntry[]>([
-    { id: 0, text: `${context === "pvp" ? "PvP" : "Story"} 전투 개시!`, tone: "system" },
+    { id: 0, text: `${context === "pvp" ? "PvP" : "Story"} 전투 개시! (15턴 룰 적용)`, tone: "system" },
   ]);
   const logIdRef = useRef(1);
   const reportedRef = useRef(false);
   const [autoExitEnabled, setAutoExitEnabled] = useState(autoExitMs > 0);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [drawByTimeout, setDrawByTimeout] = useState(false);
 
   const winner = useMemo(() => {
-    if (pState.hp <= 0 && eState.hp <= 0) return "draw" as const;
-    if (eState.hp <= 0) return "player" as const;
-    if (pState.hp <= 0) return "enemy" as const;
+    if (drawByTimeout) return "draw" as const;
+    if (pState.engineHp <= 0 && eState.engineHp <= 0) return "draw" as const;
+    if (eState.engineHp <= 0) return "player" as const;
+    if (pState.engineHp <= 0) return "enemy" as const;
     return null;
-  }, [pState.hp, eState.hp]);
-
-  useEffect(() => {
-    if (!winner || reportedRef.current) return;
-    reportedRef.current = true;
-    const outcome = winner === "draw" ? "draw" : winner === "player" ? "win" : "lose";
-    onResolved?.(outcome, {
-      playerHp: pState.hp,
-      playerMp: pState.mp,
-      enemyHp: eState.hp,
-      enemyMp: eState.mp,
-    });
-  }, [winner, onResolved, pState.hp, pState.mp, eState.hp, eState.mp]);
-
-  // Auto-return to the map a moment after the battle resolves.
-  useEffect(() => {
-    if (!winner || !onExit || !autoExitEnabled || autoExitMs <= 0) return;
-    setCountdown(Math.ceil(autoExitMs / 1000));
-    const tickIv = setInterval(() => {
-      setCountdown((c) => (c == null || c <= 1 ? c : c - 1));
-    }, 1000);
-    const exitT = setTimeout(() => {
-      onExit();
-    }, autoExitMs);
-    return () => {
-      clearInterval(tickIv);
-      clearTimeout(exitT);
-    };
-  }, [winner, onExit, autoExitEnabled, autoExitMs]);
+  }, [pState.engineHp, eState.engineHp, drawByTimeout]);
 
   const pushLogs = (entries: Omit<LogEntry, "id">[]) => {
     setLogs((prev) => {
@@ -165,76 +166,132 @@ export function BattleEngine({
       for (const e of entries) {
         next.push({ ...e, id: logIdRef.current++ });
       }
-      return next.slice(-30);
+      return next.slice(-40);
     });
   };
 
+  useEffect(() => {
+    if (!winner || reportedRef.current) return;
+    reportedRef.current = true;
+    const outcome = winner === "draw" ? "draw" : winner === "player" ? "win" : "lose";
+    onResolved?.(outcome, {
+      playerHp: uiHp(pState),
+      playerMp: pState.mp,
+      enemyHp: uiHp(eState),
+      enemyMp: eState.mp,
+    });
+  }, [winner, onResolved, pState, eState]);
+
+  useEffect(() => {
+    if (!winner || !onExit || !autoExitEnabled || autoExitMs <= 0) return;
+    setCountdown(Math.ceil(autoExitMs / 1000));
+    const tickIv = setInterval(() => {
+      setCountdown((c) => (c == null || c <= 1 ? c : c - 1));
+    }, 1000);
+    const exitT = setTimeout(() => onExit(), autoExitMs);
+    return () => {
+      clearInterval(tickIv);
+      clearTimeout(exitT);
+    };
+  }, [winner, onExit, autoExitEnabled, autoExitMs]);
+
+  // ---------------- Player turn start hooks (Bella heal) ----------------
+  const playerStartRanRef = useRef<number>(0);
+  useEffect(() => {
+    if (winner) return;
+    if (turn !== "player") return;
+    if (playerStartRanRef.current === turnNumber) return;
+    playerStartRanRef.current = turnNumber;
+    setPState((cur) => {
+      const { next, logs: l } = onTurnStart(cur);
+      if (l.length) pushLogs(l);
+      return next;
+    });
+  }, [turn, turnNumber, winner]);
+
   const handleAttack = () => {
     if (winner || turn !== "player") return;
-    const result = performAttack(pState, eState);
+    const result = performAttack(pState, eState, { turnNumber });
     setPState(result.attacker);
     setEState(result.defender);
     pushLogs(result.logs);
-    // After attacking, the player's action is consumed — drain MP and pass
-    // the turn to the enemy. This is the single source of truth for "what
-    // happens at end of player turn" so a player can no longer spam-attack
-    // in a single turn.
-    const drained = endTurnDrain(result.attacker);
-    setPState(drained.next);
+    // 종료 처리: MP 소모 + 패시브(턴 종료)
+    const drained = endTurnDrain(result.attacker, result.defender, { turnNumber });
+    setPState(drained.self);
+    setEState(drained.opponent);
     pushLogs(drained.logs);
     setTurn("enemy");
   };
 
-  // "Pass turn" — player chooses not to attack. Still drains MP and ends turn.
   const handlePassTurn = () => {
     if (winner || turn !== "player") return;
-    const drained = endTurnDrain(pState);
-    setPState(drained.next);
+    const drained = endTurnDrain(pState, eState, { turnNumber });
+    setPState(drained.self);
+    setEState(drained.opponent);
     pushLogs(drained.logs);
     setTurn("enemy");
   };
 
-  // Enemy AI runs as an effect on turn change. Putting it here (rather than
-  // inside the player's button handler with nested setState callbacks) makes
-  // the turn flow strictly serial and idempotent: each enemy turn fires
-  // exactly once per (turnNumber, turn==="enemy") tuple.
+  const enemyAttackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enemyDrainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const enemyTurnRanRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (turn !== "enemy" || winner) return;
-    // Guard: don't run the same enemy turn twice (Strict Mode double-invoke).
     if (enemyTurnRanRef.current === turnNumber) return;
     enemyTurnRanRef.current = turnNumber;
 
-    // Small delay so the player can read the log of their own action first.
+    // Bella heal at enemy turn start
+    setEState((cur) => {
+      const { next, logs: l } = onTurnStart(cur);
+      if (l.length) pushLogs(l);
+      return next;
+    });
+
     const attackTimer = setTimeout(() => {
-      // Read fresh state via functional updates so we never act on stale
-      // values from the closure captured at effect-mount time.
+      // 함수형 업데이트로 stale state 방지. 상호 의존이 있어 한쪽에서
+      // 양쪽 다 갱신.
+      let nextEnemy: Combatant | null = null;
+      let nextPlayer: Combatant | null = null;
       setEState((curEnemy) => {
-        if (curEnemy.hp <= 0) return curEnemy;
-        let attackerAfter = curEnemy;
+        if (curEnemy.engineHp <= 0) {
+          nextEnemy = curEnemy;
+          return curEnemy;
+        }
         setPState((curPlayer) => {
-          if (curPlayer.hp <= 0) return curPlayer;
-          const r = performAttack(curEnemy, curPlayer);
+          if (curPlayer.engineHp <= 0) {
+            nextPlayer = curPlayer;
+            nextEnemy = curEnemy;
+            return curPlayer;
+          }
+          const r = performAttack(curEnemy, curPlayer, { turnNumber });
           pushLogs(r.logs);
-          attackerAfter = r.attacker;
+          nextEnemy = r.attacker;
+          nextPlayer = r.defender;
           return r.defender;
         });
-        return attackerAfter;
+        return nextEnemy ?? curEnemy;
       });
 
-      // Then drain enemy MP and hand control back to the player.
       const drainTimer = setTimeout(() => {
-        setEState((cur) => {
-          if (cur.hp <= 0) return cur;
-          const { next, logs: el } = endTurnDrain(cur);
-          pushLogs(el);
-          return next;
-        });
+        if (!nextEnemy || !nextPlayer) {
+          setTurn("player");
+          return;
+        }
+        const d = endTurnDrain(nextEnemy, nextPlayer, { turnNumber });
+        setEState(d.self);
+        setPState(d.opponent);
+        pushLogs(d.logs);
+
+        // 15턴 룰 검사
+        if (turnNumber >= 15) {
+          pushLogs([{ text: `[15턴 룰] 시간 초과 — 무승부!`, tone: "system" }]);
+          setDrawByTimeout(true);
+          return;
+        }
         setTurn("player");
         setTurnNumber((n) => n + 1);
       }, 500);
-
-      // Stash so we can clear if unmounted mid-turn.
       enemyDrainTimerRef.current = drainTimer;
     }, 500);
 
@@ -245,14 +302,12 @@ export function BattleEngine({
     };
   }, [turn, turnNumber, winner]);
 
-  const enemyAttackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const enemyDrainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100">
           {context === "pvp" ? "PvP Arena" : "Story Battle"}
+          <span className="ml-2 text-xs font-normal text-slate-400">턴 {turnNumber}/15</span>
         </h2>
         {onExit && (
           <button
