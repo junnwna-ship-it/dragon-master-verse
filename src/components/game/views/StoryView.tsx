@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
+import { MerlinStageView } from "./MerlinStageView";
+import { useOwnedDragons } from "@/hooks/useOwnedDragons";
 
 type NodeKind = "battle" | "event" | "boss";
 interface MapNode {
@@ -187,6 +189,8 @@ function nodeIcon(kind: NodeKind, cleared: boolean) {
 
 export function StoryView() {
   const dragons = useGameStore((s) => s.dragons);
+  const { isTrainee, loading: ownedLoading, refetch: refetchOwned } = useOwnedDragons();
+  const [stage1Done, setStage1Done] = useState(false);
 
   const [run, setRun] = useState<RunState | null>(null);
   const [picker, setPicker] = useState(false);
