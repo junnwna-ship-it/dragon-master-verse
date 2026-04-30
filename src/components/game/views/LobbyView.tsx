@@ -23,7 +23,11 @@ export function LobbyView() {
   // (driven by IntersectionObserver) and which one is user-selected via tap.
   const [centeredId, setCenteredId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [detailId, setDetailId] = useState<number | null>(null);
+  // Whether the detail modal is open. The dragon shown inside is ALWAYS
+  // derived from the global PvP selection so that picking a different card
+  // (or having the selection change from any other surface) instantly
+  // refreshes the modal content without a close/reopen cycle.
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Two-way sync with the global store:
   //  • If the global PvP selection changes elsewhere (e.g. PvP picker), the
@@ -32,6 +36,14 @@ export function LobbyView() {
   useEffect(() => {
     setSelectedId(pvpSelectedDragonId);
   }, [pvpSelectedDragonId]);
+
+  // If the globally selected dragon disappears (e.g. roster refresh) while
+  // the modal is open, close it — there's nothing to show.
+  useEffect(() => {
+    if (detailOpen && pvpSelectedDragonId === null) {
+      setDetailOpen(false);
+    }
+  }, [detailOpen, pvpSelectedDragonId]);
   // True while a touch/wheel scroll is active OR within ~140ms of the last
   // scroll event — drives the "live micro-hover" applied to the snapping
   // card during the swipe gesture. Once it flips back to false, the card
@@ -198,13 +210,13 @@ export function LobbyView() {
               aria-pressed={isSelected}
               onClick={() => {
                 setPvpSelectedDragonId(d.id);
-                setDetailId(d.id);
+                setDetailOpen(true);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   setPvpSelectedDragonId(d.id);
-                  setDetailId(d.id);
+                  setDetailOpen(true);
                 }
               }}
               // Transition timing differs by phase:
@@ -276,9 +288,12 @@ export function LobbyView() {
       {showScan && user && (
         <CardScanner userId={user.id} onClose={() => setShowScan(false)} />
       )}
-      {detailId !== null && (() => {
-        const d = dragons.find((x) => x.id === detailId);
-        return d ? <DragonDetailModal dragon={d} onClose={() => setDetailId(null)} /> : null;
+      {detailOpen && (() => {
+        // Derived: always show the currently globally-selected dragon.
+        const d = dragons.find((x) => x.id === pvpSelectedDragonId);
+        return d ? (
+          <DragonDetailModal dragon={d} onClose={() => setDetailOpen(false)} />
+        ) : null;
       })()}
     </div>
   );
