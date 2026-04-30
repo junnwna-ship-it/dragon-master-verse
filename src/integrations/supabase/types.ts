@@ -89,6 +89,30 @@ export type Database = {
         }
         Relationships: []
       }
+      owned_dragons: {
+        Row: {
+          acquired_at: string
+          bonus_stat_points: number
+          dragon_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          bonus_stat_points?: number
+          dragon_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          bonus_stat_points?: number
+          dragon_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -107,6 +131,39 @@ export type Database = {
           gold?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      quizzes: {
+        Row: {
+          answer_index: number
+          category: string
+          choices: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          answer_index: number
+          category?: string
+          choices: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          answer_index?: number
+          category?: string
+          choices?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          question?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -155,6 +212,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_inventory: {
+        Row: {
+          id: string
+          item_key: string
+          quantity: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_key: string
+          quantity?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_key?: string
+          quantity?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -185,6 +266,8 @@ export type Database = {
         Args: { _dragon_uuid: string; _outcome: string }
         Returns: Json
       }
+      bond_with_dragon: { Args: { _dragon_uuid: string }; Returns: Json }
+      claim_quiz_reward: { Args: { _correct: number }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -196,6 +279,7 @@ export type Database = {
         Args: { _dragon_uuid: string; _item_key: string }
         Returns: Json
       }
+      recruit_dragon: { Args: { _dragon_uuid: string }; Returns: Json }
       spend_stat_point: {
         Args: { _dragon_uuid: string; _stat: string }
         Returns: Json
