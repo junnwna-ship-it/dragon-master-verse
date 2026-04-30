@@ -694,15 +694,20 @@ export function TagBattleEngine({
     const d = curE.members[curE.activeIdx];
     if (!a || !d || a.engineHp <= 0 || d.engineHp <= 0) return;
     if (a.mp < a.maxMp * MP_SKILL_THRESHOLD_PCT) return;
+    // ── 시네마틱: dim + zoom (공격자) ──
+    playSkillCinematic("player");
     const r = performAttack(a, d, { turnNumber, skill: true });
     pushLogs(r.logs);
     const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
     const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
-    playAttackFx("player", dmgDealt, true, a.base.element);
+    setTimeout(() => {
+      playAttackFx("player", dmgDealt, true, a.base.element);
+      if (dmgDealt > 0) playBigImpact("enemy", "콰광!");
+    }, 320);
     if (reflect > 0) popDamage("player", reflect);
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
     const nextE = setActive(curE, curE.activeIdx, r.defender);
-    finishTurn("player", nextP, nextE);
+    setTimeout(() => finishTurn("player", nextP, nextE), 360);
   };
 
   const handleSwapTo = (idx: number) => {
