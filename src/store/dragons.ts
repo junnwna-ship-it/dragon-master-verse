@@ -100,6 +100,7 @@ interface GameState {
   customDragons: (Dragon & { lore?: string; isCustom: true })[];
   addCustomDragon: (d: Omit<Dragon, "id"> & { lore?: string }) => void;
   removeCustomDragon: (id: number) => void;
+  updateCustomDragon: (id: number, patch: Partial<Omit<Dragon, "id">> & { lore?: string }) => void;
 }
 
 const CUSTOM_KEY = "customDragons";
