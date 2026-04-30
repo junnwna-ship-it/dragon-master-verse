@@ -290,7 +290,12 @@ export function LobbyView() {
               // Transition timing differs by phase:
               //  • live swipe → short 180ms ease-out (springy follow)
               //  • settled    → calmer 300ms ease-out (locks in place)
-              className={`group block cursor-pointer rounded-3xl list-none will-change-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+              // snap-always = `scroll-snap-stop: always`. Without this, a
+              // single fast flick can blow past 2-3 cards before the snap
+              // engine engages, making the resulting "centered" selection
+              // feel random. With it, every card becomes a hard stop so
+              // slow drags and fast flicks both land on the next card.
+              className={`group block cursor-pointer snap-always rounded-3xl list-none will-change-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                 isScrolling ? "transition-all duration-[180ms] ease-out" : "transition-all duration-300 ease-out"
               } ${
                 isSelected
