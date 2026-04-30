@@ -316,12 +316,32 @@ export function TagBattleEngine({
 
   /** 공통: 한쪽 active가 KO되면 자동 출전 처리 + 로그. */
   const advanceIfDead = (team: Team, label: string): Team => {
+    const prevActive = team.members[team.activeIdx];
+    const wasAlive = prevActive && prevActive.engineHp > 0;
     const { team: next, advancedTo } = autoAdvance(team);
     if (advancedTo !== null) {
+      if (prevActive && !wasAlive) {
+        pushLogs([
+          {
+            text: `💀 [KO] ${label} 진영의 ${prevActive.base.name}이(가) 쓰러졌습니다!`,
+            tone: "penalty",
+          },
+        ]);
+      }
+      const incoming = next.members[advancedTo];
+      const remaining = next.members.filter((m) => m.engineHp > 0).length;
       pushLogs([
         {
-          text: `[교체] ${label} 진영 - ${next.members[advancedTo].base.name}이(가) 자동 출전!`,
+          text: `🔁 [자동 출전] ${label} 진영 - ${incoming.base.name} 등장! (남은 생존자 ${remaining}/3)`,
           tone: "system",
+        },
+      ]);
+    } else if (prevActive && !wasAlive) {
+      // 더 이상 출전할 드래곤이 없음 = 진영 전멸
+      pushLogs([
+        {
+          text: `💀 [KO] ${label} 진영의 ${prevActive.base.name}이(가) 쓰러졌습니다! ${label} 진영 전멸!`,
+          tone: "penalty",
         },
       ]);
     }
