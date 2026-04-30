@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Swords,
   ChevronRight,
@@ -119,12 +119,37 @@ export function PvpView() {
   }, [phase]);
 
   const tier = useMemo(() => {
-    if (rp >= 1500) return { label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
-    if (rp >= 1200) return { label: "Platinum", tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10" };
-    if (rp >= 1000) return { label: "Gold", tone: "text-amber-300 border-amber-400/40 bg-amber-500/10" };
-    if (rp >= 800) return { label: "Silver", tone: "text-slate-200 border-slate-400/40 bg-slate-400/10" };
-    return { label: "Bronze", tone: "text-orange-300 border-orange-400/40 bg-orange-500/10" };
+    if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
+    if (rp >= 1200) return { rank: 4, label: "Platinum", tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10" };
+    if (rp >= 1000) return { rank: 3, label: "Gold", tone: "text-amber-300 border-amber-400/40 bg-amber-500/10" };
+    if (rp >= 800) return { rank: 2, label: "Silver", tone: "text-slate-200 border-slate-400/40 bg-slate-400/10" };
+    return { rank: 1, label: "Bronze", tone: "text-orange-300 border-orange-400/40 bg-orange-500/10" };
   }, [rp]);
+
+  // Track RP changes to animate the badge: direction (up/down/none),
+  // a one-shot pulse key that re-runs the animation on every change,
+  // and a special "promotion/demotion" flash when the tier itself shifts.
+  const prevRpRef = useRef<number>(rp);
+  const prevTierRef = useRef<number>(tier.rank);
+  const [direction, setDirection] = useState<"up" | "down" | "none">("none");
+  const [pulseKey, setPulseKey] = useState(0);
+  const [tierShift, setTierShift] = useState<"promote" | "demote" | null>(null);
+  useEffect(() => {
+    const prevRp = prevRpRef.current;
+    if (prevRp !== rp) {
+      setDirection(rp > prevRp ? "up" : "down");
+      setPulseKey((k) => k + 1);
+    }
+    const prevTier = prevTierRef.current;
+    if (prevTier !== tier.rank) {
+      setTierShift(tier.rank > prevTier ? "promote" : "demote");
+      const t = setTimeout(() => setTierShift(null), 1400);
+      prevTierRef.current = tier.rank;
+      prevRpRef.current = rp;
+      return () => clearTimeout(t);
+    }
+    prevRpRef.current = rp;
+  }, [rp, tier.rank]);
 
   // ---------------- Battle ----------------
   if (phase === "battle" && player && opponent) {
