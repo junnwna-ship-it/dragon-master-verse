@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import eslintPluginPrettier from "eslint-plugin-prettier/recommended";
+import prettierConfig from "eslint-config-prettier";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
@@ -25,6 +26,11 @@ export default tseslint.config(
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      parserOptions: {
+        // Skip type-aware linting for performance — no `project` reference.
+        project: false,
+        projectService: false,
+      },
     },
     plugins: {
       "react-hooks": reactHooks,
@@ -48,4 +54,6 @@ export default tseslint.config(
     },
   },
   eslintPluginPrettier,
+  // Must be LAST: disables ESLint rules that conflict with Prettier formatting.
+  prettierConfig,
 );
