@@ -500,6 +500,8 @@ export function BondingSection({ dragon }: { dragon: Dragon }) {
     setBusy(false);
     if (error) { toast.error(`교감 실패: ${error.message}`); return; }
     setVfx(true);
+    // 카드 이미지 / EXP 게이지에서 동시에 VFX 재생
+    emitBondSuccess({ dragonId: dragon.id, expGain: 500 });
     toast.success(`${dragon.name}와(과)의 친밀도 상승! EXP +500`);
     setTimeout(() => setVfx(false), 1200);
     await Promise.all([loadTokens(), refetchDragons()]);
