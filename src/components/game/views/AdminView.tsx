@@ -408,6 +408,34 @@ export function AdminView() {
         ) : null}
       </div>
 
+      {/* Feature flags — admin-only live toggles backed by `app_settings`. */}
+      {isAdmin && (
+        <section className="space-y-2 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <Settings2 className="h-3 w-3" /> Feature Flags (라이브 토글)
+          </p>
+          <FeatureToggle
+            flagKey="isShopOpen"
+            label="Shop 오픈"
+            description="상점 탭의 잠금 해제 / 구매 RPC 활성화"
+            value={settings.isShopOpen}
+            onChange={setFlag}
+            disabled={false}
+          />
+          <FeatureToggle
+            flagKey="isTrainingOpen"
+            label="훈련소 오픈"
+            description="드래곤 스탯 분배(스탯 포인트 사용) 활성화"
+            value={settings.isTrainingOpen}
+            onChange={setFlag}
+            disabled={false}
+          />
+          <p className="pt-1 text-[10px] text-slate-500">
+            <ToggleRight className="mr-1 inline h-3 w-3" /> 변경 즉시 모든 클라이언트에 반영됩니다.
+          </p>
+        </section>
+      )}
+
       {/* Single-card form */}
       <form
         onSubmit={onSubmit}
