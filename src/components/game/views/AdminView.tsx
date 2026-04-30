@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { Trash2, Upload, Plus } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil, X } from "lucide-react";
 import { useGameStore, type Element } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 
@@ -30,7 +30,9 @@ export function AdminView() {
   const customDragons = useGameStore((s) => s.customDragons);
   const addCustomDragon = useGameStore((s) => s.addCustomDragon);
   const removeCustomDragon = useGameStore((s) => s.removeCustomDragon);
+  const updateCustomDragon = useGameStore((s) => s.updateCustomDragon);
 
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [lore, setLore] = useState("");
   const [maxHp, setMaxHp] = useState(1500);
@@ -43,6 +45,37 @@ export function AdminView() {
   const [error, setError] = useState<string>("");
 
   const customIds = new Set(customDragons.map((d) => d.id));
+
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setLore("");
+    setMaxHp(1500);
+    setMaxMp(1000);
+    setAtk(1500);
+    setDef(1000);
+    setElement("Water");
+    setImageData("");
+    setImageName("");
+    setError("");
+  }
+
+  function startEdit(id: number) {
+    const d = customDragons.find((x) => x.id === id);
+    if (!d) return;
+    setEditingId(id);
+    setName(d.name);
+    setLore(d.lore ?? "");
+    setMaxHp(d.maxHp);
+    setMaxMp(d.mp);
+    setAtk(d.atk);
+    setDef(d.def);
+    setElement(d.element);
+    setImageData(d.imageUrl ?? "");
+    setImageName(d.imageUrl ? "현재 이미지" : "");
+    setError("");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   async function onFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -63,22 +96,32 @@ export function AdminView() {
       setError("이름을 입력하세요");
       return;
     }
-    addCustomDragon({
-      name: name.trim(),
-      element,
-      maxHp,
-      hp: maxHp,
-      mp: maxMp,
-      atk,
-      def,
-      imageUrl: imageData || undefined,
-      lore: lore.trim() || undefined,
-    });
-    setName("");
-    setLore("");
-    setImageData("");
-    setImageName("");
-    setError("");
+    if (editingId != null) {
+      updateCustomDragon(editingId, {
+        name: name.trim(),
+        element,
+        maxHp,
+        hp: maxHp,
+        mp: maxMp,
+        atk,
+        def,
+        imageUrl: imageData || undefined,
+        lore: lore.trim() || undefined,
+      });
+    } else {
+      addCustomDragon({
+        name: name.trim(),
+        element,
+        maxHp,
+        hp: maxHp,
+        mp: maxMp,
+        atk,
+        def,
+        imageUrl: imageData || undefined,
+        lore: lore.trim() || undefined,
+      });
+    }
+    resetForm();
   }
 
   return (
@@ -93,7 +136,20 @@ export function AdminView() {
         onSubmit={onSubmit}
         className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4"
       >
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">새 드래곤 카드</p>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            {editingId != null ? `드래곤 수정 #${editingId}` : "새 드래곤 카드"}
+          </p>
+          {editingId != null && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-700"
+            >
+              <X className="h-3 w-3" /> 취소
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 gap-2">
           <label className="col-span-2 block text-xs">
@@ -173,7 +229,15 @@ export function AdminView() {
           type="submit"
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400"
         >
-          <Plus className="h-4 w-4" />새 드래곤 카드 생성하기
+          {editingId != null ? (
+            <>
+              <Pencil className="h-4 w-4" />변경사항 저장
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" />새 드래곤 카드 생성하기
+            </>
+          )}
         </button>
       </form>
 
@@ -207,14 +271,31 @@ export function AdminView() {
                   </p>
                 </div>
                 {isCustom ? (
-                  <button
-                    type="button"
-                    onClick={() => removeCustomDragon(d.id)}
-                    aria-label={`${d.name} 삭제`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(d.id)}
+                      aria-label={`${d.name} 편집`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                        editingId === d.id
+                          ? "bg-amber-500/20 text-amber-300"
+                          : "bg-sky-500/10 text-sky-400 hover:bg-sky-500/20"
+                      }`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editingId === d.id) resetForm();
+                        removeCustomDragon(d.id);
+                      }}
+                      aria-label={`${d.name} 삭제`}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 ) : (
                   <span className="text-[9px] uppercase tracking-wider text-slate-600">기본</span>
                 )}
