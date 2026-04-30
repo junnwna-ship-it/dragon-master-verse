@@ -49,25 +49,26 @@ const GHOST_POOL: GhostOpponent[] = [
     id: 201,
     trainer: "@vortex_kr",
     rp: 1024,
-    dragon: { id: 201, name: "Vortex", element: "Water", hp: 55, maxHp: 55, mp: 70, atk: 82, def: 30 },
+    // 원본 카드 스탯 — HP+MP+ATK+DEF=5000.
+    dragon: { id: 201, name: "Vortex", element: "Water", hp: 1160, maxHp: 1160, mp: 1480, atk: 1730, def: 630 },
   },
   {
     id: 202,
     trainer: "@mossguard",
     rp: 988,
-    dragon: { id: 202, name: "Mossguard", element: "Wood", hp: 75, maxHp: 75, mp: 45, atk: 50, def: 55 },
+    dragon: { id: 202, name: "Mossguard", element: "Wood", hp: 1665, maxHp: 1665, mp: 1000, atk: 1110, def: 1225 },
   },
   {
     id: 203,
     trainer: "@cinder99",
     rp: 1041,
-    dragon: { id: 203, name: "Cinder", element: "Fire", hp: 60, maxHp: 60, mp: 60, atk: 76, def: 28 },
+    dragon: { id: 203, name: "Cinder", element: "Fire", hp: 1340, maxHp: 1340, mp: 1340, atk: 1695, def: 625 },
   },
   {
     id: 204,
     trainer: "@ironscale",
     rp: 1012,
-    dragon: { id: 204, name: "Ironscale", element: "Earth", hp: 80, maxHp: 80, mp: 40, atk: 58, def: 62 },
+    dragon: { id: 204, name: "Ironscale", element: "Earth", hp: 1665, maxHp: 1665, mp: 835, atk: 1210, def: 1290 },
   },
 ];
 
