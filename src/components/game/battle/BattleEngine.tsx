@@ -22,6 +22,12 @@ interface BattleEngineProps {
   /** Optional starting HP/MP overrides so multi-battle runs preserve damage. */
   initialPlayerHp?: number;
   initialPlayerMp?: number;
+  /**
+   * If > 0, automatically invoke onExit this many ms after the battle resolves
+   * so the player returns to the map without clicking. Set to 0 to disable.
+   * Defaults to 1000ms (1s).
+   */
+  autoExitMs?: number;
 }
 
 const elementTone: Record<string, string> = {
@@ -94,6 +100,7 @@ export function BattleEngine({
   onResolved,
   initialPlayerHp,
   initialPlayerMp,
+  autoExitMs = 1000,
 }: BattleEngineProps) {
   const [pState, setPState] = useState<Combatant>(() => {
     const c = makeCombatant(player);
@@ -111,6 +118,8 @@ export function BattleEngine({
   ]);
   const logIdRef = useRef(1);
   const reportedRef = useRef(false);
+  const [autoExitEnabled, setAutoExitEnabled] = useState(autoExitMs > 0);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const winner = useMemo(() => {
     if (pState.hp <= 0 && eState.hp <= 0) return "draw" as const;
@@ -130,6 +139,22 @@ export function BattleEngine({
       enemyMp: eState.mp,
     });
   }, [winner, onResolved, pState.hp, pState.mp, eState.hp, eState.mp]);
+
+  // Auto-return to the map a moment after the battle resolves.
+  useEffect(() => {
+    if (!winner || !onExit || !autoExitEnabled || autoExitMs <= 0) return;
+    setCountdown(Math.ceil(autoExitMs / 1000));
+    const tickIv = setInterval(() => {
+      setCountdown((c) => (c == null || c <= 1 ? c : c - 1));
+    }, 1000);
+    const exitT = setTimeout(() => {
+      onExit();
+    }, autoExitMs);
+    return () => {
+      clearInterval(tickIv);
+      clearTimeout(exitT);
+    };
+  }, [winner, onExit, autoExitEnabled, autoExitMs]);
 
   const pushLogs = (entries: Omit<LogEntry, "id">[]) => {
     setLogs((prev) => {
@@ -237,12 +262,24 @@ export function BattleEngine({
             {winner === "draw" ? "무승부" : winner === "player" ? "승리!" : "패배..."}
           </p>
           {onExit && (
-            <button
-              onClick={onExit}
-              className="mt-2 rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950"
-            >
-              돌아가기
-            </button>
+            <div className="mt-2 flex flex-col items-center gap-1.5">
+              <button
+                onClick={onExit}
+                className="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400"
+              >
+                {autoExitEnabled && countdown != null
+                  ? `돌아가기 (${countdown}s)`
+                  : "돌아가기"}
+              </button>
+              {autoExitMs > 0 && (
+                <button
+                  onClick={() => setAutoExitEnabled((v) => !v)}
+                  className="text-[10px] text-amber-300/80 underline-offset-2 hover:underline"
+                >
+                  {autoExitEnabled ? "자동 돌아가기 취소" : "자동 돌아가기 활성화"}
+                </button>
+              )}
+            </div>
           )}
         </div>
       ) : (
