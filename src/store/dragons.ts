@@ -1,22 +1,21 @@
 import { create } from "zustand";
-// Optimized WebP variants (small for cards, large for the modal hero).
-import elia480 from "@/assets/dragons/elia-480.webp";
-import elia800 from "@/assets/dragons/elia-800.webp";
-import bella480 from "@/assets/dragons/bella-480.webp";
-import bella800 from "@/assets/dragons/bella-800.webp";
-import comi480 from "@/assets/dragons/comi-480.webp";
-import comi800 from "@/assets/dragons/comi-800.webp";
-import snowy480 from "@/assets/dragons/snowy-480.webp";
-import snowy800 from "@/assets/dragons/snowy-800.webp";
-import caminont480 from "@/assets/dragons/caminont-480.webp";
-import caminont800 from "@/assets/dragons/caminont-800.webp";
-import younigon480 from "@/assets/dragons/younigon-480.webp";
-import younigon800 from "@/assets/dragons/younigon-800.webp";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type Element = "Wood" | "Water" | "Fire" | "Earth" | "Light" | "Dark";
 
 export interface Dragon {
+  /** Stable in-memory numeric id assigned at fetch time; used by deck/PvP/battle systems. */
   id: number;
+  /** Authoritative cloud UUID (Supabase row id). */
+  uuid: string;
+  /** True for the original 8 hard-coded dragons (read-only for non-admins). */
+  isSeed?: boolean;
+  /** True if not a seed (= user-uploaded). */
+  isCustom?: boolean;
+  /** Author user id (auth.uid()). Null for seeds. */
+  createdBy?: string | null;
+  lore?: string;
   name: string;
   element: Element;
   hp: number;
@@ -24,14 +23,7 @@ export interface Dragon {
   mp: number;
   atk: number;
   def: number;
-  /** ~480px wide WebP — used by the lobby card grid. */
-  image?: string;
-  /** ~800px wide WebP — used by the detail modal hero. */
-  imageLarge?: string;
-  /**
-   * 사용자 업로드 이미지(절대경로, 예: "/Ain.jpg"). 지정 시 모든 곳에서
-   * 우선적으로 사용된다. 누락/로드 실패 시 기존 webp/그라디언트 폴백.
-   */
+  /** Public Storage URL (Supabase). Optional — falls back to gradient placeholder. */
   imageUrl?: string;
 }
 
