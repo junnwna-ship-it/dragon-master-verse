@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Dragon, Element } from "@/store/dragons";
 
 const ELEMENT_META: Record<Element, { label: string; color: string; icon: React.ComponentType<{ className?: string }>; strong: Element; weak: Element }> = {
@@ -20,9 +20,36 @@ function recommendBuild(d: Dragon): { title: string; desc: string; tags: string[
   return { title: "마법형 캐스터", desc: "MP를 활용한 스킬 위주 빌드. 마나 회복과 스킬 강화 장비를 권장합니다.", tags: ["스킬", "마나", "원거리"] };
 }
 
-export function DragonDetailModal({ dragon, onClose }: { dragon: Dragon; onClose: () => void }) {
+export function DragonDetailModal({
+  dragon,
+  onClose,
+  onNext,
+  onPrev,
+  hasNext = false,
+  hasPrev = false,
+}: {
+  dragon: Dragon;
+  onClose: () => void;
+  /** Advance to the next dragon in the roster (called by swipe-left / →). */
+  onNext?: () => void;
+  /** Go back to the previous dragon in the roster (swipe-right / ←). */
+  onPrev?: () => void;
+  hasNext?: boolean;
+  hasPrev?: boolean;
+}) {
+  // Keyboard: ESC closes; ←/→ navigate when handlers are wired.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      } else if (e.key === "ArrowRight" && onNext) {
+        e.preventDefault();
+        onNext();
+      } else if (e.key === "ArrowLeft" && onPrev) {
+        e.preventDefault();
+        onPrev();
+      }
+    };
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -30,7 +57,33 @@ export function DragonDetailModal({ dragon, onClose }: { dragon: Dragon; onClose
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose]);
+  }, [onClose, onNext, onPrev]);
+
+  // Touch swipe — horizontal gesture > 50px and at least 1.5× the vertical
+  // delta counts as a navigation. Anything else is treated as a regular
+  // tap/scroll and ignored so we don't fight scrollable inner content.
+  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (!t) return;
+    touchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    // Threshold: meaningful horizontal motion, mostly horizontal, fast enough.
+    if (absX < 50 || absX < absY * 1.5) return;
+    if (Date.now() - start.t > 600) return;
+    if (dx < 0 && onNext) onNext();
+    else if (dx > 0 && onPrev) onPrev();
+  };
 
   const meta = ELEMENT_META[dragon.element];
   const ElIcon = meta.icon;
@@ -56,6 +109,8 @@ export function DragonDetailModal({ dragon, onClose }: { dragon: Dragon; onClose
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
         className="w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-slate-700/70 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-300"
       >
         {/* Inner content is keyed by dragon.id so swapping the globally
@@ -75,13 +130,37 @@ export function DragonDetailModal({ dragon, onClose }: { dragon: Dragon; onClose
               <span className="font-semibold">{meta.label} 속성</span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="닫기"
-            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {(onPrev || onNext) && (
+              <>
+                <button
+                  type="button"
+                  onClick={onPrev}
+                  disabled={!hasPrev}
+                  aria-label="이전 드래곤"
+                  className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={!hasNext}
+                  aria-label="다음 드래곤"
+                  className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="닫기"
+              className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4 px-5 py-4">
