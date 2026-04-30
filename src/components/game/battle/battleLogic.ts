@@ -309,6 +309,14 @@ export function onTurnStart(c: Combatant): { next: Combatant; logs: Omit<LogEntr
     const heal = Math.round(next.engineMaxHp * 0.05);
     next.engineHp = Math.min(next.engineMaxHp, next.engineHp + heal);
     logs.push({ text: `[가호의 물결] Bella가 ${heal} HP 회복`, tone: "system" });
+    const { next: afterCost, spent } = spendPctMp(next, MP_PASSIVE_PCT);
+    next = afterCost;
+    if (spent > 0) {
+      logs.push({
+        text: `[패시브 소모] ${next.base.name} MP -${spent} (MaxMp 5%)`,
+        tone: "system",
+      });
+    }
   }
   return { next, logs };
 }
@@ -323,10 +331,15 @@ export function endTurnDrain(
   ctx: { turnNumber: number },
 ): { self: Combatant; opponent: Combatant; logs: Omit<LogEntry, "id">[] } {
   const logs: Omit<LogEntry, "id">[] = [];
-  let self: Combatant = { ...selfIn, mp: selfIn.mp - 10 };
+  // 정률 기반 턴 종료 MP 소모 (MaxMp의 10%)
+  const turnDrain = Math.floor(selfIn.maxMp * MP_TURN_END_PCT);
+  let self: Combatant = { ...selfIn, mp: selfIn.mp - turnDrain };
   let opponent: Combatant = { ...opponentIn };
 
-  logs.push({ text: `${self.base.name}의 MP -10 (${Math.max(0, self.mp)})`, tone: "system" });
+  logs.push({
+    text: `${self.base.name}의 MP -${turnDrain} (MaxMp 10%, 잔량 ${Math.max(0, self.mp)}/${self.maxMp})`,
+    tone: "system",
+  });
   if (self.mp <= 0 && !self.exhausted) {
     self.exhausted = true;
     logs.push({
@@ -352,6 +365,14 @@ export function endTurnDrain(
         text: `[수류 흡수] Elia가 ${opponent.base.name}의 MP ${drained}을 흡수`,
         tone: "system",
       });
+      const { next: afterCost, spent } = spendPctMp(self, MP_PASSIVE_PCT);
+      self = afterCost;
+      if (spent > 0) {
+        logs.push({
+          text: `[패시브 소모] ${self.base.name} MP -${spent} (MaxMp 5%)`,
+          tone: "system",
+        });
+      }
     }
   }
 
@@ -360,7 +381,32 @@ export function endTurnDrain(
     self.rageUsed = true;
     self.engineAtk = Math.round(self.engineAtk * 1.5);
     logs.push({ text: `[화염 격노] Younigon의 공격력이 1.5배로 증폭!`, tone: "penalty" });
+    const { next: afterCost, spent } = spendPctMp(self, MP_PASSIVE_PCT);
+    self = afterCost;
+    if (spent > 0) {
+      logs.push({
+        text: `[패시브 소모] ${self.base.name} MP -${spent} (MaxMp 5%)`,
+        tone: "system",
+      });
+    }
   }
 
   return { self, opponent, logs };
+}
+
+/**
+ * 벤치(대기석) 1마리 턴 종료 회복: MaxMp의 15%만큼 MP 회복.
+ * 회복으로 MP가 1 이상 되면 탈진 상태도 해제한다.
+ */
+export function recoverBenchMp(c: Combatant): { next: Combatant; recovered: number } {
+  if (c.engineHp <= 0) return { next: c, recovered: 0 };
+  const amount = Math.floor(c.maxMp * MP_BENCH_RECOVER_PCT);
+  if (amount <= 0) return { next: c, recovered: 0 };
+  const nextMp = Math.min(c.maxMp, c.mp + amount);
+  const recovered = nextMp - c.mp;
+  if (recovered <= 0) return { next: c, recovered: 0 };
+  return {
+    next: { ...c, mp: nextMp, exhausted: nextMp > 0 ? false : c.exhausted },
+    recovered,
+  };
 }
