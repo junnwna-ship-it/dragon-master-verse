@@ -1,4 +1,4 @@
-import { Home, ScrollText, Swords, Library, Wrench, Bug, ShoppingBag } from "lucide-react";
+import { Home, ScrollText, Swords, Library, Wrench, Bug, ShoppingBag, Dumbbell } from "lucide-react";
 import { useGameStore, type View } from "@/store/dragons";
 
 const tabs: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -7,6 +7,7 @@ const tabs: { id: View; label: string; icon: React.ComponentType<{ className?: s
   { id: "story", label: "Story", icon: ScrollText },
   { id: "pvp", label: "PvP", icon: Swords },
   { id: "shop", label: "Shop", icon: ShoppingBag },
+  { id: "training", label: "훈련소", icon: Dumbbell },
 ];
 
 export function BottomNav() {
