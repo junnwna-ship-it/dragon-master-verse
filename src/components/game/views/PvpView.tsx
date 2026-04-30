@@ -685,3 +685,176 @@ export function PvpView() {
   );
 }
 
+// ----------------------------------------------------------------------
+// ConfirmStartModal — accessible confirm dialog for the picker.
+//
+// A11y contract:
+//  • Focus moves to the cancel button on open (least-destructive default).
+//  • Tab / Shift+Tab cycle ONLY between the modal's focusable elements
+//    (focus trap). Tabbing past the last element wraps to the first, and
+//    vice versa.
+//  • ESC closes (acts as cancel) — never confirms.
+//  • Backdrop closes only when the press AND release both happen on the
+//    backdrop itself. A drag that starts inside the dialog and ends on the
+//    backdrop must NOT close the modal.
+//  • Body scroll is locked while the modal is open.
+//  • On close, focus is restored to whatever element was focused before
+//    the modal opened (typically the "전투 시작" trigger).
+//  • Modal body is announced via aria-describedby.
+// ----------------------------------------------------------------------
+function ConfirmStartModal({
+  playerName,
+  opponentTrainer,
+  opponentDragonName,
+  onCancel,
+  onConfirm,
+}: {
+  playerName: string;
+  opponentTrainer: string;
+  opponentDragonName: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const cancelBtnRef = useRef<HTMLButtonElement | null>(null);
+  // Tracks where a mousedown started so a click that began inside the dialog
+  // can't accidentally dismiss it when the user releases over the backdrop.
+  const backdropMouseDownTargetRef = useRef<EventTarget | null>(null);
+
+  // Save the previously focused element so we can restore focus on unmount.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    // Defer focus to next frame so the dialog node is mounted + measurable.
+    const raf = requestAnimationFrame(() => {
+      cancelBtnRef.current?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      // Only restore if the previously focused element is still in the DOM
+      // and still focusable; guards against the trigger having unmounted.
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus?.();
+      }
+    };
+  }, []);
+
+  // Lock body scroll while open.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
+  // Keyboard handling: ESC cancels; Tab is trapped within the dialog.
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      e.preventDefault();
+      onCancel();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const root = dialogRef.current;
+    if (!root) return;
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
+    if (focusables.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement as HTMLElement | null;
+    if (e.shiftKey && (active === first || !root.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  return (
+    <div
+      // Backdrop. role="presentation" is intentional so AT treats only the
+      // inner [role=dialog] as the modal landmark.
+      role="presentation"
+      onMouseDown={(e) => {
+        backdropMouseDownTargetRef.current = e.target;
+      }}
+      onMouseUp={(e) => {
+        const startedOnBackdrop =
+          backdropMouseDownTargetRef.current === e.currentTarget;
+        const endedOnBackdrop = e.target === e.currentTarget;
+        backdropMouseDownTargetRef.current = null;
+        if (startedOnBackdrop && endedOnBackdrop) {
+          onCancel();
+        }
+      }}
+      onKeyDown={onKeyDown}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 animate-in fade-in duration-150"
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pvp-confirm-title"
+        aria-describedby="pvp-confirm-desc"
+        // Stop propagation so internal mousedown/up never count as
+        // backdrop interaction even if the inner content is later changed.
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        className="w-full max-w-xs rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl outline-none animate-in zoom-in-95 duration-150"
+        tabIndex={-1}
+      >
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
+          <Swords className="h-6 w-6" />
+        </div>
+        <h3
+          id="pvp-confirm-title"
+          className="mt-3 text-center text-base font-bold text-slate-100"
+        >
+          선택한 드래곤으로 진행할까요?
+        </h3>
+        <div
+          id="pvp-confirm-desc"
+          className="mt-3 space-y-1.5 rounded-lg border border-slate-700/60 bg-slate-800/60 p-3 text-xs"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">내 드래곤</span>
+            <span className="font-bold text-amber-300">{playerName}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">상대</span>
+            <span className="font-bold text-rose-300">
+              {opponentTrainer} · {opponentDragonName}
+            </span>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            ref={cancelBtnRef}
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+          >
+            진행
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
