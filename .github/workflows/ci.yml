@@ -512,12 +512,12 @@ jobs:
           CANDIDATE_RUNS=$(gh api -X GET \
             "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
             -f branch="$BRANCH" -f status=completed -f per_page=50 \
-            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)\t\(.created_at)\t\(.event)\t\(.html_url)"')
+            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)\t\(.created_at)\t\(.event)\t\(.conclusion // "?")\t\(.html_url)"')
 
           RUNS=""
           MATCHED_JSONL=""
           KEPT=0
-          while IFS=$'\t' read -r RID HEAD_SHA CREATED EVENT URL; do
+          while IFS=$'\t' read -r RID HEAD_SHA CREATED EVENT CONCLUSION URL; do
             [ -z "$RID" ] && continue
             [ "$KEPT" -ge 20 ] && break
             WF_SHA_AT_RUN=$(git rev-parse "$HEAD_SHA:${WORKFLOW_PATH}" 2>/dev/null || echo "")
@@ -526,8 +526,9 @@ jobs:
               MATCHED_JSONL="$MATCHED_JSONL$(jq -nc \
                 --arg id "$RID" --arg head_sha "$HEAD_SHA" \
                 --arg created_at "$CREATED" --arg event "$EVENT" \
-                --arg url "$URL" --arg workflow_file_sha "$WF_SHA_AT_RUN" \
-                '{id:$id, head_sha:$head_sha, created_at:$created_at, event:$event, workflow_file_sha:$workflow_file_sha, html_url:$url}')\n"
+                --arg conclusion "$CONCLUSION" --arg url "$URL" \
+                --arg workflow_file_sha "$WF_SHA_AT_RUN" \
+                '{id:$id, head_sha:$head_sha, created_at:$created_at, event:$event, conclusion:$conclusion, workflow_file_sha:$workflow_file_sha, html_url:$url}')\n"
               KEPT=$((KEPT + 1))
             fi
           done <<< "$CANDIDATE_RUNS"
@@ -539,9 +540,11 @@ jobs:
             --arg current_workflow_file_sha "$CURRENT_WF_SHA" \
             --arg workflow_path "$WORKFLOW_PATH" \
             --arg current_run_id "${{ github.run_id }}" \
+            --arg current_head_sha "${{ github.sha }}" \
             --arg branch "$BRANCH" \
             --arg generated_at "$(date -u +%FT%TZ)" \
             --argjson matched "$MATCHED_JSON" \
+            --argjson candidates_scanned 50 \
             --argjson matched_count "$KEPT" \
             '{
               source: "compare-lint-time-by-cache",
@@ -549,13 +552,14 @@ jobs:
               workflow_path: $workflow_path,
               current_workflow_file_sha: $current_workflow_file_sha,
               current_run_id: $current_run_id,
+              current_head_sha: $current_head_sha,
               generated_at: $generated_at,
-              candidates_scanned: 50,
+              candidates_scanned: $candidates_scanned,
               matched_count: $matched_count,
               workflow_version: {
                 sha_short: ($current_workflow_file_sha | .[0:7]),
                 sha_full: $current_workflow_file_sha,
-                candidates_scanned: 50,
+                candidates_scanned: $candidates_scanned,
                 matched_count: $matched_count
               },
               matched_runs: $matched
