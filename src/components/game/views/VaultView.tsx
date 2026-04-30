@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Heart, Sword, Shield, Droplet, X, Check, Swords } from "lucide-react";
+import { Heart, Sword, Shield, Droplet, X, Swords, Plus } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 
@@ -35,6 +35,7 @@ export function VaultView() {
 
   const slots: (Dragon | null)[] = [deck[0] ?? null, deck[1] ?? null, deck[2] ?? null];
   const ready = deck.length === 3;
+  const full = ready;
 
   return (
     <div className="space-y-4">
@@ -44,12 +45,53 @@ export function VaultView() {
         <p className="text-xs text-slate-400">출전 덱 3마리를 편성하세요</p>
       </div>
 
-      {/* 출전 덱 슬롯 */}
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/60 p-3">
+      {/* 출전 덱 슬롯 — sticky로 항상 보이게 */}
+      <section
+        className={`sticky top-0 z-10 -mx-4 rounded-b-2xl border-b border-slate-700/60 bg-slate-900/95 px-4 pb-3 pt-3 backdrop-blur transition ${
+          ready ? "shadow-[0_4px_20px_-8px_rgba(245,158,11,0.4)]" : ""
+        }`}
+      >
+        <style>{`
+          @keyframes vault-slot-pop {
+            0% { transform: scale(0.85); opacity: 0; }
+            55% { transform: scale(1.06); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          .vault-slot-pop { animation: vault-slot-pop 0.28s ease-out 1; }
+          @keyframes vault-dot-fill {
+            0% { transform: scale(0.6); }
+            55% { transform: scale(1.25); }
+            100% { transform: scale(1); }
+          }
+          .vault-dot-fill { animation: vault-dot-fill 0.32s ease-out 1; }
+        `}</style>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            출전 덱 ({deck.length}/3)
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              출전 덱
+            </p>
+            {/* 점 인디케이터 — 0/3을 시각화 */}
+            <div className="flex items-center gap-1">
+              {[0, 1, 2].map((i) => {
+                const filled = i < deck.length;
+                return (
+                  <span
+                    key={i}
+                    className={`block h-2 w-2 rounded-full transition-colors ${
+                      filled ? "vault-dot-fill bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.7)]" : "bg-slate-700"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <span
+              className={`font-mono text-xs font-bold tabular-nums ${
+                ready ? "text-amber-300" : "text-slate-300"
+              }`}
+            >
+              {deck.length}/3
+            </span>
+          </div>
           {deck.length > 0 && (
             <button
               onClick={clearDeck}
@@ -63,29 +105,42 @@ export function VaultView() {
           {slots.map((d, i) => (
             <div
               key={i}
-              className={`relative aspect-[3/4] overflow-hidden rounded-xl border ${
-                d ? "border-amber-500/60 bg-slate-900/60" : "border-dashed border-slate-600/60 bg-slate-900/40"
+              className={`relative aspect-[3/4] overflow-hidden rounded-xl border transition ${
+                d
+                  ? "border-amber-500 bg-slate-900/60 shadow-lg shadow-amber-900/30"
+                  : "border-dashed border-slate-600/60 bg-slate-900/40"
               }`}
             >
+              {/* 슬롯 번호 배지 — 항상 좌상단에 표시 */}
+              <span
+                className={`absolute left-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                  d ? "bg-amber-500 text-slate-950 shadow" : "bg-slate-800 text-slate-500"
+                }`}
+              >
+                {i + 1}
+              </span>
               {d ? (
                 <button
                   type="button"
+                  // 새 카드가 들어올 때마다 pop 애니메이션 — key=드래곤 ID
+                  key={d.id}
                   onClick={() => toggleDeckMember(d.id)}
-                  className="group block h-full w-full"
+                  className="vault-slot-pop group block h-full w-full"
                   aria-label={`${d.name} 덱에서 제외`}
                 >
                   <DragonImage dragon={d} className="h-full w-full" />
-                  <span className="absolute right-1 top-1 rounded-full bg-rose-500/90 p-0.5 opacity-0 transition group-hover:opacity-100">
+                  <span className="absolute right-1 top-1 z-10 rounded-full bg-rose-500/90 p-0.5 opacity-0 transition group-hover:opacity-100">
                     <X className="h-3 w-3 text-white" />
                   </span>
-                  <span className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950/90 to-transparent px-1.5 py-1 text-left">
+                  <span className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950/95 via-slate-950/70 to-transparent px-1.5 py-1 text-left">
                     <span className="block truncate text-[11px] font-bold text-slate-100">{d.name}</span>
-                    <span className="block text-[9px] text-slate-400">#{i + 1} · {d.element}</span>
+                    <span className="block text-[9px] text-slate-400">{d.element}</span>
                   </span>
                 </button>
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-slate-600">
-                  <span className="text-2xl font-bold">{i + 1}</span>
+                <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-600">
+                  <Plus className="h-5 w-5" />
+                  <span className="text-[9px] font-semibold uppercase tracking-wider">비어있음</span>
                 </div>
               )}
             </div>
@@ -105,29 +160,51 @@ export function VaultView() {
 
       {/* 보유 드래곤 */}
       <section>
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-          보유 드래곤 ({owned.length})
-        </p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            보유 드래곤 ({owned.length})
+          </p>
+          {full && (
+            <p className="text-[10px] text-amber-300">덱이 가득 찼어요 — 교체하려면 슬롯을 탭하세요</p>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {owned.map((d) => {
-            const sel = selectedDeck.includes(d.id);
+            const slotIdx = selectedDeck.indexOf(d.id);
+            const sel = slotIdx >= 0;
+            const dim = full && !sel;
             const tone = elementTone[d.element] ?? elementTone.Wood;
             return (
               <button
                 key={d.id}
                 type="button"
                 onClick={() => toggleDeckMember(d.id)}
-                className={`group relative overflow-hidden rounded-xl border text-left transition ${
+                aria-pressed={sel}
+                className={`group relative overflow-hidden rounded-xl border text-left transition active:scale-[0.97] ${
                   sel
-                    ? "border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-900/30"
-                    : "border-slate-700/60 bg-slate-800/60 hover:border-slate-500"
+                    ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-400/50 shadow-lg shadow-amber-900/30"
+                    : dim
+                      ? "border-slate-800 bg-slate-900/40 opacity-50 hover:opacity-90"
+                      : "border-slate-700/60 bg-slate-800/60 hover:border-slate-500"
                 }`}
               >
                 <div className="relative aspect-square">
                   <DragonImage dragon={d} className="h-full w-full" />
+                  {sel ? (
+                    // 선택됨 → 슬롯 번호 배지 (#1/#2/#3)
+                    <span className="vault-dot-fill absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-slate-950 shadow ring-2 ring-amber-300/50">
+                      {slotIdx + 1}
+                    </span>
+                  ) : (
+                    !dim && (
+                      <span className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/80 text-slate-300 opacity-0 ring-1 ring-slate-600 transition group-hover:opacity-100">
+                        <Plus className="h-3.5 w-3.5" />
+                      </span>
+                    )
+                  )}
                   {sel && (
-                    <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-slate-950 shadow">
-                      <Check className="h-3 w-3" />
+                    <span className="absolute inset-x-0 bottom-0 bg-amber-500/90 px-1.5 py-0.5 text-center text-[9px] font-bold uppercase tracking-wider text-slate-950">
+                      출전 #{slotIdx + 1}
                     </span>
                   )}
                 </div>
