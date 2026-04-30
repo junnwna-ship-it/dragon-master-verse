@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud, ToggleRight, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useGameStore, type Element } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppSettings, type AppSettings } from "@/hooks/useAppSettings";
 
 /**
  * Admin Dashboard — cloud-backed.
@@ -92,6 +93,51 @@ interface BulkRow {
   lore: string;
 }
 
+/**
+ * Inline toggle row that flips a single feature flag in `app_settings`.
+ * Optimistic + realtime — every connected client reflects the change instantly.
+ */
+function FeatureToggle({
+  flagKey,
+  label,
+  description,
+  value,
+  onChange,
+  disabled,
+}: {
+  flagKey: keyof AppSettings;
+  label: string;
+  description: string;
+  value: boolean;
+  onChange: (key: keyof AppSettings, next: boolean) => Promise<void>;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-slate-100">{label}</p>
+        <p className="truncate text-[11px] text-slate-400">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        disabled={disabled}
+        onClick={() => onChange(flagKey, !value)}
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition ${
+          value ? "bg-emerald-500" : "bg-slate-700"
+        } disabled:cursor-not-allowed disabled:opacity-50`}
+      >
+        <span
+          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+            value ? "translate-x-6" : "translate-x-1"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
 export function AdminView() {
   const dragons = useGameStore((s) => s.dragons);
   const customDragons = useGameStore((s) => s.customDragons);
@@ -102,6 +148,7 @@ export function AdminView() {
 
   const { user } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { settings, setFlag } = useAppSettings();
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [justUpdatedId, setJustUpdatedId] = useState<number | null>(null);
@@ -360,6 +407,34 @@ export function AdminView() {
           </p>
         ) : null}
       </div>
+
+      {/* Feature flags — admin-only live toggles backed by `app_settings`. */}
+      {isAdmin && (
+        <section className="space-y-2 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <Settings2 className="h-3 w-3" /> Feature Flags (라이브 토글)
+          </p>
+          <FeatureToggle
+            flagKey="isShopOpen"
+            label="Shop 오픈"
+            description="상점 탭의 잠금 해제 / 구매 RPC 활성화"
+            value={settings.isShopOpen}
+            onChange={setFlag}
+            disabled={false}
+          />
+          <FeatureToggle
+            flagKey="isTrainingOpen"
+            label="훈련소 오픈"
+            description="드래곤 스탯 분배(스탯 포인트 사용) 활성화"
+            value={settings.isTrainingOpen}
+            onChange={setFlag}
+            disabled={false}
+          />
+          <p className="pt-1 text-[10px] text-slate-500">
+            <ToggleRight className="mr-1 inline h-3 w-3" /> 변경 즉시 모든 클라이언트에 반영됩니다.
+          </p>
+        </section>
+      )}
 
       {/* Single-card form */}
       <form

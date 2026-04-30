@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       dragons: {
         Row: {
           atk: number
@@ -21,13 +39,16 @@ export type Database = {
           created_by: string | null
           def: number
           element: string
+          exp: number
           id: string
           image_url: string | null
           is_seed: boolean
+          level: number
           lore: string | null
           max_hp: number
           mp: number
           name: string
+          stat_points: number
           updated_at: string
         }
         Insert: {
@@ -36,13 +57,16 @@ export type Database = {
           created_by?: string | null
           def?: number
           element: string
+          exp?: number
           id?: string
           image_url?: string | null
           is_seed?: boolean
+          level?: number
           lore?: string | null
           max_hp?: number
           mp?: number
           name: string
+          stat_points?: number
           updated_at?: string
         }
         Update: {
@@ -51,14 +75,38 @@ export type Database = {
           created_by?: string | null
           def?: number
           element?: string
+          exp?: number
           id?: string
           image_url?: string | null
           is_seed?: boolean
+          level?: number
           lore?: string | null
           max_hp?: number
           mp?: number
           name?: string
+          stat_points?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          gold: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gold?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gold?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -133,12 +181,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_battle_reward: {
+        Args: { _dragon_uuid: string; _outcome: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      purchase_shop_item: {
+        Args: { _dragon_uuid: string; _item_key: string }
+        Returns: Json
+      }
+      spend_stat_point: {
+        Args: { _dragon_uuid: string; _stat: string }
+        Returns: Json
       }
     }
     Enums: {

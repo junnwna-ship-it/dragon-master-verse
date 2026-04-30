@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { TagBattleEngine } from "../battle/TagBattleEngine";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 /**
  * 3:3 Tag-Team PvP arena.
@@ -164,6 +166,24 @@ export function PvpView() {
             enemyName: matchedTrainer.trainer,
             outcome,
           });
+          // Cloud reward — atomic gold/exp via SECURITY DEFINER RPC.
+          // Win: +100G, +50exp · Lose: +20G · Draw: +30G, +10exp
+          const lead = playerDeck[0];
+          (async () => {
+            const { data, error } = await supabase.rpc("award_battle_reward", {
+              _outcome: outcome,
+              _dragon_uuid: lead.uuid as string,
+            });
+            if (error) {
+              console.error("[pvp] award failed:", error);
+              toast.error(`보상 지급 실패: ${error.message}`);
+              return;
+            }
+            const r = (data ?? {}) as { gold_delta?: number; exp_delta?: number };
+            const goldText = r.gold_delta ? `+${r.gold_delta}G` : "";
+            const expText = r.exp_delta ? ` · +${r.exp_delta} exp` : "";
+            if (goldText) toast.success(`보상 ${goldText}${expText}`);
+          })();
           const delta =
             outcome === "win" ? RP_WIN_DELTA : outcome === "lose" ? RP_LOSS_DELTA : 0;
           const before = rp;
