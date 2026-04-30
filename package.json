@@ -9,6 +9,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-location node_modules/.cache/eslint/",
+    "lint:ci": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
+    "ci": "bun run lint:ci && bun run build",
     "format": "prettier --write ."
   },
   "dependencies": {
