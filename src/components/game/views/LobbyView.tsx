@@ -53,7 +53,7 @@ export function LobbyView() {
   // Distinct from `centeredId` (live during swipe) and `selectedId` (tap).
   const [snappedId, setSnappedId] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
 
   // Observe each card's intersection ratio inside the horizontal scroller and
   // mark the one closest to the viewport center as "centered" — this drives
@@ -184,8 +184,13 @@ export function LobbyView() {
       </button>
       <div
         ref={scrollerRef}
-        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="내 드래곤 목록 - 좌우로 스와이프하여 탐색"
+        tabIndex={0}
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
+        <ul role="list" className="contents">
         {dragons.map((d) => {
           const isCentered = centeredId === d.id;
           const isSelected = selectedId === d.id;
@@ -197,8 +202,15 @@ export function LobbyView() {
           // After the gesture ends, the snapped card keeps a soft persistent
           // highlight (only when the user hasn't already tapped one).
           const settledSnap = !isScrolling && isSnapped && !isSelected;
+          // Descriptive label so AT users hear name, element, and core
+          // stats when focus reaches the card without opening the modal.
+          const cardLabel =
+            `${d.name}, ${d.element} 속성. ` +
+            `ATK ${d.atk}, DEF ${d.def}, HP ${d.hp} of ${d.maxHp}, MP ${d.mp}.` +
+            (isSelected ? " 현재 선택됨." : "") +
+            " 누르면 상세 모달이 열립니다.";
           return (
-            <div
+            <li
               key={d.id}
               data-dragon-id={d.id}
               ref={(el) => {
@@ -206,6 +218,9 @@ export function LobbyView() {
                 else cardRefs.current.delete(d.id);
               }}
               role="button"
+              aria-roledescription="slide"
+              aria-label={cardLabel}
+              aria-current={isSelected ? "true" : undefined}
               tabIndex={0}
               aria-pressed={isSelected}
               onClick={() => {
@@ -222,7 +237,7 @@ export function LobbyView() {
               // Transition timing differs by phase:
               //  • live swipe → short 180ms ease-out (springy follow)
               //  • settled    → calmer 300ms ease-out (locks in place)
-              className={`group cursor-pointer rounded-3xl will-change-transform ${
+              className={`group block cursor-pointer rounded-3xl list-none will-change-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                 isScrolling ? "transition-all duration-[180ms] ease-out" : "transition-all duration-300 ease-out"
               } ${
                 isSelected
@@ -237,9 +252,10 @@ export function LobbyView() {
               }`}
             >
               <DragonCard dragon={d} />
-            </div>
+            </li>
           );
         })}
+        </ul>
       </div>
       {selectedId !== null && (
         <p className="-mt-2 px-1 text-[11px] text-amber-300/80 animate-in fade-in duration-200">
