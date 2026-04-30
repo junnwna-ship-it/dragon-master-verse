@@ -414,7 +414,12 @@ export function PvpView() {
             return (
               <button
                 key={d.id}
-                onClick={() => setPlayer(selected ? null : d)}
+                onClick={() =>
+                  setPlayerWithReason(
+                    selected ? null : d,
+                    selected ? "user-toggle-in-picker" : "user-pick-dragon",
+                  )
+                }
                 aria-pressed={selected}
                 className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left transition ${
                   selected
@@ -461,7 +466,7 @@ export function PvpView() {
         </button>
         <button
           onClick={() => {
-            resetMatchUi();
+            resetMatchUi("user-cancel-picker");
             setConfirmStart(false);
             setPhase("idle");
           }}
@@ -516,6 +521,10 @@ export function PvpView() {
                   onClick={() => {
                     setConfirmStart(false);
                     setPhase("battle");
+                    // Note: we deliberately do NOT clear `player` here —
+                    // the BattleEngine consumes the selection and the
+                    // post-battle onExit handler runs the
+                    // "post-battle-cleanup" mutation.
                   }}
                   className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-500"
                 >
