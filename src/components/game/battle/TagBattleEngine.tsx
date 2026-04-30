@@ -428,6 +428,18 @@ export function TagBattleEngine({
   const [ePops, setEPops] = useState<DamagePop[]>([]);
   const popIdRef = useRef(1);
 
+  // ===== VFX 전역 이펙트 큐 =====
+  const [activeEffects, setActiveEffects] = useState<ActiveEffect[]>([]);
+  const effectIdRef = useRef(1);
+  /** 이펙트 트리거: 큐에 추가하고 0.6초 뒤 자동 제거. */
+  const triggerEffect = (target: "player" | "enemy", type: EffectType) => {
+    const id = effectIdRef.current++;
+    setActiveEffects((prev) => [...prev, { id, target, type }]);
+    setTimeout(() => {
+      setActiveEffects((prev) => prev.filter((e) => e.id !== id));
+    }, 600);
+  };
+
   /** -dmg 텍스트 파티클을 한쪽에 띄우고 1.1초 후 제거. */
   const popDamage = (target: "player" | "enemy", value: number, variant: DamagePop["variant"] = "damage") => {
     if (value <= 0) return;
@@ -446,6 +458,7 @@ export function TagBattleEngine({
     actor: "player" | "enemy",
     targetHpDelta: number,
     skill = false,
+    attackerElement?: string,
   ) => {
     setAttackingSide(actor);
     setTimeout(() => setAttackingSide(null), 460);
@@ -460,6 +473,9 @@ export function TagBattleEngine({
         setEShakeKey((k) => k + 1);
       }
       popDamage(target, targetHpDelta, skill ? "skill" : "damage");
+      // 공격자의 원소에 맞춘 VFX (없으면 slash)
+      const fx: EffectType = attackerElement ? elementToEffect(attackerElement) : "slash";
+      triggerEffect(target, fx);
     }
   };
 
