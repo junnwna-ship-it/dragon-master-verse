@@ -755,6 +755,96 @@ interface QuizRow {
   category: string;
 }
 
+interface ParsedQuiz {
+  question: string;
+  choices: string[];
+  answer_index: number;
+  category: string;
+}
+
+/** Parse one CSV line respecting double-quoted fields with escaped quotes (""). */
+function parseCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { cur += ch; }
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ",") { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+/**
+ * Parse a CSV string with header row.
+ * Required columns: question, choice_a, choice_b, choice_c, choice_d, answer (A/B/C/D or 0–3)
+ * Optional column: category
+ */
+function parseQuizCsv(text: string): ParsedQuiz[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) throw new Error("CSV에 헤더와 최소 1개의 행이 필요합니다");
+  const header = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const idx = (name: string) => header.indexOf(name);
+  const qi = idx("question");
+  const cIdx = [idx("choice_a"), idx("choice_b"), idx("choice_c"), idx("choice_d")];
+  const ai = idx("answer");
+  const cati = idx("category");
+  if (qi < 0 || cIdx.some((n) => n < 0) || ai < 0) {
+    throw new Error("CSV 헤더는 question, choice_a, choice_b, choice_c, choice_d, answer 가 필요합니다");
+  }
+  const out: ParsedQuiz[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCsvLine(lines[i]);
+    const question = (cols[qi] ?? "").trim();
+    const choices = cIdx.map((n) => (cols[n] ?? "").trim());
+    const rawAns = (cols[ai] ?? "").trim().toUpperCase();
+    let answer_index = -1;
+    if (/^[ABCD]$/.test(rawAns)) answer_index = rawAns.charCodeAt(0) - 65;
+    else if (/^[0-3]$/.test(rawAns)) answer_index = Number(rawAns);
+    const category = (cati >= 0 ? (cols[cati] ?? "") : "").trim() || "general";
+    if (!question || choices.some((c) => !c) || answer_index < 0) {
+      throw new Error(`행 ${i + 1}: 필수 값이 비었거나 정답 형식이 잘못되었습니다 (A–D 또는 0–3)`);
+    }
+    out.push({ question, choices, answer_index, category });
+  }
+  return out;
+}
+
+/** Parse a JSON array of quiz objects. Accepts either answer_index (0–3) or answer (A–D). */
+function parseQuizJson(text: string): ParsedQuiz[] {
+  const data = JSON.parse(text);
+  if (!Array.isArray(data)) throw new Error("JSON은 배열이어야 합니다");
+  return data.map((row, i) => {
+    if (!row || typeof row !== "object") throw new Error(`행 ${i + 1}: 객체가 아닙니다`);
+    const question = String(row.question ?? "").trim();
+    const choices = Array.isArray(row.choices) ? row.choices.map((c: unknown) => String(c ?? "").trim()) : [];
+    let answer_index = -1;
+    if (typeof row.answer_index === "number") answer_index = row.answer_index;
+    else if (typeof row.answer === "string") {
+      const a = row.answer.trim().toUpperCase();
+      if (/^[ABCD]$/.test(a)) answer_index = a.charCodeAt(0) - 65;
+      else if (/^[0-3]$/.test(a)) answer_index = Number(a);
+    }
+    const category = String(row.category ?? "general").trim() || "general";
+    if (!question || choices.length !== 4 || choices.some((c: string) => !c) || answer_index < 0 || answer_index > 3) {
+      throw new Error(`행 ${i + 1}: question + 4 choices + 정답(0–3 또는 A–D)이 필요합니다`);
+    }
+    return { question, choices, answer_index, category };
+  });
+}
+
+const CSV_TEMPLATE =
+  'question,choice_a,choice_b,choice_c,choice_d,answer,category\n' +
+  '"드래곤은 어떤 알에서 부화할까요?","돌알","불알","물알","바람알",B,general\n';
+
 function QuizManager() {
   const [rows, setRows] = useState<QuizRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -825,6 +915,48 @@ function QuizManager() {
     if (editingId === id) reset();
   };
 
+  const handleBulkFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setBusy(true);
+    try {
+      const text = await file.text();
+      const isJson = /\.json$/i.test(file.name) || text.trim().startsWith("[");
+      const parsed = isJson ? parseQuizJson(text) : parseQuizCsv(text);
+      if (parsed.length === 0) throw new Error("가져올 항목이 없습니다");
+
+      const remaining = MAX_QUIZZES - rows.length;
+      if (remaining <= 0) throw new Error(`이미 최대 ${MAX_QUIZZES}개에 도달했습니다`);
+      const toInsert = parsed.slice(0, remaining);
+      const skipped = parsed.length - toInsert.length;
+
+      const { error } = await supabase.from("quizzes").insert(toInsert);
+      if (error) throw new Error(error.message);
+
+      toast.success(
+        skipped > 0
+          ? `${toInsert.length}개 등록 · ${skipped}개는 정원 초과로 건너뜀`
+          : `${toInsert.length}개 퀴즈를 가져왔습니다`,
+      );
+      await load();
+    } catch (err) {
+      toast.error(`가져오기 실패: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "quizzes-template.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section className="space-y-3 rounded-2xl border border-purple-500/40 bg-slate-900/60 p-4">
       <div className="flex items-center justify-between">
@@ -837,6 +969,31 @@ function QuizManager() {
             <X className="h-3 w-3" /> 취소
           </button>
         )}
+      </div>
+
+      {/* 일괄 가져오기 — CSV / JSON */}
+      <div className="space-y-2 rounded-xl border border-dashed border-purple-500/30 bg-slate-950/40 p-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-purple-300">
+          일괄 가져오기 (CSV / JSON)
+        </p>
+        <p className="text-[11px] leading-relaxed text-slate-400">
+          CSV 헤더: <code className="text-slate-300">question, choice_a, choice_b, choice_c, choice_d, answer, category</code>
+          <br />
+          JSON: <code className="text-slate-300">{`[{ question, choices:[a,b,c,d], answer_index:0–3, category? }]`}</code>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-500/20 px-3 py-2 text-xs font-semibold text-purple-200 transition hover:bg-purple-500/30">
+            <FileUp className="h-3.5 w-3.5" />
+            파일 선택 (.csv / .json)
+            <input type="file" accept=".csv,.json,text/csv,application/json"
+              onChange={handleBulkFile} disabled={busy} className="hidden" />
+          </label>
+          <button type="button" onClick={downloadTemplate}
+            className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+            <Download className="h-3.5 w-3.5" />
+            템플릿
+          </button>
+        </div>
       </div>
 
       <form onSubmit={save} className="space-y-2">
