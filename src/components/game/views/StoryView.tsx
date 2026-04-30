@@ -284,6 +284,16 @@ export function StoryView() {
   };
 
   // ----- Battle screen -----
+  // ----- Stage 1: 수습생(드래곤 0마리) 전용 멀린의 시험 -----
+  if (!ownedLoading && isTrainee && !stage1Done) {
+    return (
+      <MerlinStageView
+        onComplete={() => setStage1Done(true)}
+        refetchOwned={async () => { await refetchOwned(); }}
+      />
+    );
+  }
+
   if (run && selectedDragon && activeBattleNode && activeBattleNode.enemy) {
     return (
       <BattleEngine
