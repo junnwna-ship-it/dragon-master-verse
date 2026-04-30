@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake } from "lucide-react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 
@@ -56,6 +56,30 @@ const EDGES: Array<[number, number]> = [
 const FIRST_NODE_ID = 1;
 const TOTAL_NODES = NODES.length;
 
+/**
+ * Battle-result banner display behavior.
+ *  - number > 0 → auto-dismiss after that many ms
+ *  - "manual"   → keep visible until the user dismisses it
+ *  - "off"      → never show the banner
+ */
+type BannerDuration = 1500 | 3500 | "manual" | "off";
+const BANNER_DURATION_KEY = "story.bannerDuration";
+const BANNER_OPTIONS: Array<{ value: BannerDuration; label: string }> = [
+  { value: 1500, label: "1.5s" },
+  { value: 3500, label: "3.5s" },
+  { value: "manual", label: "수동" },
+  { value: "off", label: "끄기" },
+];
+
+function loadBannerDuration(): BannerDuration {
+  if (typeof window === "undefined") return 3500;
+  const raw = window.localStorage.getItem(BANNER_DURATION_KEY);
+  if (raw === "manual" || raw === "off") return raw;
+  const n = Number(raw);
+  if (n === 1500 || n === 3500) return n;
+  return 3500;
+}
+
 interface RunState {
   currentNodeId: number; // the next node the player must clear
   playerHp: number;
@@ -84,6 +108,12 @@ export function StoryView() {
   >(null);
   const [defeated, setDefeated] = useState(false);
   const [defeatStats, setDefeatStats] = useState<{ hp: number; mp: number } | null>(null);
+  const [bannerDuration, setBannerDuration] = useState<BannerDuration>(() => loadBannerDuration());
+  const [showBannerSettings, setShowBannerSettings] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(BANNER_DURATION_KEY, String(bannerDuration));
+  }, [bannerDuration]);
   // Pulse the HP/MP gauges briefly when state changes after a battle/event.
   const [gaugePulseKey, setGaugePulseKey] = useState(0);
   const prevStateRef = useRef<{ hp: number; mp: number } | null>(null);
@@ -99,12 +129,14 @@ export function StoryView() {
     prevStateRef.current = { hp: run.playerHp, mp: run.playerMp };
   }, [run]);
 
-  // Auto-dismiss the post-battle banner after a few seconds.
+  // Auto-dismiss the post-battle banner based on the user's chosen duration.
+  // "manual" → never auto-dismiss; "off" → handled at set-time (banner won't appear).
   useEffect(() => {
     if (!battleResult) return;
-    const t = setTimeout(() => setBattleResult(null), 3500);
+    if (bannerDuration === "manual" || bannerDuration === "off") return;
+    const t = setTimeout(() => setBattleResult(null), bannerDuration);
     return () => clearTimeout(t);
-  }, [battleResult]);
+  }, [battleResult, bannerDuration]);
 
   // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
   const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
