@@ -396,6 +396,55 @@ export function TagBattleEngine({
     });
   };
 
+  // ===== Framer Motion 시각 연출 상태 =====
+  // 어느 쪽이 "지금" 공격 lunge 중인지 (null = idle 둥둥)
+  const [attackingSide, setAttackingSide] = useState<"player" | "enemy" | null>(null);
+  // 피격 빨강 플래시 트리거 키 — 키가 바뀌면 ActivePanel이 새로 깜빡임
+  const [pHitKey, setPHitKey] = useState(0);
+  const [eHitKey, setEHitKey] = useState(0);
+  // 좌우 흔들림 트리거 키
+  const [pShakeKey, setPShakeKey] = useState(0);
+  const [eShakeKey, setEShakeKey] = useState(0);
+  // 데미지 텍스트 파티클 큐
+  const [pPops, setPPops] = useState<DamagePop[]>([]);
+  const [ePops, setEPops] = useState<DamagePop[]>([]);
+  const popIdRef = useRef(1);
+
+  /** -dmg 텍스트 파티클을 한쪽에 띄우고 1.1초 후 제거. */
+  const popDamage = (target: "player" | "enemy", value: number, variant: DamagePop["variant"] = "damage") => {
+    if (value <= 0) return;
+    const id = popIdRef.current++;
+    const entry: DamagePop = { id, value, variant };
+    if (target === "player") setPPops((prev) => [...prev, entry]);
+    else setEPops((prev) => [...prev, entry]);
+    setTimeout(() => {
+      if (target === "player") setPPops((prev) => prev.filter((p) => p.id !== id));
+      else setEPops((prev) => prev.filter((p) => p.id !== id));
+    }, 1100);
+  };
+
+  /** 공격 시각 연출: 공격자 lunge + 피격자 flash/shake + 데미지 팝업. */
+  const playAttackFx = (
+    actor: "player" | "enemy",
+    targetHpDelta: number,
+    skill = false,
+  ) => {
+    setAttackingSide(actor);
+    setTimeout(() => setAttackingSide(null), 460);
+    if (targetHpDelta > 0) {
+      const target = actor === "player" ? "enemy" : "player";
+      // 피격 시각 효과
+      if (target === "player") {
+        setPHitKey((k) => k + 1);
+        setPShakeKey((k) => k + 1);
+      } else {
+        setEHitKey((k) => k + 1);
+        setEShakeKey((k) => k + 1);
+      }
+      popDamage(target, targetHpDelta, skill ? "skill" : "damage");
+    }
+  };
+
   const winner = useMemo<"player" | "enemy" | null>(() => {
     const pDead = isTeamWiped(pTeam);
     const eDead = isTeamWiped(eTeam);
