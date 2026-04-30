@@ -30,6 +30,7 @@ import { DragonImage } from "./DragonImage";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useInventory, emitInventoryChanged } from "@/hooks/useInventory";
 
 const ELEMENT_META: Record<Element, { label: string; color: string; icon: React.ComponentType<{ className?: string }>; strong: Element; weak: Element }> = {
   Fire:  { label: "화염",   color: "text-rose-300",    icon: Flame,    strong: "Wood",  weak: "Water" },
@@ -650,38 +651,28 @@ function ExpGauge({ dragon }: { dragon: Dragon }) {
  */
 export function BondingSection({ dragon }: { dragon: Dragon }) {
   const refetchDragons = useGameStore((s) => s.fetchDragons);
-  const [tokens, setTokens] = useState<number | null>(null);
+  const { qty, loading: invLoading } = useInventory();
+  const tokens = qty("bonding_token");
   const [busy, setBusy] = useState(false);
   const [vfx, setVfx] = useState(false);
 
-  const loadTokens = async () => {
-    const { data, error } = await supabase
-      .from("user_inventory")
-      .select("quantity")
-      .eq("item_key", "bonding_token")
-      .maybeSingle();
-    if (error) { console.error("[bonding] inventory fetch:", error); setTokens(0); return; }
-    setTokens(data?.quantity ?? 0);
-  };
-
-  useEffect(() => { void loadTokens(); }, []);
-
   const bond = async () => {
     if (!dragon.uuid) { toast.error("이 드래곤은 클라우드에 저장되어 있지 않습니다"); return; }
-    if ((tokens ?? 0) < 1) { toast.error("교감의 증표가 부족합니다"); return; }
+    if (tokens < 1) { toast.error("교감의 증표가 부족합니다"); return; }
     setBusy(true);
     const { error } = await supabase.rpc("bond_with_dragon", { _dragon_uuid: dragon.uuid });
     setBusy(false);
     if (error) { toast.error(`교감 실패: ${error.message}`); return; }
     setVfx(true);
-    // 카드 이미지 / EXP 게이지에서 동시에 VFX 재생
+    // 인벤토리 / 카드 / EXP 게이지 모두 동기화
+    emitInventoryChanged({ itemKey: "bonding_token", delta: -1 });
     emitBondSuccess({ dragonId: dragon.id, expGain: 500 });
     toast.success(`${dragon.name}와(과)의 친밀도 상승! EXP +500`);
     setTimeout(() => setVfx(false), 1200);
-    await Promise.all([loadTokens(), refetchDragons()]);
+    await refetchDragons();
   };
 
-  const disabled = busy || (tokens ?? 0) < 1 || !dragon.uuid;
+  const disabled = busy || tokens < 1 || !dragon.uuid;
 
   return (
     <section className="relative">
@@ -690,7 +681,7 @@ export function BondingSection({ dragon }: { dragon: Dragon }) {
           <HeartHandshake className="h-3.5 w-3.5" /> 교감하기
         </h4>
         <span className="rounded-md bg-pink-500/15 px-2 py-0.5 text-[11px] font-mono font-bold text-pink-200">
-          교감의 증표 × {tokens ?? "…"}
+          교감의 증표 × {invLoading ? "…" : tokens}
         </span>
       </div>
       <button
@@ -700,7 +691,7 @@ export function BondingSection({ dragon }: { dragon: Dragon }) {
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-pink-500/40 bg-gradient-to-r from-pink-500/20 to-rose-500/20 px-3 py-3 text-sm font-extrabold text-pink-100 transition hover:from-pink-500/30 hover:to-rose-500/30 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-        {(tokens ?? 0) < 1 ? "증표 부족 — 퀴즈 시련에서 획득" : "교감의 증표 소모하고 EXP +500"}
+        {tokens < 1 ? "증표 부족 — 퀴즈 시련에서 획득" : "교감의 증표 소모하고 EXP +500"}
       </button>
       {vfx && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
