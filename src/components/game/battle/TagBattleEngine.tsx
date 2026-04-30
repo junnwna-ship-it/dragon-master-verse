@@ -1087,6 +1087,6 @@ export function TagBattleEngine({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
