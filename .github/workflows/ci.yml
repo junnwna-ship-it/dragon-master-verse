@@ -343,20 +343,6 @@ jobs:
           fail-on-error: false
           markdown-report-on-step-summary: true
 
-      - name: Upload ESLint reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: eslint-reports
-          path: |
-            reports/eslint-report.json
-            reports/eslint-report.html
-            reports/eslint-failed-files.json
-            reports/eslint-timing.json
-            reports/eslint-rule-timing.txt
-            reports/lint-time-by-cache.svg
-          retention-days: 14
-
       - name: Compute cache hit-rate (last 20 runs)
         if: always()
         continue-on-error: true
