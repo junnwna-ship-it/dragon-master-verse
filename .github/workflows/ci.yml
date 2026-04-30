@@ -13,6 +13,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Need full history so we can resolve the workflow-file SHA at past
+          # commits (used to pin cache-history queries to the current CI version).
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -363,12 +367,45 @@ jobs:
           STEP_NAME: Report ESLint cache status
         run: |
           set -e
-          # Pull last 20 completed runs of this workflow on the same branch
+          # Pin history to the SAME workflow file version as the current run.
+          # This avoids mixing metrics across CI config changes (different rules,
+          # different cache keys, different timing instrumentation, etc.).
+          WORKFLOW_PATH=".github/workflows/${WORKFLOW_FILE}"
+          CURRENT_WF_SHA=$(git rev-parse "${{ github.sha }}:${WORKFLOW_PATH}" 2>/dev/null || echo "")
+          if [ -z "$CURRENT_WF_SHA" ]; then
+            echo "Could not resolve workflow file SHA — skipping history (refusing to mix versions)."
+            {
+              echo ""
+              echo "## ESLint cache hit-rate (history)"
+              echo ""
+              echo "_Skipped — could not pin to current workflow version._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "Pinning history to workflow file SHA: $CURRENT_WF_SHA"
+
+          # Pull last 50 completed runs on this branch (over-fetch, then filter
+          # down to runs whose workflow file matches CURRENT_WF_SHA, keep ≤20).
           BRANCH="${{ github.ref_name }}"
-          RUNS=$(gh api -X GET \
+          CANDIDATE_RUNS=$(gh api -X GET \
             "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
-            -f branch="$BRANCH" -f status=completed -f per_page=20 \
-            --jq '.workflow_runs[].id')
+            -f branch="$BRANCH" -f status=completed -f per_page=50 \
+            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)"')
+
+          # Filter: keep only runs whose workflow file content matches the current SHA.
+          MATCHED_RUNS=""
+          KEPT=0
+          while IFS=$'\t' read -r RID HEAD_SHA; do
+            [ -z "$RID" ] && continue
+            [ "$KEPT" -ge 20 ] && break
+            WF_SHA_AT_RUN=$(git rev-parse "$HEAD_SHA:${WORKFLOW_PATH}" 2>/dev/null || echo "")
+            if [ "$WF_SHA_AT_RUN" = "$CURRENT_WF_SHA" ]; then
+              MATCHED_RUNS="$MATCHED_RUNS $RID"
+              KEPT=$((KEPT + 1))
+            fi
+          done <<< "$CANDIDATE_RUNS"
+          RUNS="$MATCHED_RUNS"
+          echo "Kept $KEPT runs matching current workflow version (out of up to 50 candidates)."
 
           TOTAL=0; EXACT=0; PARTIAL=0; MISS=0
           for RUN_ID in $RUNS; do
@@ -393,7 +430,7 @@ jobs:
               echo ""
               echo "## ESLint cache hit-rate (history)"
               echo ""
-              echo "_No prior completed runs on \`$BRANCH\` yet — metrics will appear next run._"
+              echo "_No prior completed runs on \`$BRANCH\` matching the current workflow version (\`${CURRENT_WF_SHA:0:7}\`) — metrics will appear once this CI version has accumulated history._"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -404,7 +441,7 @@ jobs:
 
           {
             echo ""
-            echo "## ESLint cache hit-rate (last $TOTAL runs on \`$BRANCH\`)"
+            echo "## ESLint cache hit-rate (last $TOTAL runs on \`$BRANCH\`, workflow \`${CURRENT_WF_SHA:0:7}\`)"
             echo ""
             echo "| Metric | Count | % |"
             echo "| --- | ---: | ---: |"
@@ -426,11 +463,38 @@ jobs:
           CURRENT_LINT_MS: ${{ steps.eslint.outputs.duration_ms }}
         run: |
           set -e
+          # Pin to current workflow file SHA — never compare across CI versions.
+          WORKFLOW_PATH=".github/workflows/${WORKFLOW_FILE}"
+          CURRENT_WF_SHA=$(git rev-parse "${{ github.sha }}:${WORKFLOW_PATH}" 2>/dev/null || echo "")
+          if [ -z "$CURRENT_WF_SHA" ]; then
+            echo "Could not resolve workflow file SHA — skipping cache-vs-time history."
+            {
+              echo ""
+              echo "## Lint time vs cache level (history)"
+              echo ""
+              echo "_Skipped — could not pin to current workflow version._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           BRANCH="${{ github.ref_name }}"
-          RUNS=$(gh api -X GET \
+          CANDIDATE_RUNS=$(gh api -X GET \
             "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs" \
-            -f branch="$BRANCH" -f status=completed -f per_page=20 \
-            --jq '.workflow_runs[].id')
+            -f branch="$BRANCH" -f status=completed -f per_page=50 \
+            --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)"')
+
+          RUNS=""
+          KEPT=0
+          while IFS=$'\t' read -r RID HEAD_SHA; do
+            [ -z "$RID" ] && continue
+            [ "$KEPT" -ge 20 ] && break
+            WF_SHA_AT_RUN=$(git rev-parse "$HEAD_SHA:${WORKFLOW_PATH}" 2>/dev/null || echo "")
+            if [ "$WF_SHA_AT_RUN" = "$CURRENT_WF_SHA" ]; then
+              RUNS="$RUNS $RID"
+              KEPT=$((KEPT + 1))
+            fi
+          done <<< "$CANDIDATE_RUNS"
+          echo "Comparing $KEPT runs matching workflow ${CURRENT_WF_SHA:0:7}."
 
           # Buckets: tab-separated lists of "ms" values per level
           : > /tmp/L0.txt; : > /tmp/L1.txt; : > /tmp/L2.txt; : > /tmp/L3.txt; : > /tmp/MISS.txt
