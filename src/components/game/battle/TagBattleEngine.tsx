@@ -656,6 +656,10 @@ export function TagBattleEngine({
       }
       const r = performAttack(a, d, { turnNumber });
       pushLogs(r.logs);
+      const dmgDealt = Math.max(0, d.engineHp - r.defender.engineHp);
+      const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
+      playAttackFx("enemy", dmgDealt);
+      if (reflect > 0) popDamage("enemy", reflect);
       const nextE = setActive(curE, curE.activeIdx, r.attacker);
       const nextP = setActive(curP, curP.activeIdx, r.defender);
       finishTurn("enemy", nextP, nextE);
