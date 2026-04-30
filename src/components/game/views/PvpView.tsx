@@ -106,17 +106,51 @@ export function PvpView() {
     setPlayer(null);
   };
 
-  // Async matchmaking: show spinner for exactly MATCH_SEARCH_MS, then pick a
-  // ghost opponent and continue. No network call — pure setTimeout.
-  useEffect(() => {
-    if (phase !== "searching") return;
-    const t = setTimeout(() => {
+  // Async matchmaking — show spinner for EXACTLY MATCH_SEARCH_MS (2000ms).
+  //
+  // We deliberately do NOT key the timer to the phase effect cleanup, because
+  // an effect re-run (e.g. parent re-render that triggers strict-mode double
+  // invoke, or a rapid state change) would clear the timer and restart it,
+  // breaking the "exactly 2 seconds" guarantee. Instead we own the timer in
+  // a ref and only ever set it once per "searching" entry.
+  const matchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const matchStartedAtRef = useRef<number | null>(null);
+
+  const startMatchmaking = () => {
+    // Ignore re-entries — a search is already running and must complete its
+    // fixed 2s window unaffected by extra clicks.
+    if (matchTimerRef.current !== null) return;
+    if (phase === "searching") return;
+    setPhase("searching");
+    matchStartedAtRef.current = Date.now();
+    matchTimerRef.current = setTimeout(() => {
       const pick = GHOST_POOL[Math.floor(Math.random() * GHOST_POOL.length)];
       setOpponent(pick);
       setPhase("picker");
+      matchTimerRef.current = null;
+      matchStartedAtRef.current = null;
     }, MATCH_SEARCH_MS);
-    return () => clearTimeout(t);
-  }, [phase]);
+  };
+
+  const cancelMatchmaking = () => {
+    if (matchTimerRef.current !== null) {
+      clearTimeout(matchTimerRef.current);
+      matchTimerRef.current = null;
+    }
+    matchStartedAtRef.current = null;
+    resetMatchUi();
+    setPhase("idle");
+  };
+
+  // Clean up any pending timer on unmount only — not on every re-render.
+  useEffect(() => {
+    return () => {
+      if (matchTimerRef.current !== null) {
+        clearTimeout(matchTimerRef.current);
+        matchTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const tier = useMemo(() => {
     if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
@@ -247,8 +281,7 @@ export function PvpView() {
         <button
           onClick={() => {
             setLastResult(null);
-            resetMatchUi();
-            setPhase("searching");
+            startMatchmaking();
           }}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800"
         >
@@ -448,10 +481,7 @@ export function PvpView() {
               비슷한 RP의 트레이너를 찾고 있습니다
             </p>
             <button
-              onClick={() => {
-                resetMatchUi();
-                setPhase("idle");
-              }}
+              onClick={cancelMatchmaking}
               className="mt-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
             >
               취소
@@ -469,8 +499,12 @@ export function PvpView() {
             <button
               onClick={() => {
                 if (dragons.length === 0) return;
-                setPhase("searching");
+                startMatchmaking();
               }}
+              // Note: this branch only renders when phase !== "searching", so the
+              // button itself can't be clicked mid-search. The startMatchmaking()
+              // helper additionally guards via matchTimerRef so any spurious
+              // re-entry can't compress the fixed 2s window.
               disabled={dragons.length === 0}
               className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
