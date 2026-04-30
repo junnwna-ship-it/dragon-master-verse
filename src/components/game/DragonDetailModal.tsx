@@ -1,5 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2, HeartHandshake } from "lucide-react";
+import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2, HeartHandshake, Star } from "lucide-react";
+/**
+ * BondingSection이 성공할 때 모달 내 다른 컴포넌트(카드 이미지 영역, EXP 게이지)에
+ * 동시에 VFX를 트리거하기 위한 가벼운 이벤트 버스.
+ * payload: { dragonId, expGain }
+ */
+export const BOND_SUCCESS_EVENT = "dragon:bond-success";
+export interface BondSuccessDetail { dragonId: number; expGain: number }
+
+function emitBondSuccess(detail: BondSuccessDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<BondSuccessDetail>(BOND_SUCCESS_EVENT, { detail }));
+}
+
+function useBondSuccess(dragonId: number, handler: (detail: BondSuccessDetail) => void) {
+  useEffect(() => {
+    const fn = (e: Event) => {
+      const ce = e as CustomEvent<BondSuccessDetail>;
+      if (ce.detail?.dragonId === dragonId) handler(ce.detail);
+    };
+    window.addEventListener(BOND_SUCCESS_EVENT, fn);
+    return () => window.removeEventListener(BOND_SUCCESS_EVENT, fn);
+  }, [dragonId, handler]);
+}
+
 import type { Dragon, Element } from "@/store/dragons";
 import { useGameStore } from "@/store/dragons";
 import { DragonImage } from "./DragonImage";
