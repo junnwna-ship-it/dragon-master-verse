@@ -80,6 +80,97 @@ function loadBannerDuration(): BannerDuration {
   return 3500;
 }
 
+type BattleResultData = {
+  outcome: "win" | "draw" | "lose";
+  nodeTitle: string;
+  enemyName?: string;
+};
+
+/**
+ * Battle result banner with smooth fade/slide enter+exit and a reserved-height
+ * slot so the surrounding map doesn't jump when the banner appears or
+ * disappears on small (mobile) viewports.
+ */
+function BattleResultBanner({
+  result,
+  onDismiss,
+}: {
+  result: BattleResultData | null;
+  onDismiss: () => void;
+}) {
+  // Keep the last result around through the exit animation so we can render
+  // it while it's animating out. Tracks the latest non-null content.
+  const [shown, setShown] = useState<BattleResultData | null>(result);
+  const [visible, setVisible] = useState<boolean>(!!result);
+
+  useEffect(() => {
+    if (result) {
+      setShown(result);
+      // Defer to next frame so the enter transition triggers from hidden→visible.
+      const id = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(id);
+    }
+    setVisible(false);
+    // Match the CSS duration below (250ms) before clearing content.
+    const t = setTimeout(() => setShown(null), 260);
+    return () => clearTimeout(t);
+  }, [result]);
+
+  const tone =
+    shown?.outcome === "win"
+      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+      : shown?.outcome === "draw"
+        ? "border-slate-500/40 bg-slate-500/10 text-slate-200"
+        : "border-rose-500/40 bg-rose-500/10 text-rose-200";
+
+  const Icon =
+    shown?.outcome === "win" ? Trophy : shown?.outcome === "draw" ? Handshake : Skull;
+  const iconTone =
+    shown?.outcome === "win"
+      ? "text-emerald-300"
+      : shown?.outcome === "draw"
+        ? "text-slate-300"
+        : "text-rose-300";
+
+  return (
+    // Reserved slot — fixed min-height keeps page layout stable on mobile.
+    <div className="min-h-[44px]">
+      {shown && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-xs transition-all duration-[250ms] ease-out will-change-transform ${tone} ${
+            visible
+              ? "translate-y-0 opacity-100 scale-100"
+              : "-translate-y-1 opacity-0 scale-[0.98] pointer-events-none"
+          }`}
+        >
+          <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${iconTone}`} />
+          <p className="leading-snug">
+            <span className="font-bold">
+              {shown.outcome === "win"
+                ? "승리!"
+                : shown.outcome === "draw"
+                  ? "무승부"
+                  : "패배..."}
+            </span>{" "}
+            {shown.nodeTitle}
+            {shown.enemyName ? ` · ${shown.enemyName}` : ""}
+            {shown.outcome === "win" && " — 다음 노드로 진행합니다"}
+          </p>
+          <button
+            onClick={onDismiss}
+            aria-label="배너 닫기"
+            className="ml-auto rounded px-2 text-[10px] opacity-70 transition-opacity hover:opacity-100"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface RunState {
   currentNodeId: number; // the next node the player must clear
   playerHp: number;
