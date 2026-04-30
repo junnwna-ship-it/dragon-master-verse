@@ -114,6 +114,19 @@ export function StoryView() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(BANNER_DURATION_KEY, String(bannerDuration));
   }, [bannerDuration]);
+
+  // Trigger a brief shake on the newly-active node whenever activeNodeId changes
+  // (e.g. right after onResolved auto-advances the run). The shake key is
+  // bumped so the CSS animation re-runs even if the same node id appears later.
+  const [shakeKey, setShakeKey] = useState(0);
+  const prevActiveIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prevId = prevActiveIdRef.current;
+    if (prevId !== null && prevId !== activeNodeId) {
+      setShakeKey((k) => k + 1);
+    }
+    prevActiveIdRef.current = activeNodeId;
+  }, [activeNodeId]);
   // Pulse the HP/MP gauges briefly when state changes after a battle/event.
   const [gaugePulseKey, setGaugePulseKey] = useState(0);
   const prevStateRef = useRef<{ hp: number; mp: number } | null>(null);
