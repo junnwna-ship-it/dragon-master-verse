@@ -31,6 +31,7 @@ import {
   MP_SKILL_COST_PCT,
   MP_SKILL_THRESHOLD_PCT,
 } from "./battleLogic";
+import { EffectOverlay, elementToEffect, type ActiveEffect, type EffectType } from "./EffectOverlay";
 
 /** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
 function uiHp(c: Combatant): number {
@@ -182,12 +183,14 @@ function ActivePanel({
   attacking = false,
   hitFlashKey = 0,
   damagePops = [],
+  effects = [],
 }: {
   c: Combatant;
   side: "player" | "enemy";
   attacking?: boolean;
   hitFlashKey?: number;
   damagePops?: DamagePop[];
+  effects?: ActiveEffect[];
 }) {
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
@@ -233,6 +236,9 @@ function ActivePanel({
             />
           )}
         </AnimatePresence>
+
+        {/* VFX 이펙트 오버레이 — 이미지 위에 덮임 */}
+        <EffectOverlay effects={effects} target={side} />
 
         {/* 데미지 파티클 텍스트 */}
         <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-2">
