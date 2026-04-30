@@ -304,6 +304,10 @@ jobs:
           EXTRACT_MS_VAL=${EXTRACT_MS:-0}
           TOTAL_MS=$((LINT_MS_VAL + HTML_MS_VAL + EXTRACT_MS_VAL))
 
+          # Grep-friendly markers consumed by the cache-vs-time history step below.
+          echo "METRIC lint_total_ms=$TOTAL_MS"
+          echo "METRIC lint_only_ms=$LINT_MS_VAL"
+
           {
             echo ""
             echo "## ESLint timing"
