@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, CheckCircle2, XCircle, Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { fetchQuizSet, gradeAndReward } from "@/server/quiz.functions";
+import { emitInventoryChanged } from "@/hooks/useInventory";
 
 interface QuizItem {
   id: string;
@@ -69,6 +70,10 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
         const res = await gradeAndReward({ data: { picks: next } });
         const reward = (res.reward as { rewarded?: boolean }) ?? {};
         setResult({ correct: res.correct, total: res.total, rewarded: !!reward.rewarded });
+        if (reward.rewarded) {
+          // 보상 지급 성공 → 모든 인벤토리 구독자(MerlinStage, BondingSection 등) 갱신
+          emitInventoryChanged({ itemKey: "bonding_token", delta: 1 });
+        }
       } catch (err: unknown) {
         const m = err instanceof Error ? err.message : String(err);
         toast.error(`채점 실패: ${m}`);
