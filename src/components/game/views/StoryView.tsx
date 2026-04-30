@@ -100,6 +100,35 @@ export function StoryView() {
   // Helper: which node id is the player currently allowed to enter?
   const activeNodeId = run?.currentNodeId ?? FIRST_NODE_ID;
 
+  /**
+   * Single state-update pipeline used by BOTH battle resolution and event nodes.
+   * Always uses the functional updater form so the preserved HP/MP merges into
+   * the latest run (avoids stale-closure bugs and guarantees the map gauges
+   * reflect the freshest values regardless of which node type triggered it).
+   */
+  const applyRunUpdate = (update: {
+    hp?: number;
+    mp?: number;
+    clearNodeId?: number;
+  }) => {
+    setRun((prev) => {
+      if (!prev) return prev;
+      const nextHp = update.hp ?? prev.playerHp;
+      const nextMp = update.mp ?? prev.playerMp;
+      if (update.clearNodeId == null) {
+        return { ...prev, playerHp: nextHp, playerMp: nextMp };
+      }
+      const cleared = update.clearNodeId;
+      const isLast = cleared >= TOTAL_NODES;
+      return {
+        currentNodeId: isLast ? cleared : cleared + 1,
+        playerHp: nextHp,
+        playerMp: nextMp,
+        visited: prev.visited.includes(cleared) ? prev.visited : [...prev.visited, cleared],
+      };
+    });
+  };
+
   // ----- Battle screen -----
   if (run && selectedDragon && activeBattleNode && activeBattleNode.enemy) {
     return (
