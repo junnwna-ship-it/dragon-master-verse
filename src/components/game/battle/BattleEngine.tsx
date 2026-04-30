@@ -15,7 +15,13 @@ interface BattleEngineProps {
   enemy: Dragon;
   context?: "story" | "pvp";
   onExit?: () => void;
-  onResolved?: (outcome: "win" | "lose" | "draw") => void;
+  onResolved?: (
+    outcome: "win" | "lose" | "draw",
+    finalState: { playerHp: number; playerMp: number; enemyHp: number; enemyMp: number },
+  ) => void;
+  /** Optional starting HP/MP overrides so multi-battle runs preserve damage. */
+  initialPlayerHp?: number;
+  initialPlayerMp?: number;
 }
 
 const elementTone: Record<string, string> = {
@@ -80,8 +86,24 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
   );
 }
 
-export function BattleEngine({ player, enemy, context = "story", onExit, onResolved }: BattleEngineProps) {
-  const [pState, setPState] = useState<Combatant>(() => makeCombatant(player));
+export function BattleEngine({
+  player,
+  enemy,
+  context = "story",
+  onExit,
+  onResolved,
+  initialPlayerHp,
+  initialPlayerMp,
+}: BattleEngineProps) {
+  const [pState, setPState] = useState<Combatant>(() => {
+    const c = makeCombatant(player);
+    return {
+      ...c,
+      hp: initialPlayerHp ?? c.hp,
+      mp: initialPlayerMp ?? c.mp,
+      exhausted: (initialPlayerMp ?? c.mp) <= 0,
+    };
+  });
   const [eState, setEState] = useState<Combatant>(() => makeCombatant(enemy));
   const [turn, setTurn] = useState<"player" | "enemy">("player");
   const [logs, setLogs] = useState<LogEntry[]>([
@@ -101,8 +123,13 @@ export function BattleEngine({ player, enemy, context = "story", onExit, onResol
     if (!winner || reportedRef.current) return;
     reportedRef.current = true;
     const outcome = winner === "draw" ? "draw" : winner === "player" ? "win" : "lose";
-    onResolved?.(outcome);
-  }, [winner, onResolved]);
+    onResolved?.(outcome, {
+      playerHp: pState.hp,
+      playerMp: pState.mp,
+      enemyHp: eState.hp,
+      enemyMp: eState.mp,
+    });
+  }, [winner, onResolved, pState.hp, pState.mp, eState.hp, eState.mp]);
 
   const pushLogs = (entries: Omit<LogEntry, "id">[]) => {
     setLogs((prev) => {
