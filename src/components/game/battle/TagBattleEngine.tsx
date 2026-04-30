@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Heart,
   Droplet,
@@ -12,6 +13,7 @@ import {
   Flame,
   Repeat,
   Trophy,
+  Wand2,
 } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
@@ -24,6 +26,10 @@ import {
   makeCombatant,
   onTurnStart,
   performAttack,
+  recoverBenchMp,
+  MP_BENCH_RECOVER_PCT,
+  MP_SKILL_COST_PCT,
+  MP_SKILL_THRESHOLD_PCT,
 } from "./battleLogic";
 
 /** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
@@ -62,18 +68,24 @@ function autoAdvance(t: Team): { team: Team; advancedTo: number | null } {
   return { team: { ...t, activeIdx: nextIdx }, advancedTo: nextIdx };
 }
 
-/** 진영의 벤치(=필드 외) MP +5씩 회복. */
-function tickBenchMp(t: Team): Team {
-  return {
-    ...t,
-    members: t.members.map((m, i) => {
-      if (i === t.activeIdx) return m;
-      if (m.engineHp <= 0) return m;
-      const next = Math.min(m.maxMp, m.mp + 5);
-      if (next === m.mp) return m;
-      return { ...m, mp: next, exhausted: next > 0 ? false : m.exhausted };
-    }),
-  };
+/**
+ * 진영의 벤치(=필드 외) MP를 MaxMp의 15%씩 회복.
+ * 회복 발생 시 로그 항목도 함께 반환한다.
+ */
+function tickBenchMp(t: Team): { team: Team; logs: Omit<LogEntry, "id">[] } {
+  const logs: Omit<LogEntry, "id">[] = [];
+  const members = t.members.map((m, i) => {
+    if (i === t.activeIdx) return m;
+    const { next, recovered } = recoverBenchMp(m);
+    if (recovered > 0) {
+      logs.push({
+        text: `[벤치 회복] ${m.base.name} MP +${recovered} (MaxMp ${Math.round(MP_BENCH_RECOVER_PCT * 100)}%)`,
+        tone: "system",
+      });
+    }
+    return next;
+  });
+  return { team: { ...t, members }, logs };
 }
 
 function setActive(t: Team, idx: number, value: Combatant): Team {
