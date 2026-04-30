@@ -318,18 +318,77 @@ export function StoryView() {
           <MapIcon className="h-5 w-5 text-amber-400" />
           <h2 className="text-xl font-bold text-slate-100">Story · 여정의 맵</h2>
         </div>
-        {run && selectedDragon && (
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={() => {
-              setRun(null);
-              setSelectedDragon(null);
-            }}
-            className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+            onClick={() => setShowBannerSettings((v) => !v)}
+            aria-label="배너 표시 설정"
+            aria-expanded={showBannerSettings}
+            title="전투 결과 배너 표시 시간"
+            className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] transition ${
+              showBannerSettings
+                ? "border-amber-500/60 bg-amber-500/10 text-amber-200"
+                : "border-slate-700 text-slate-400 hover:bg-slate-800"
+            }`}
           >
-            여정 포기
+            <Settings2 className="h-3 w-3" />
+            배너 {bannerDuration === "off" ? "끔" : bannerDuration === "manual" ? "수동" : `${bannerDuration / 1000}s`}
           </button>
-        )}
+          {run && selectedDragon && (
+            <button
+              onClick={() => {
+                setRun(null);
+                setSelectedDragon(null);
+              }}
+              className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+            >
+              여정 포기
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Battle result banner — display-duration settings */}
+      {showBannerSettings && (
+        <div className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold text-slate-200">전투 결과 배너 표시 시간</p>
+            <button
+              onClick={() => setShowBannerSettings(false)}
+              className="rounded px-1 text-[10px] text-slate-500 hover:text-slate-300"
+              aria-label="설정 닫기"
+            >
+              ✕
+            </button>
+          </div>
+          <div
+            role="radiogroup"
+            aria-label="배너 표시 시간"
+            className="mt-2 grid grid-cols-4 gap-1.5"
+          >
+            {BANNER_OPTIONS.map((opt) => {
+              const active = bannerDuration === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setBannerDuration(opt.value)}
+                  className={`rounded-md border px-2 py-1.5 text-[11px] font-semibold transition ${
+                    active
+                      ? "border-amber-400/70 bg-amber-500/15 text-amber-200"
+                      : "border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-slate-500">
+            "수동" 선택 시 배너는 직접 닫을 때까지 유지됩니다.
+          </p>
+        </div>
+      )}
 
       {/* Player status (only during a run) */}
       {run && selectedDragon && (
