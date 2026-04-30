@@ -630,6 +630,7 @@ export function TagBattleEngine({
     if (selfActive.poisoned && drained.self.engineHp < selfActive.engineHp) {
       const poisonTarget: "player" | "enemy" = actor === "player" ? "player" : "enemy";
       triggerEffect(poisonTarget, "poison");
+      popOno("치익-", "hiss");
     }
 
     let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
