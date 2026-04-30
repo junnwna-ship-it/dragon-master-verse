@@ -38,19 +38,33 @@ export function useProfile() {
   // Realtime — gold updates from RPCs (battle reward, shop) reflect instantly.
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel(`profile-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const next = (payload.new as { gold?: number } | null)?.gold;
-          if (typeof next === "number") setGold(next);
-        },
-      )
-      .subscribe();
+    // Unique channel name per mount avoids "cannot add postgres_changes
+    // callbacks ... after subscribe()" when multiple components consume
+    // useProfile() at the same time.
+    const channelName = `profile-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            const next = (payload.new as { gold?: number } | null)?.gold;
+            if (typeof next === "number") setGold(next);
+          },
+        )
+        .subscribe();
+    } catch (e) {
+      console.error("[profile] realtime subscribe failed:", e);
+    }
     return () => {
-      supabase.removeChannel(channel);
+      if (!channel) return;
+      try {
+        supabase.removeChannel(channel);
+      } catch (e) {
+        console.error("[profile] removeChannel failed:", e);
+      }
     };
   }, [user]);
 
