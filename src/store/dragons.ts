@@ -7,8 +7,8 @@ export type Element = "Wood" | "Water" | "Fire" | "Earth" | "Light" | "Dark";
 export interface Dragon {
   /** Stable in-memory numeric id assigned at fetch time; used by deck/PvP/battle systems. */
   id: number;
-  /** Authoritative cloud UUID (Supabase row id). */
-  uuid: string;
+  /** Authoritative cloud UUID (Supabase row id). Optional for transient/local-only entries. */
+  uuid?: string;
   /** True for the original 8 hard-coded dragons (read-only for non-admins). */
   isSeed?: boolean;
   /** True if not a seed (= user-uploaded). */
