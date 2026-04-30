@@ -461,46 +461,9 @@ export function StoryView() {
         </div>
       )}
 
-      {/* Battle result banner — appears briefly after onResolved */}
-      {battleResult && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-xs animate-in fade-in slide-in-from-top-1 duration-300 ${
-            battleResult.outcome === "win"
-              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-              : battleResult.outcome === "draw"
-                ? "border-slate-500/40 bg-slate-500/10 text-slate-200"
-                : "border-rose-500/40 bg-rose-500/10 text-rose-200"
-          }`}
-        >
-          {battleResult.outcome === "win" ? (
-            <Trophy className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-          ) : battleResult.outcome === "draw" ? (
-            <Handshake className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
-          ) : (
-            <Skull className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
-          )}
-          <p className="leading-snug">
-            <span className="font-bold">
-              {battleResult.outcome === "win"
-                ? "승리!"
-                : battleResult.outcome === "draw"
-                  ? "무승부"
-                  : "패배..."}
-            </span>{" "}
-            {battleResult.nodeTitle}
-            {battleResult.enemyName ? ` · ${battleResult.enemyName}` : ""}
-            {battleResult.outcome === "win" && " — 다음 노드로 진행합니다"}
-          </p>
-          <button
-            onClick={() => setBattleResult(null)}
-            className="ml-auto rounded px-2 text-[10px] opacity-70 hover:opacity-100"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {/* Battle result banner — fixed-height slot prevents layout jump on
+          mobile; the inner element fades + slides in/out smoothly. */}
+      <BattleResultBanner result={battleResult} onDismiss={() => setBattleResult(null)} />
 
       {/* All-cleared banner */}
       {allCleared && (
