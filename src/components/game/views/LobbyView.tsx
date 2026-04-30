@@ -289,11 +289,30 @@ export function LobbyView() {
         <CardScanner userId={user.id} onClose={() => setShowScan(false)} />
       )}
       {detailOpen && (() => {
-        // Derived: always show the currently globally-selected dragon.
-        const d = dragons.find((x) => x.id === pvpSelectedDragonId);
-        return d ? (
-          <DragonDetailModal dragon={d} onClose={() => setDetailOpen(false)} />
-        ) : null;
+        // Derived: always show the currently globally-selected dragon, and
+        // expose navigation hooks so the user can swipe / arrow-key through
+        // the roster without closing the modal. Navigation cycles wrap
+        // around for a smooth carousel feel.
+        const idx = dragons.findIndex((x) => x.id === pvpSelectedDragonId);
+        if (idx < 0) return null;
+        const d = dragons[idx];
+        const goTo = (nextIdx: number) => {
+          const n = dragons.length;
+          if (n === 0) return;
+          const wrapped = ((nextIdx % n) + n) % n;
+          const target = dragons[wrapped];
+          if (target) setPvpSelectedDragonId(target.id);
+        };
+        return (
+          <DragonDetailModal
+            dragon={d}
+            onClose={() => setDetailOpen(false)}
+            onNext={dragons.length > 1 ? () => goTo(idx + 1) : undefined}
+            onPrev={dragons.length > 1 ? () => goTo(idx - 1) : undefined}
+            hasNext={dragons.length > 1}
+            hasPrev={dragons.length > 1}
+          />
+        );
       })()}
     </div>
   );
