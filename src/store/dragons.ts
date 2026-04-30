@@ -246,7 +246,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   updateCustomDragon: async (id, patch) => {
     const target = get().dragons.find((d) => d.id === id);
     if (!target) return;
-    const update: Record<string, unknown> = {};
+    const update: {
+      name?: string;
+      element?: string;
+      max_hp?: number;
+      mp?: number;
+      atk?: number;
+      def?: number;
+      image_url?: string | null;
+      lore?: string | null;
+    } = {};
     if (patch.name !== undefined) update.name = patch.name;
     if (patch.element !== undefined) update.element = patch.element;
     if (patch.maxHp !== undefined) update.max_hp = patch.maxHp;
@@ -314,7 +323,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   pvpDraws: 0,
   pvpSelectedDragonId: null,
   setPvpSelectedDragonId: (id) => set({ pvpSelectedDragonId: id }),
-  ownedDragonIds: INITIAL_OWNED,
+  ownedDragonIds: [],
   selectedDeck: [],
   enemyDeck: [],
   toggleDeckMember: (id) =>

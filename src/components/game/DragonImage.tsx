@@ -35,12 +35,11 @@ export function DragonImage({
   // transient network failure on one card doesn't permanently mask another.
   useEffect(() => {
     setFailed(false);
-  }, [dragon.id, dragon.image, dragon.imageLarge, dragon.imageUrl]);
+  }, [dragon.id, dragon.imageUrl]);
 
-  // imageUrl(사용자 업로드 절대경로)가 있으면 최우선 사용.
-  // 그 외에는 기존 webp 변형(작은/큰)을 사용.
-  const primary = dragon.imageUrl
-    ?? (preferLarge ? dragon.imageLarge ?? dragon.image : dragon.image);
+  // 클라우드 Storage URL을 단일 소스로 사용.
+  void preferLarge;
+  const primary = dragon.imageUrl;
 
   if (!primary || failed) {
     return (
@@ -59,12 +58,6 @@ export function DragonImage({
   return (
     <img
       src={primary}
-      srcSet={
-        // imageUrl 사용 중이면 srcSet 비활성화 (단일 자산).
-        !dragon.imageUrl && dragon.image && dragon.imageLarge
-          ? `${dragon.image} 480w, ${dragon.imageLarge} 800w`
-          : undefined
-      }
       sizes={sizes}
       alt={`${dragon.name} 일러스트`}
       className={`${fit === "cover" ? "object-cover" : "object-contain"} ${className}`}
