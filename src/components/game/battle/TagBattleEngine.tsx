@@ -139,7 +139,20 @@ function MiniBenchCard({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11px] font-bold text-slate-100">{c.base.name}</p>
         <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-slate-700">
-          <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+          <motion.div
+            className="h-full bg-emerald-500"
+            initial={false}
+            animate={{ width: `${pct}%` }}
+            transition={{ type: "spring", stiffness: 180, damping: 24 }}
+          />
+        </div>
+        <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-slate-700">
+          <motion.div
+            className={`h-full ${c.exhausted ? "bg-rose-500" : "bg-sky-500"}`}
+            initial={false}
+            animate={{ width: `${Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100))}%` }}
+            transition={{ type: "spring", stiffness: 180, damping: 24 }}
+          />
         </div>
         <p className="mt-0.5 font-mono text-[9px] text-slate-400">
           HP {uiHp(c)} · MP {Math.max(0, c.mp)}
