@@ -1,8 +1,9 @@
-import { Home, ScrollText, Swords } from "lucide-react";
+import { Home, ScrollText, Swords, Library } from "lucide-react";
 import { useGameStore, type View } from "@/store/dragons";
 
 const tabs: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "lobby", label: "Lobby", icon: Home },
+  { id: "vault", label: "Vault", icon: Library },
   { id: "story", label: "Story", icon: ScrollText },
   { id: "pvp", label: "PvP", icon: Swords },
 ];

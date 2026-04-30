@@ -30,7 +30,7 @@ export interface Dragon {
   imageLarge?: string;
 }
 
-export type View = "lobby" | "story" | "pvp";
+export type View = "lobby" | "story" | "pvp" | "vault";
 
 export type BattleOutcome = "win" | "lose" | "draw";
 
@@ -79,6 +79,17 @@ interface GameState {
   // is currently picked for PvP.
   pvpSelectedDragonId: number | null;
   setPvpSelectedDragonId: (id: number | null) => void;
+  // ===== My Vault & 3:3 Tag Battle =====
+  /** 보유/스캔한 모든 드래곤 ID 풀. 기본은 시드 드래곤 전체. */
+  ownedDragonIds: number[];
+  /** 출전 덱 — 정확히 3마리일 때만 PvP 진입 가능. 순서 = 출전 순서. */
+  selectedDeck: number[];
+  /** 매칭 시 생성된 적 AI 덱 (3마리). */
+  enemyDeck: number[];
+  /** Vault에서 카드 토글 (선택/해제). 3마리 초과 선택은 무시. */
+  toggleDeckMember: (id: number) => void;
+  clearDeck: () => void;
+  setEnemyDeck: (ids: number[]) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -144,6 +155,19 @@ export const useGameStore = create<GameState>((set) => ({
   pvpDraws: 0,
   pvpSelectedDragonId: null,
   setPvpSelectedDragonId: (id) => set({ pvpSelectedDragonId: id }),
+  ownedDragonIds: [1, 2, 3, 4, 5, 6],
+  selectedDeck: [],
+  enemyDeck: [],
+  toggleDeckMember: (id) =>
+    set((state) => {
+      if (state.selectedDeck.includes(id)) {
+        return { selectedDeck: state.selectedDeck.filter((x) => x !== id) };
+      }
+      if (state.selectedDeck.length >= 3) return {};
+      return { selectedDeck: [...state.selectedDeck, id] };
+    }),
+  clearDeck: () => set({ selectedDeck: [] }),
+  setEnemyDeck: (ids) => set({ enemyDeck: ids }),
   recordPvp: (r) =>
     set((state) => {
       const entry: PvpRecord = {
