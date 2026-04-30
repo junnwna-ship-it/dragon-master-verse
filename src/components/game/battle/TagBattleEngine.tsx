@@ -316,12 +316,32 @@ export function TagBattleEngine({
 
   /** 공통: 한쪽 active가 KO되면 자동 출전 처리 + 로그. */
   const advanceIfDead = (team: Team, label: string): Team => {
+    const prevActive = team.members[team.activeIdx];
+    const wasAlive = prevActive && prevActive.engineHp > 0;
     const { team: next, advancedTo } = autoAdvance(team);
     if (advancedTo !== null) {
+      if (prevActive && !wasAlive) {
+        pushLogs([
+          {
+            text: `💀 [KO] ${label} 진영의 ${prevActive.base.name}이(가) 쓰러졌습니다!`,
+            tone: "penalty",
+          },
+        ]);
+      }
+      const incoming = next.members[advancedTo];
+      const remaining = next.members.filter((m) => m.engineHp > 0).length;
       pushLogs([
         {
-          text: `[교체] ${label} 진영 - ${next.members[advancedTo].base.name}이(가) 자동 출전!`,
+          text: `🔁 [자동 출전] ${label} 진영 - ${incoming.base.name} 등장! (남은 생존자 ${remaining}/3)`,
           tone: "system",
+        },
+      ]);
+    } else if (prevActive && !wasAlive) {
+      // 더 이상 출전할 드래곤이 없음 = 진영 전멸
+      pushLogs([
+        {
+          text: `💀 [KO] ${label} 진영의 ${prevActive.base.name}이(가) 쓰러졌습니다! ${label} 진영 전멸!`,
+          tone: "penalty",
         },
       ]);
     }
@@ -529,36 +549,7 @@ export function TagBattleEngine({
         </div>
       </div>
 
-      {winner ? (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 text-center">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20">
-            <Trophy className="h-5 w-5 text-amber-300" />
-          </div>
-          <p className="mt-2 text-sm font-bold text-amber-300">
-            {winner === "player" ? "승리! 적 진영 전멸" : "패배... 우리 진영 전멸"}
-          </p>
-          {onExit && (
-            <div className="mt-2 flex flex-col items-center gap-1.5">
-              <button
-                onClick={onExit}
-                className="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400"
-              >
-                {autoExitEnabled && countdown != null
-                  ? `돌아가기 (${countdown}s)`
-                  : "돌아가기"}
-              </button>
-              {autoExitMs > 0 && (
-                <button
-                  onClick={() => setAutoExitEnabled((v) => !v)}
-                  className="text-[10px] text-amber-300/80 underline-offset-2 hover:underline"
-                >
-                  {autoExitEnabled ? "자동 돌아가기 취소" : "자동 돌아가기 활성화"}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
+      {!winner && (
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={handleAttack}
@@ -585,6 +576,92 @@ export function TagBattleEngine({
           >
             <Zap className="h-4 w-4" /> 턴 넘기기
           </button>
+        </div>
+      )}
+
+      {winner && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-in fade-in duration-300"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={`w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl animate-in zoom-in-95 duration-300 ${
+              winner === "player"
+                ? "border-amber-500/50 bg-gradient-to-b from-amber-500/15 via-slate-900 to-slate-950 shadow-amber-900/40"
+                : "border-rose-500/50 bg-gradient-to-b from-rose-500/15 via-slate-900 to-slate-950 shadow-rose-900/40"
+            }`}
+          >
+            <div
+              className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
+                winner === "player"
+                  ? "bg-amber-500/20 ring-4 ring-amber-500/30"
+                  : "bg-rose-500/20 ring-4 ring-rose-500/30"
+              }`}
+            >
+              {winner === "player" ? (
+                <Trophy className="h-8 w-8 text-amber-300" />
+              ) : (
+                <Skull className="h-8 w-8 text-rose-300" />
+              )}
+            </div>
+            <p
+              className={`mt-4 text-2xl font-extrabold tracking-wide ${
+                winner === "player" ? "text-amber-300" : "text-rose-300"
+              }`}
+            >
+              {winner === "player" ? "VICTORY" : "DEFEAT"}
+            </p>
+            <p className="mt-1 text-sm text-slate-300">
+              {winner === "player"
+                ? "적 진영을 전멸시켰습니다!"
+                : "우리 진영이 전멸했습니다..."}
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 p-2 text-left">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">내 진영</p>
+                <p className="font-mono text-sm text-emerald-300">
+                  생존 {pTeam.members.filter((m) => m.engineHp > 0).length}/3
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">적 진영</p>
+                <p className="font-mono text-sm text-rose-300">
+                  생존 {eTeam.members.filter((m) => m.engineHp > 0).length}/3
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">진행 턴</p>
+                <p className="font-mono text-sm text-slate-200">{turnNumber} 턴</p>
+              </div>
+            </div>
+
+            {onExit && (
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <button
+                  onClick={onExit}
+                  className={`w-full rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                    winner === "player"
+                      ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                      : "bg-rose-500 text-slate-950 hover:bg-rose-400"
+                  }`}
+                >
+                  {autoExitEnabled && countdown != null
+                    ? `돌아가기 (${countdown}s)`
+                    : "돌아가기"}
+                </button>
+                {autoExitMs > 0 && (
+                  <button
+                    onClick={() => setAutoExitEnabled((v) => !v)}
+                    className="text-[10px] text-slate-400 underline-offset-2 hover:underline"
+                  >
+                    {autoExitEnabled ? "자동 돌아가기 취소" : "자동 돌아가기 활성화"}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
