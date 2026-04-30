@@ -93,6 +93,52 @@ export function PvpView() {
   // Confirm modal shown after the user taps "전투 시작"; cancelling closes the
   // modal but preserves the selected player so the picker state is intact.
   const [confirmStart, setConfirmStart] = useState(false);
+
+  // ---- Selection invariant ----
+  // The hard rule: while phase === "picker", the highlighted dragon (player)
+  // MUST persist until ONE of these explicit user actions happens —
+  //   1) user taps a different card (toggle within picker)
+  //   2) user taps "취소" (leaves picker)
+  //   3) user taps "진행" inside the confirm modal (consumed → battle)
+  //   4) the entire match resets (new matchmaking, post-battle exit)
+  //
+  // Every code path that mutates `player` must declare its reason via this
+  // typed enum so we can statically audit selection clears and assert the
+  // invariant at runtime in development.
+  type SelectionMutationReason =
+    | "user-toggle-in-picker"   // (1)
+    | "user-cancel-picker"      // (2)
+    | "user-confirm-progress"   // (3) — consumed into battle
+    | "matchmaking-reset"       // (4a) — new search starts
+    | "post-battle-cleanup"     // (4b) — battle ended
+    | "opponent-cleared"        // (4c) — opponent went away (defensive)
+    | "user-pick-dragon";       // (1) — first pick / replace
+
+  const setPlayerWithReason = (
+    next: Dragon | null,
+    reason: SelectionMutationReason,
+  ) => {
+    if (import.meta.env.DEV) {
+      // Invariant: in picker phase, only explicit user-driven mutations or a
+      // deliberate confirm-progress may change `player`. Any other reason
+      // would silently strip the highlight and break the picker contract.
+      const allowedInPicker: SelectionMutationReason[] = [
+        "user-toggle-in-picker",
+        "user-pick-dragon",
+        "user-cancel-picker",
+        "user-confirm-progress",
+      ];
+      if (phase === "picker" && !allowedInPicker.includes(reason)) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[PvpView] selection-invariant violation: tried to mutate player ` +
+            `during picker phase with reason="${reason}". Highlighted dragon ` +
+            `must persist until 진행/취소/토글.`,
+        );
+      }
+    }
+    setPlayer(next);
+  };
   const [lastResult, setLastResult] = useState<{
     outcome: "win" | "lose" | "draw";
     delta: number;
@@ -105,9 +151,9 @@ export function PvpView() {
   // Centralized reset so cancel / 다시 매칭 / 확인 always land in the same
   // clean idle state — no leftover opponent, player selection, highlight,
   // or open confirm modal.
-  const resetMatchUi = () => {
+  const resetMatchUi = (reason: SelectionMutationReason = "matchmaking-reset") => {
     setOpponent(null);
-    setPlayer(null);
+    setPlayerWithReason(null, reason);
     setConfirmStart(false);
   };
 
@@ -129,7 +175,7 @@ export function PvpView() {
     // Each new matchmaking attempt starts from a fully clean slate so the
     // resulting picker can never inherit stale selection / opponent / modal
     // state from a previous match.
-    resetMatchUi();
+    resetMatchUi("matchmaking-reset");
     setPhase("searching");
     matchStartedAtRef.current = Date.now();
     matchTimerRef.current = setTimeout(() => {
@@ -147,7 +193,7 @@ export function PvpView() {
       matchTimerRef.current = null;
     }
     matchStartedAtRef.current = null;
-    resetMatchUi();
+    resetMatchUi("user-cancel-picker");
     setPhase("idle");
   };
 
@@ -169,12 +215,38 @@ export function PvpView() {
   const lastOpponentIdRef = useRef<number | null>(null);
   useEffect(() => {
     const id = opponent?.id ?? null;
-    if (lastOpponentIdRef.current !== id) {
-      setPlayer(null);
+    const prevId = lastOpponentIdRef.current;
+    if (prevId === id) return;
+    // Tightened rule: only clear selection on opponent IDENTITY transitions
+    // that mean the picker context is gone or has been replaced —
+    //   • opponent → null (reset / leaving picker)
+    //   • opponent A → opponent B (re-roll; selection no longer meaningful)
+    // We must NEVER clear selection on the initial null → opponent transition
+    // that happens when entering picker, because that would race with the
+    // user's first pick and could wipe a valid highlight.
+    const enteringPickerForFirstTime = prevId === null && id !== null;
+    if (!enteringPickerForFirstTime) {
+      setPlayerWithReason(null, "opponent-cleared");
       setConfirmStart(false);
-      lastOpponentIdRef.current = id;
     }
+    lastOpponentIdRef.current = id;
   }, [opponent]);
+
+  // Runtime invariant: confirmStart can only be true while a player IS selected
+  // in the picker phase. If we ever observe confirmStart=true with no player,
+  // close the modal — its semantics are broken.
+  useEffect(() => {
+    if (confirmStart && (!player || phase !== "picker")) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[PvpView] confirmStart invariant violation: confirmStart=true but ` +
+            `player=${player?.name ?? "null"}, phase="${phase}". Force-closing.`,
+        );
+      }
+      setConfirmStart(false);
+    }
+  }, [confirmStart, player, phase]);
 
   const tier = useMemo(() => {
     if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
@@ -238,12 +310,12 @@ export function PvpView() {
           // selection and confirm-modal flag so re-entering the picker (via
           // 다시 매칭) starts clean. Opponent stays only while the result
           // popup needs to display its info.
-          setPlayer(null);
+          setPlayerWithReason(null, "post-battle-cleanup");
           setConfirmStart(false);
           if (lastResult) {
             setPhase("result");
           } else {
-            resetMatchUi();
+            resetMatchUi("post-battle-cleanup");
             setPhase("idle");
           }
         }}
@@ -342,7 +414,12 @@ export function PvpView() {
             return (
               <button
                 key={d.id}
-                onClick={() => setPlayer(selected ? null : d)}
+                onClick={() =>
+                  setPlayerWithReason(
+                    selected ? null : d,
+                    selected ? "user-toggle-in-picker" : "user-pick-dragon",
+                  )
+                }
                 aria-pressed={selected}
                 className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left transition ${
                   selected
@@ -389,7 +466,7 @@ export function PvpView() {
         </button>
         <button
           onClick={() => {
-            resetMatchUi();
+            resetMatchUi("user-cancel-picker");
             setConfirmStart(false);
             setPhase("idle");
           }}
@@ -444,6 +521,10 @@ export function PvpView() {
                   onClick={() => {
                     setConfirmStart(false);
                     setPhase("battle");
+                    // Note: we deliberately do NOT clear `player` here —
+                    // the BattleEngine consumes the selection and the
+                    // post-battle onExit handler runs the
+                    // "post-battle-cleanup" mutation.
                   }}
                   className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-500"
                 >
