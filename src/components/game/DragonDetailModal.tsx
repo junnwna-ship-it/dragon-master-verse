@@ -53,6 +53,8 @@ function defaultBuildKey(d: Dragon): BuildKey {
 
 export function DragonDetailModal({
   dragon,
+  nextDragon,
+  prevDragon,
   onClose,
   onNext,
   onPrev,
@@ -60,6 +62,10 @@ export function DragonDetailModal({
   hasPrev = false,
 }: {
   dragon: Dragon;
+  /** Optional neighbor dragons — used purely to preload artwork so swiping
+      to the next/previous card feels instant. */
+  nextDragon?: Dragon;
+  prevDragon?: Dragon;
   onClose: () => void;
   /** Advance to the next dragon in the roster (called by swipe-left / →). */
   onNext?: () => void;
