@@ -42,17 +42,7 @@ function LandingPage() {
   const [showSignup, setShowSignup] = useState(false);
   const [showcase, setShowcase] = useState<ShowcaseDragon[]>([]);
 
-  // 이미 로그인되어 있으면 곧장 앱으로.
-  useEffect(() => {
-    let cancel = false;
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancel) return;
-      if (data.session) void navigate({ to: "/app", replace: true });
-    });
-    return () => {
-      cancel = true;
-    };
-  }, [navigate]);
+  // 의도적으로 자동 리다이렉트 없음 — 랜딩은 CTA 클릭 전까지 항상 표시.
 
   // 게임 속 드래곤들을 마퀴에 노출 — RLS상 비로그인은 못 읽으니 실패 시 샘플 사용.
   useEffect(() => {
@@ -308,29 +298,34 @@ function NicknameSignupModal({
 
     setSubmitting(true);
     try {
-      // 1) 익명 우회: 자동 생성 이메일/비번으로 바로 가입 (auto_confirm_email=on)
-      const email = generateGuestEmail();
-      const password = generateGuestPassword();
-      const { data: signup, error: signErr } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { nickname: cleaned } },
-      });
-      if (signErr) throw signErr;
-      const userId = signup.user?.id;
-      if (!userId) throw new Error("사용자 생성에 실패했습니다");
+      // 1) 기존 게스트 세션이 있으면 그대로 재사용해서 닉네임만 덮어쓴다.
+      //    없으면 자동 생성 이메일/비번으로 새로 가입.
+      const { data: existing } = await supabase.auth.getSession();
+      let userId = existing.session?.user?.id ?? null;
 
-      // 2) 세션이 없으면 즉시 로그인 (auto-confirm이 켜져 있으면 보통 세션이 같이 발급됨)
-      if (!signup.session) {
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInErr) throw signInErr;
+      if (!userId) {
+        const email = generateGuestEmail();
+        const password = generateGuestPassword();
+        const { data: signup, error: signErr } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { nickname: cleaned } },
+        });
+        if (signErr) throw signErr;
+        userId = signup.user?.id ?? null;
+        if (!userId) throw new Error("사용자 생성에 실패했습니다");
+
+        if (!signup.session) {
+          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInErr) throw signInErr;
+        }
       }
 
-      // 3) 프로필에 닉네임/스테이지 저장 (handle_new_user 트리거가 행을 만들었을 것)
+      // 2) 프로필에 닉네임/스테이지 덮어쓰기 (기존 게스트면 nickname만 갱신, gold는 보존)
       const { error: upErr } = await supabase
         .from("profiles")
         .upsert(
-          { user_id: userId, nickname: cleaned, current_stage: 1, gold: 0 },
+          { user_id: userId, nickname: cleaned, current_stage: 1 },
           { onConflict: "user_id" },
         );
       if (upErr) {
