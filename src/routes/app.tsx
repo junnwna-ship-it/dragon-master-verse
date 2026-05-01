@@ -113,7 +113,6 @@ function Index() {
         <BottomNav />
       </div>
       <Toaster />
-      {showAuth && <AuthDialog onClose={() => setShowAuth(false)} />}
     </div>
   );
 }
