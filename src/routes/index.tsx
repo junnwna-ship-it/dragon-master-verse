@@ -298,29 +298,34 @@ function NicknameSignupModal({
 
     setSubmitting(true);
     try {
-      // 1) 익명 우회: 자동 생성 이메일/비번으로 바로 가입 (auto_confirm_email=on)
-      const email = generateGuestEmail();
-      const password = generateGuestPassword();
-      const { data: signup, error: signErr } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { nickname: cleaned } },
-      });
-      if (signErr) throw signErr;
-      const userId = signup.user?.id;
-      if (!userId) throw new Error("사용자 생성에 실패했습니다");
+      // 1) 기존 게스트 세션이 있으면 그대로 재사용해서 닉네임만 덮어쓴다.
+      //    없으면 자동 생성 이메일/비번으로 새로 가입.
+      const { data: existing } = await supabase.auth.getSession();
+      let userId = existing.session?.user?.id ?? null;
 
-      // 2) 세션이 없으면 즉시 로그인 (auto-confirm이 켜져 있으면 보통 세션이 같이 발급됨)
-      if (!signup.session) {
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInErr) throw signInErr;
+      if (!userId) {
+        const email = generateGuestEmail();
+        const password = generateGuestPassword();
+        const { data: signup, error: signErr } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { nickname: cleaned } },
+        });
+        if (signErr) throw signErr;
+        userId = signup.user?.id ?? null;
+        if (!userId) throw new Error("사용자 생성에 실패했습니다");
+
+        if (!signup.session) {
+          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInErr) throw signInErr;
+        }
       }
 
-      // 3) 프로필에 닉네임/스테이지 저장 (handle_new_user 트리거가 행을 만들었을 것)
+      // 2) 프로필에 닉네임/스테이지 덮어쓰기 (기존 게스트면 nickname만 갱신, gold는 보존)
       const { error: upErr } = await supabase
         .from("profiles")
         .upsert(
-          { user_id: userId, nickname: cleaned, current_stage: 1, gold: 0 },
+          { user_id: userId, nickname: cleaned, current_stage: 1 },
           { onConflict: "user_id" },
         );
       if (upErr) {
