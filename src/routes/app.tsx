@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { z } from "zod";
 import { Coins, Flame } from "lucide-react";
 import { useGameStore } from "@/store/dragons";
@@ -14,7 +14,6 @@ import { ShopView } from "@/components/game/views/ShopView";
 import { TrainingView } from "@/components/game/views/TrainingView";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { AuthDialog } from "@/components/game/auth/AuthDialog";
 import { useProfile } from "@/hooks/useProfile";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -39,7 +38,6 @@ function Index() {
   const fetchDragons = useGameStore((s) => s.fetchDragons);
   const loadingDragons = useGameStore((s) => s.loadingDragons);
   const { user, loading: authLoading } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
   const { gold } = useProfile();
   const search = useSearch({ from: "/app" });
   const navigate = useNavigate();
@@ -69,8 +67,6 @@ function Index() {
     if (authLoading) return;
     if (!user) {
       void navigate({ to: "/", replace: true });
-    } else {
-      setShowAuth(false);
     }
   }, [user, authLoading, navigate]);
 
