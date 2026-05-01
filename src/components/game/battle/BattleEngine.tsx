@@ -325,33 +325,6 @@ export function BattleEngine({
         <CombatantPanel c={eState} side="enemy" />
       </div>
 
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-3">
-        <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-slate-500">
-          <span>Battle Log</span>
-          <span className={turn === "player" ? "text-emerald-400" : "text-rose-400"}>
-            {winner ? "전투 종료" : turn === "player" ? "내 턴" : "상대 턴"}
-          </span>
-        </div>
-        <div className="h-40 space-y-1 overflow-y-auto pr-1 text-xs">
-          {logs.map((l) => (
-            <p
-              key={l.id}
-              className={
-                l.tone === "penalty"
-                  ? "text-rose-400 font-semibold"
-                  : l.tone === "damage"
-                    ? "text-amber-300"
-                    : l.tone === "system"
-                      ? "text-slate-500"
-                      : "text-slate-300"
-              }
-            >
-              {l.text}
-            </p>
-          ))}
-        </div>
-      </div>
-
       {winner ? (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 text-center">
           <p className="text-sm font-bold text-amber-300">
@@ -379,23 +352,50 @@ export function BattleEngine({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="sticky bottom-0 z-20 -mx-4 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-900/95 px-4 py-3 backdrop-blur">
           <button
             onClick={handleAttack}
             disabled={turn !== "player"}
-            className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+            className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-4 text-base font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
           >
-            <Sword className="h-4 w-4" /> 공격
+            <Sword className="h-5 w-5" /> 공격
           </button>
           <button
             onClick={handlePassTurn}
             disabled={turn !== "player"}
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-3 text-sm font-bold text-slate-100 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-4 text-base font-bold text-slate-100 transition hover:bg-slate-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
           >
-            <Zap className="h-4 w-4" /> 턴 넘기기
+            <Zap className="h-5 w-5" /> 턴 넘기기
           </button>
         </div>
       )}
+
+      <div className="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-2 opacity-80">
+        <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-slate-500">
+          <span>Battle Log</span>
+          <span className={turn === "player" ? "text-emerald-400" : "text-rose-400"}>
+            {winner ? "전투 종료" : turn === "player" ? "내 턴" : "상대 턴"}
+          </span>
+        </div>
+        <div className="max-h-32 space-y-0.5 overflow-y-auto pr-1 text-xs leading-snug">
+          {logs.map((l) => (
+            <p
+              key={l.id}
+              className={
+                l.tone === "penalty"
+                  ? "text-rose-400 font-semibold"
+                  : l.tone === "damage"
+                    ? "text-amber-300"
+                    : l.tone === "system"
+                      ? "text-slate-500"
+                      : "text-slate-300"
+              }
+            >
+              {l.text}
+            </p>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
