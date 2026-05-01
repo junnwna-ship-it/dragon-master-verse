@@ -42,17 +42,7 @@ function LandingPage() {
   const [showSignup, setShowSignup] = useState(false);
   const [showcase, setShowcase] = useState<ShowcaseDragon[]>([]);
 
-  // 이미 로그인되어 있으면 곧장 앱으로.
-  useEffect(() => {
-    let cancel = false;
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancel) return;
-      if (data.session) void navigate({ to: "/app", replace: true });
-    });
-    return () => {
-      cancel = true;
-    };
-  }, [navigate]);
+  // 의도적으로 자동 리다이렉트 없음 — 랜딩은 CTA 클릭 전까지 항상 표시.
 
   // 게임 속 드래곤들을 마퀴에 노출 — RLS상 비로그인은 못 읽으니 실패 시 샘플 사용.
   useEffect(() => {
