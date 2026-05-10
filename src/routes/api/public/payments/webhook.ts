@@ -67,7 +67,7 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
     return;
   }
 
-  const { data: result, error: rpcErr } = await supabase.rpc(
+  const { data: result, error: rpcErr } = await (supabase.rpc as any)(
     'credit_gold_from_purchase',
     { _user_id: userId, _txn_id: txnId, _gold: totalGold, _env: env },
   );
