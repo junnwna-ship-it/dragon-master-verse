@@ -6,6 +6,7 @@ import { useGameStore } from "@/store/dragons";
 import { useProfile } from "@/hooks/useProfile";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { DragonImage } from "../DragonImage";
+import { GoldRecharge } from "../GoldRecharge";
 
 /**
  * Shop view — gated by the `isShopOpen` feature flag.
@@ -78,6 +79,9 @@ export function ShopView() {
 
   return (
     <div className="relative">
+      <div className="mb-6">
+        <GoldRecharge />
+      </div>
       <div className={settings.isShopOpen ? "" : "pointer-events-none select-none"}>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
