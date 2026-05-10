@@ -1,0 +1,1 @@
+revoke execute on function public.credit_gold_from_purchase(uuid, text, int, text) from public, authenticated, anon;
