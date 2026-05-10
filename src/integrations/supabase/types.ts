@@ -89,6 +89,24 @@ export type Database = {
         }
         Relationships: []
       }
+      gold_packages: {
+        Row: {
+          created_at: string
+          gold_amount: number
+          price_external_id: string
+        }
+        Insert: {
+          created_at?: string
+          gold_amount: number
+          price_external_id: string
+        }
+        Update: {
+          created_at?: string
+          gold_amount?: number
+          price_external_id?: string
+        }
+        Relationships: []
+      }
       owned_dragons: {
         Row: {
           acquired_at: string
@@ -109,6 +127,30 @@ export type Database = {
           bonus_stat_points?: number
           dragon_id?: string
           id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      processed_payments: {
+        Row: {
+          created_at: string
+          environment: string
+          gold_credited: number
+          paddle_transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          environment: string
+          gold_credited: number
+          paddle_transaction_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          environment?: string
+          gold_credited?: number
+          paddle_transaction_id?: string
           user_id?: string
         }
         Relationships: []
@@ -274,6 +316,10 @@ export type Database = {
       }
       bond_with_dragon: { Args: { _dragon_uuid: string }; Returns: Json }
       claim_quiz_reward: { Args: { _correct: number }; Returns: Json }
+      credit_gold_from_purchase: {
+        Args: { _env: string; _gold: number; _txn_id: string; _user_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
