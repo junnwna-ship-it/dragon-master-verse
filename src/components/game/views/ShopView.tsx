@@ -7,6 +7,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { DragonImage } from "../DragonImage";
 import { GoldRecharge } from "../GoldRecharge";
+import { PaymentHistory } from "../PaymentHistory";
 
 /**
  * Shop view — gated by the `isShopOpen` feature flag.
@@ -81,6 +82,9 @@ export function ShopView() {
     <div className="relative">
       <div className="mb-6">
         <GoldRecharge />
+      </div>
+      <div className="mb-6">
+        <PaymentHistory />
       </div>
       <div className={settings.isShopOpen ? "" : "pointer-events-none select-none"}>
         <div className="space-y-4">
