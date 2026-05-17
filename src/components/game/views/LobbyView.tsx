@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Package, Sparkles, ScanLine, LogOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonCard } from "../DragonCard";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DragonDetailModal } from "../DragonDetailModal";
 
 export function LobbyView() {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const setDragons = useGameStore((s) => s.setDragons);
   const inventory = useGameStore((s) => s.inventory);
@@ -215,8 +217,8 @@ export function LobbyView() {
     <div className="space-y-4">
       <div className="flex items-end justify-between px-1">
         <div>
-          <p className="text-xs uppercase tracking-widest text-slate-500">My Collection</p>
-          <h2 className="text-2xl font-bold text-slate-100">My Dragons</h2>
+          <p className="text-xs uppercase tracking-widest text-slate-500">{t("lobby.subtitle")}</p>
+          <h2 className="text-2xl font-bold text-slate-100">{t("lobby.title")}</h2>
         </div>
         {!loading && user && (
           <button
@@ -224,7 +226,7 @@ export function LobbyView() {
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-slate-500 hover:text-slate-300"
           >
             <LogOut className="h-3 w-3" />
-            로그아웃
+            {t("common.logout")}
           </button>
         )}
       </div>
@@ -233,13 +235,13 @@ export function LobbyView() {
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-rose-500/10 px-4 py-3 text-sm font-bold text-amber-200 hover:from-amber-500/25 hover:to-rose-500/20"
       >
         <ScanLine className="h-4 w-4" />
-        {user ? "카드 스캔으로 등록" : "로그인하고 카드 스캔하기"}
+        {user ? t("lobby.scanCta") : t("lobby.scanLoginCta")}
       </button>
       <div
         ref={scrollerRef}
         role="region"
         aria-roledescription="carousel"
-        aria-label="내 드래곤 목록 - 좌우로 스와이프하여 탐색"
+        aria-label={t("lobby.ariaCarousel")}
         tabIndex={0}
         className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
@@ -258,10 +260,16 @@ export function LobbyView() {
           // Descriptive label so AT users hear name, element, and core
           // stats when focus reaches the card without opening the modal.
           const cardLabel =
-            `${d.name}, ${d.element} 속성. ` +
-            `ATK ${d.atk}, DEF ${d.def}, HP ${d.hp} of ${d.maxHp}, MP ${d.mp}.` +
-            (isSelected ? " 현재 선택됨." : "") +
-            " 누르면 상세 모달이 열립니다.";
+            t("lobby.cardLabel", {
+              name: d.name,
+              element: d.element,
+              atk: d.atk,
+              def: d.def,
+              hp: d.hp,
+              maxHp: d.maxHp,
+              mp: d.mp,
+              selectedSuffix: isSelected ? t("lobby.currentlySelected") : "",
+            });
           return (
             <li
               key={d.id}
@@ -317,17 +325,17 @@ export function LobbyView() {
       </div>
       {selectedId !== null && (
         <p className="-mt-2 px-1 text-[11px] text-amber-300/80 animate-in fade-in duration-200">
-          선택됨: {dragons.find((d) => d.id === selectedId)?.name}
+          {t("lobby.selected", { name: dragons.find((d) => d.id === selectedId)?.name ?? "" })}
         </p>
       )}
       <div className="space-y-2 pt-2">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-lg font-bold text-slate-100">Inventory</h2>
-          <span className="text-[10px] font-mono text-slate-500">{inventory.length} items</span>
+          <h2 className="text-lg font-bold text-slate-100">{t("lobby.inventoryTitle")}</h2>
+          <span className="text-[10px] font-mono text-slate-500">{t("lobby.inventoryItems", { count: inventory.length })}</span>
         </div>
         {inventory.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-700/60 bg-slate-800/30 px-4 py-6 text-center text-xs text-slate-500">
-            Story 스테이지를 클리어해 아이템을 모아보세요
+            {t("lobby.inventoryEmpty")}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">

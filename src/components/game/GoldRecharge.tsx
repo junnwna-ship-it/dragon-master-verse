@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Coins, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { getPaddleEnvironment, getPaddlePriceId, initializePaddle } from "@/lib/paddle";
 
@@ -8,22 +9,23 @@ interface Pack {
   priceId: string;
   gold: number;
   price: string;
-  badge?: string;
+  badgeKey?: "bonus10" | "bonus20";
 }
 
 const PACKS: Pack[] = [
   { priceId: "gold_pack_small", gold: 1000, price: "$1.99" },
-  { priceId: "gold_pack_medium", gold: 5500, price: "$8.99", badge: "+10% 보너스" },
-  { priceId: "gold_pack_large", gold: 12000, price: "$17.99", badge: "+20% 보너스" },
+  { priceId: "gold_pack_medium", gold: 5500, price: "$8.99", badgeKey: "bonus10" },
+  { priceId: "gold_pack_large", gold: 12000, price: "$17.99", badgeKey: "bonus20" },
 ];
 
 export function GoldRecharge() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
 
   const buy = async (pack: Pack) => {
     if (!user) {
-      toast.error("로그인이 필요합니다");
+      toast.error(t("gold.loginRequired"));
       return;
     }
     setBusy(pack.priceId);
@@ -42,7 +44,7 @@ export function GoldRecharge() {
       });
     } catch (e) {
       console.error("[gold-recharge] checkout failed", e);
-      toast.error("결제 창을 열 수 없습니다");
+      toast.error(t("gold.checkoutFailed"));
     } finally {
       setBusy(null);
     }
@@ -52,10 +54,10 @@ export function GoldRecharge() {
     <section className="space-y-3">
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-amber-300" />
-        <h2 className="text-lg font-bold text-slate-100">골드 충전</h2>
+        <h2 className="text-lg font-bold text-slate-100">{t("gold.title")}</h2>
         {getPaddleEnvironment() === "sandbox" && (
           <span className="ml-auto rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-300">
-            테스트 모드
+            {t("gold.testMode")}
           </span>
         )}
       </div>
@@ -75,10 +77,10 @@ export function GoldRecharge() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-slate-100">
-                  {p.gold.toLocaleString()} 골드
+                  {t("gold.amount", { amount: p.gold.toLocaleString() })}
                 </p>
-                {p.badge && (
-                  <p className="text-[11px] font-semibold text-amber-300">{p.badge}</p>
+                {p.badgeKey && (
+                  <p className="text-[11px] font-semibold text-amber-300">{t(`gold.${p.badgeKey}`)}</p>
                 )}
               </div>
               <span className="flex shrink-0 items-center gap-1 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950">
@@ -89,7 +91,7 @@ export function GoldRecharge() {
         })}
       </div>
       <p className="text-[10px] text-slate-500">
-        결제가 완료되면 골드가 자동으로 적립됩니다. (몇 초 소요될 수 있습니다)
+        {t("gold.footer")}
       </p>
     </section>
   );

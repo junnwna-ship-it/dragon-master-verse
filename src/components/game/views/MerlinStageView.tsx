@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Wand2, Egg, Loader2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { supabase } from "@/integrations/supabase/client";
 import { DragonImage } from "../DragonImage";
@@ -23,6 +24,7 @@ interface Props {
  * 시드 드래곤 8마리 중 무작위 3마리를 후보로 보여줘 하나 선택.
  */
 export function MerlinStageView({ onComplete, refetchOwned }: Props) {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const [phase, setPhase] = useState<Phase>("intro");
   const [contracting, setContracting] = useState(false);
@@ -43,18 +45,18 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
 
   const handleContract = async (d: Dragon) => {
     if (!d.uuid) {
-      toast.error("이 드래곤은 계약할 수 없습니다");
+      toast.error(t("merlin.cantContract"));
       return;
     }
     setContracting(true);
     const { error } = await supabase.rpc("recruit_dragon", { _dragon_uuid: d.uuid });
     setContracting(false);
     if (error) {
-      toast.error(`계약 실패: ${error.message}`);
+      toast.error(t("merlin.contractFailed", { msg: error.message }));
       return;
     }
     await refetchOwned();
-    toast.success(`${d.name}와(과) 영혼의 계약을 맺었습니다!`);
+    toast.success(t("merlin.contractSuccess", { name: d.name }));
     setPhase("done");
     setTimeout(() => onComplete(), 1500);
   };
@@ -62,8 +64,8 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-900/40 via-slate-900 to-slate-950 p-4 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-purple-300">Stage 1 · 입문</p>
-        <h2 className="mt-1 text-xl font-extrabold text-purple-100">마법사 멀린의 시험</h2>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-purple-300">{t("merlin.stage")}</p>
+        <h2 className="mt-1 text-xl font-extrabold text-purple-100">{t("merlin.title")}</h2>
       </div>
 
       <AnimatePresence mode="wait">
@@ -72,12 +74,11 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
             className="flex flex-col items-center gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-6">
             <MerlinAvatar />
             <Bubble>
-              "어서 오게, 수습생이여. 드래곤 마스터가 되기 위해선 <b>지혜와 용기</b>가 필요하다네.
-              먼저 그대에게 마법 도구를 선물하지."
+              <span dangerouslySetInnerHTML={{ __html: t("merlin.introBubble") }} />
             </Bubble>
             <button onClick={() => setPhase("items")}
               className="rounded-xl bg-purple-500 px-6 py-3 text-sm font-extrabold text-white hover:bg-purple-400">
-              계속 <ChevronRight className="ml-1 inline h-4 w-4" />
+              {t("merlin.continue")} <ChevronRight className="ml-1 inline h-4 w-4" />
             </button>
           </motion.div>
         )}
@@ -85,30 +86,31 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
         {phase === "items" && (
           <motion.div key="items" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4 rounded-2xl border border-amber-500/40 bg-slate-900/70 p-6">
-            <p className="text-xs font-bold uppercase tracking-widest text-amber-300">선물 획득</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-300">{t("merlin.giftHeading")}</p>
             <div className="grid grid-cols-2 gap-3">
-              <ItemCard icon={<Egg className="h-10 w-10 text-amber-300" />} name="신비한 알" />
-              <ItemCard icon={<Wand2 className="h-10 w-10 text-purple-300" />} name="마법 지팡이" />
+              <ItemCard icon={<Egg className="h-10 w-10 text-amber-300" />} name={t("merlin.egg")} />
+              <ItemCard icon={<Wand2 className="h-10 w-10 text-purple-300" />} name={t("merlin.wand")} />
             </div>
-            <InventoryBadge label="교감의 증표" count={invLoading ? null : bondingTokens} />
-            <Bubble>"이 도구들이 그대의 여정을 도울 걸세. 이제 <b>지혜의 시련</b>을 시작하지!"</Bubble>
+            <InventoryBadge label={t("merlin.bondToken")} count={invLoading ? null : bondingTokens} />
+            <Bubble>
+              <span dangerouslySetInnerHTML={{ __html: t("merlin.itemsBubble") }} />
+            </Bubble>
             <button onClick={() => setPhase("quiz")}
               className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-extrabold text-slate-950 hover:bg-amber-400">
-              퀴즈 시작
+              {t("merlin.startQuiz")}
             </button>
           </motion.div>
         )}
 
         {phase === "quiz" && (
           <QuizModal
-            title="멀린의 지혜 시련"
+            title={t("merlin.quizTitle")}
             count={3}
             onClose={(res) => {
               if (res.correct === res.total && res.total > 0) {
                 setPhase("contract");
               } else {
-                // Allow retry
-                toast.message("다시 도전해 보세요!");
+                toast.message(t("merlin.quizRetry"));
                 setPhase("intro");
               }
             }}
@@ -120,9 +122,9 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
             className="space-y-4 rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-900/30 to-slate-950 p-5">
             <div className="text-center">
               <Sparkles className="mx-auto h-10 w-10 text-amber-300" />
-              <h3 className="mt-2 text-lg font-extrabold text-amber-200">첫 드래곤을 선택하라</h3>
-              <p className="mt-1 text-xs text-slate-400">한 마리만 선택할 수 있다네. 신중히 고르게...</p>
-              <InventoryBadge label="교감의 증표" count={invLoading ? null : bondingTokens} className="mx-auto mt-2" />
+              <h3 className="mt-2 text-lg font-extrabold text-amber-200">{t("merlin.pickDragon")}</h3>
+              <p className="mt-1 text-xs text-slate-400">{t("merlin.pickHint")}</p>
+              <InventoryBadge label={t("merlin.bondToken")} count={invLoading ? null : bondingTokens} className="mx-auto mt-2" />
             </div>
             <div className="grid grid-cols-3 gap-2">
               {candidates.map((d) => (
@@ -142,7 +144,7 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
             </div>
             {contracting && (
               <div className="flex items-center justify-center gap-2 text-sm text-amber-300">
-                <Loader2 className="h-4 w-4 animate-spin" /> 영혼의 계약을 체결 중...
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("merlin.contracting")}
               </div>
             )}
           </motion.div>
@@ -152,8 +154,8 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
           <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-8 text-center">
             <Sparkles className="mx-auto h-16 w-16 text-emerald-300 animate-pulse" />
-            <p className="mt-3 text-lg font-extrabold text-emerald-200">선택한 드래곤과 영혼의 계약을 맺었습니다!</p>
-            <p className="mt-1 text-xs text-slate-400">스테이지 2로 이동합니다...</p>
+            <p className="mt-3 text-lg font-extrabold text-emerald-200">{t("merlin.doneTitle")}</p>
+            <p className="mt-1 text-xs text-slate-400">{t("merlin.doneSubtitle")}</p>
           </motion.div>
         )}
       </AnimatePresence>

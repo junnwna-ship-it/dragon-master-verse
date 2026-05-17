@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Lock, ShoppingBag, Sparkles, RotateCcw, Coins, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useGameStore } from "@/store/dragons";
@@ -19,30 +20,17 @@ import { PaymentHistory } from "../PaymentHistory";
 
 interface ShopItem {
   key: "exp_potion" | "forget_potion";
-  name: string;
   cost: number;
-  desc: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const ITEMS: ShopItem[] = [
-  {
-    key: "exp_potion",
-    name: "경험치 물약",
-    cost: 500,
-    desc: "선택한 드래곤의 경험치를 +100 올립니다.",
-    icon: Sparkles,
-  },
-  {
-    key: "forget_potion",
-    name: "망각의 물약",
-    cost: 1000,
-    desc: "선택한 드래곤의 미사용 스탯 포인트를 모두 초기화합니다.",
-    icon: RotateCcw,
-  },
+  { key: "exp_potion", cost: 500, icon: Sparkles },
+  { key: "forget_potion", cost: 1000, icon: RotateCcw },
 ];
 
 export function ShopView() {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const refetchDragons = useGameStore((s) => s.fetchDragons);
   const { gold } = useProfile();
@@ -51,12 +39,13 @@ export function ShopView() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const buy = async (item: ShopItem) => {
+    const itemName = t(`shop.items.${item.key}.name`);
     if (!targetUuid) {
-      toast.error("대상 드래곤을 먼저 선택하세요");
+      toast.error(t("shop.needTarget"));
       return;
     }
     if (gold < item.cost) {
-      toast.error("골드가 부족합니다");
+      toast.error(t("shop.noGold"));
       return;
     }
     setBusyKey(item.key);
@@ -67,10 +56,10 @@ export function ShopView() {
     setBusyKey(null);
     if (error) {
       console.error("[shop] purchase failed:", error);
-      toast.error(`구매 실패: ${error.message}`);
+      toast.error(t("shop.purchaseFailed", { msg: error.message }));
       return;
     }
-    toast.success(`${item.name} 구매 완료!`);
+    toast.success(t("shop.purchaseSuccess", { name: itemName }));
     void refetchDragons();
     void data;
   };
@@ -91,7 +80,7 @@ export function ShopView() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5 text-amber-300" />
-              <h2 className="text-xl font-bold text-slate-100">Shop</h2>
+              <h2 className="text-xl font-bold text-slate-100">{t("shop.title")}</h2>
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-300">
               <Coins className="h-3.5 w-3.5" /> {gold.toLocaleString()}
@@ -101,11 +90,11 @@ export function ShopView() {
           {/* Target dragon picker */}
           <section>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              대상 드래곤 선택
+              {t("shop.pickTarget")}
             </p>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {targetDragons.length === 0 && (
-                <p className="text-xs text-slate-500">드래곤이 없습니다.</p>
+                <p className="text-xs text-slate-500">{t("shop.noDragons")}</p>
               )}
               {targetDragons.map((d) => {
                 const active = targetUuid === d.uuid;
@@ -136,6 +125,8 @@ export function ShopView() {
               const Icon = item.icon;
               const tooBroke = gold < item.cost;
               const busy = busyKey === item.key;
+              const name = t(`shop.items.${item.key}.name`);
+              const desc = t(`shop.items.${item.key}.desc`);
               return (
                 <div
                   key={item.key}
@@ -145,8 +136,8 @@ export function ShopView() {
                     <Icon className="h-6 w-6" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-100">{item.name}</p>
-                    <p className="truncate text-[11px] text-slate-400">{item.desc}</p>
+                    <p className="text-sm font-bold text-slate-100">{name}</p>
+                    <p className="truncate text-[11px] text-slate-400">{desc}</p>
                   </div>
                   <button
                     type="button"
@@ -171,10 +162,10 @@ export function ShopView() {
             <Lock className="h-8 w-8 text-amber-300" />
           </div>
           <p className="mt-4 px-6 text-base font-bold text-slate-100">
-            🔒 새로운 상점이 곧 오픈됩니다!
+            {t("shop.lockedHeading")}
           </p>
           <p className="mt-1 px-6 text-xs text-slate-400">
-            골드를 모아두세요.
+            {t("shop.lockedDesc")}
           </p>
         </div>
       )}

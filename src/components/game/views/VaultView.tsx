@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { X, Swords, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 import { GlassDragonCard } from "../GlassDragonCard";
@@ -9,6 +10,7 @@ import { GlassDragonCard } from "../GlassDragonCard";
  * 카드 탭 토글로 덱에 추가/해제. 정확히 3마리가 채워져야 PvP 진입 가능.
  */
 export function VaultView() {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const ownedIds = useGameStore((s) => s.ownedDragonIds);
   const selectedDeck = useGameStore((s) => s.selectedDeck);
@@ -33,8 +35,8 @@ export function VaultView() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-slate-100">내 카드 저장소</h2>
-        <p className="text-xs text-slate-400">출전 덱 3마리를 편성하세요</p>
+        <h2 className="text-xl font-bold text-slate-100">{t("vault.title")}</h2>
+        <p className="text-xs text-slate-400">{t("vault.subtitle")}</p>
       </div>
 
       {/* 출전 덱 슬롯 — sticky로 항상 보이게 */}
@@ -60,7 +62,7 @@ export function VaultView() {
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              출전 덱
+              {t("vault.deckLabel")}
             </p>
             {/* 점 인디케이터 — 0/3을 시각화 */}
             <div className="flex items-center gap-1">
@@ -89,7 +91,7 @@ export function VaultView() {
               onClick={clearDeck}
               className="text-[10px] text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
             >
-              비우기
+              {t("vault.clear")}
             </button>
           )}
         </div>
@@ -118,7 +120,7 @@ export function VaultView() {
                   key={d.id}
                   onClick={() => toggleDeckMember(d.id)}
                   className="vault-slot-pop group block h-full w-full"
-                  aria-label={`${d.name} 덱에서 제외`}
+                  aria-label={t("vault.removeFromDeck", { name: d.name })}
                 >
                   <DragonImage dragon={d} className="h-full w-full" />
                   <span className="absolute right-1 top-1 z-10 rounded-full bg-rose-500/90 p-0.5 opacity-0 transition group-hover:opacity-100">
@@ -132,7 +134,7 @@ export function VaultView() {
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-600">
                   <Plus className="h-5 w-5" />
-                  <span className="text-[9px] font-semibold uppercase tracking-wider">비어있음</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-wider">{t("vault.empty")}</span>
                 </div>
               )}
             </div>
@@ -146,7 +148,7 @@ export function VaultView() {
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
         >
           <Swords className="h-4 w-4" />
-          {ready ? "PvP 아레나 진입" : `덱 편성 필요 (${deck.length}/3)`}
+          {ready ? t("vault.enterPvp") : t("vault.needDeck", { count: deck.length })}
         </button>
       </section>
 
@@ -154,10 +156,10 @@ export function VaultView() {
       <section>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            보유 드래곤 ({owned.length})
+            {t("vault.ownedTitle", { count: owned.length })}
           </p>
           {full && (
-            <p className="text-[10px] text-amber-300">덱이 가득 찼어요 — 교체하려면 슬롯을 탭하세요</p>
+            <p className="text-[10px] text-amber-300">{t("vault.deckFullHint")}</p>
           )}
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

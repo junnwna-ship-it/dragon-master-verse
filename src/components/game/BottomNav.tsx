@@ -1,16 +1,18 @@
 import { Home, ScrollText, Swords, Library, Wrench, Bug, ShoppingBag, Dumbbell } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useGameStore, type View } from "@/store/dragons";
 
-const tabs: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "lobby", label: "Lobby", icon: Home },
-  { id: "vault", label: "Vault", icon: Library },
-  { id: "story", label: "Story", icon: ScrollText },
-  { id: "pvp", label: "PvP", icon: Swords },
-  { id: "shop", label: "Shop", icon: ShoppingBag },
-  { id: "training", label: "훈련소", icon: Dumbbell },
+const tabs: { id: View; labelKey: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "lobby", labelKey: "nav.lobby", icon: Home },
+  { id: "vault", labelKey: "nav.vault", icon: Library },
+  { id: "story", labelKey: "nav.story", icon: ScrollText },
+  { id: "pvp", labelKey: "nav.pvp", icon: Swords },
+  { id: "shop", labelKey: "nav.shop", icon: ShoppingBag },
+  { id: "training", labelKey: "nav.training", icon: Dumbbell },
 ];
 
 export function BottomNav() {
+  const { t } = useTranslation();
   const view = useGameStore((s) => s.view);
   const setView = useGameStore((s) => s.setView);
   const adminActive = view === "admin";
@@ -18,7 +20,7 @@ export function BottomNav() {
   return (
     <nav className="sticky bottom-0 z-20 border-t border-slate-700/60 bg-slate-900/95 backdrop-blur">
       <ul className="mx-auto flex max-w-md items-stretch justify-around px-2 py-2">
-        {tabs.map(({ id, label, icon: Icon }) => {
+        {tabs.map(({ id, labelKey, icon: Icon }) => {
           const active = view === id;
           return (
             <li key={id} className="flex-1">
@@ -30,7 +32,7 @@ export function BottomNav() {
                 }`}
               >
                 <Icon className="h-6 w-6" />
-                <span className="text-[11px] font-semibold">{label}</span>
+                <span className="text-[11px] font-semibold">{t(labelKey)}</span>
               </button>
             </li>
           );
@@ -40,8 +42,8 @@ export function BottomNav() {
           <button
             type="button"
             onClick={() => setView("admin")}
-            aria-label="Admin"
-            title="Admin"
+            aria-label={t("nav.admin")}
+            title={t("nav.admin")}
             className={`flex w-full items-center justify-center rounded-lg py-2 transition-colors ${
               adminActive ? "text-slate-300" : "text-slate-600 hover:text-slate-400"
             }`}
@@ -53,8 +55,8 @@ export function BottomNav() {
           <button
             type="button"
             onClick={() => setView("debug")}
-            aria-label="Debug"
-            title="Debug"
+            aria-label={t("nav.debug")}
+            title={t("nav.debug")}
             className={`flex w-full items-center justify-center rounded-lg py-2 transition-colors ${
               debugActive ? "text-amber-400" : "text-slate-600 hover:text-slate-400"
             }`}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Lock, Dumbbell, Sparkles, Coins, Heart, Swords, Shield, Zap, Flame, ArrowRight, ArrowLeft, Wand2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { DragonImage } from "../DragonImage";
@@ -14,6 +15,7 @@ import { TrainingSection } from "../DragonDetailModal";
  *     level/EXP, owner) plus the existing stat-point distribution UI.
  */
 export function TrainingView() {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const { settings, loading } = useAppSettings();
 
@@ -43,21 +45,21 @@ export function TrainingView() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Dumbbell className="h-5 w-5 text-amber-300" />
-              <h2 className="text-xl font-bold text-slate-100">훈련소</h2>
+              <h2 className="text-xl font-bold text-slate-100">{t("training.title")}</h2>
             </div>
             <span className="rounded-full bg-amber-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-              스탯 분배
+              {t("training.tag")}
             </span>
           </div>
 
           {/* Horizontal scroll picker */}
           <section>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              훈련할 드래곤 선택
+              {t("training.pickDragon")}
             </p>
             {trainable.length === 0 ? (
               <p className="rounded-lg border border-slate-700/60 bg-slate-800/40 px-3 py-4 text-center text-xs text-slate-500">
-                훈련 가능한 드래곤이 없습니다.
+                {t("training.noTrainable")}
               </p>
             ) : (
               <div className="-mx-4 overflow-x-auto px-4 pb-2">
@@ -110,10 +112,10 @@ export function TrainingView() {
             <Lock className="h-8 w-8 text-amber-300" />
           </div>
           <p className="mt-4 px-6 text-base font-bold text-slate-100">
-            🔧 드래곤 훈련소 공사 중
+            {t("training.lockedHeading")}
           </p>
           <p className="mt-1 px-6 text-xs text-slate-400">
-            관리자가 훈련소를 오픈하면 이용할 수 있습니다.
+            {t("training.lockedDesc")}
           </p>
         </div>
       )}
@@ -125,6 +127,7 @@ export function TrainingView() {
  * Read-only detail card + the reusable TrainingSection (stat-point spend UI).
  */
 function DetailPanel({ dragon }: { dragon: Dragon }) {
+  const { t } = useTranslation();
   const stats = [
     { icon: Heart, label: "HP", value: dragon.maxHp, tint: "text-rose-300" },
     { icon: Zap, label: "MP", value: dragon.mp, tint: "text-sky-300" },
@@ -164,7 +167,7 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
       {/* Stats grid */}
       <div>
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-          현재 스탯
+          {t("training.currentStats")}
         </p>
         <div className="grid grid-cols-4 gap-1.5">
           {stats.map(({ icon: Icon, label, value, tint }) => (
@@ -183,19 +186,19 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
       {/* Element matchup (5행 상성) */}
       <div>
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-          속성 상성 (5행)
+          {t("training.elementMatchup")}
         </p>
         <div className="grid grid-cols-2 gap-1.5">
           <div className="flex items-center gap-1.5 rounded-lg border border-emerald-800/60 bg-emerald-500/5 px-2 py-1.5">
             <ArrowRight className="h-3.5 w-3.5 text-emerald-300" />
-            <span className="text-[10px] text-slate-400">강함</span>
+            <span className="text-[10px] text-slate-400">{t("training.strong")}</span>
             <span className="ml-auto text-xs font-bold text-emerald-200">
               {ELEMENT_INFO[elementInfo.strongVs].icon} {elementInfo.strongVs}
             </span>
           </div>
           <div className="flex items-center gap-1.5 rounded-lg border border-rose-800/60 bg-rose-500/5 px-2 py-1.5">
             <ArrowLeft className="h-3.5 w-3.5 text-rose-300" />
-            <span className="text-[10px] text-slate-400">약함</span>
+            <span className="text-[10px] text-slate-400">{t("training.weak")}</span>
             <span className="ml-auto text-xs font-bold text-rose-200">
               {ELEMENT_INFO[elementInfo.weakTo].icon} {elementInfo.weakTo}
             </span>
@@ -206,16 +209,16 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
       {/* Passive / Signature skill */}
       <div>
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-          고유 스킬 / 패시브
+          {t("training.uniqueSkill")}
         </p>
         <div className="space-y-1.5">
           <div className="rounded-lg border border-amber-800/60 bg-amber-500/5 px-3 py-2">
             <div className="flex items-center gap-1.5">
               <Flame className="h-3.5 w-3.5 text-amber-300" />
-              <span className="text-[11px] font-bold text-amber-200">특수 스킬</span>
+              <span className="text-[11px] font-bold text-amber-200">{t("training.specialSkill")}</span>
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
-              MP의 20%를 소모해 RawDamage 1.5배 강화 공격을 발동합니다.
+              {t("training.specialSkillDesc")}
             </p>
           </div>
           {passive && (
@@ -234,7 +237,7 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
       {dragon.lore && (
         <div>
           <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            전설
+            {t("training.lore")}
           </p>
           <p className="whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-[12px] leading-relaxed text-slate-300">
             {dragon.lore}
