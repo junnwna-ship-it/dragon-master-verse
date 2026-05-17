@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
+import { useTranslation } from "react-i18next";
 import { TagBattleEngine } from "../battle/TagBattleEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -73,6 +74,7 @@ function pickEnemyDeck(): { trainer: GhostTrainer; deck: Dragon[] } {
 type Phase = "idle" | "searching" | "battle" | "result";
 
 export function PvpView() {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const recordPvp = useGameStore((s) => s.recordPvp);
   const pvpRecords = useGameStore((s) => s.pvpRecords);
@@ -176,13 +178,13 @@ export function PvpView() {
             });
             if (error) {
               console.error("[pvp] award failed:", error);
-              toast.error(`보상 지급 실패: ${error.message}`);
+              toast.error(t("pvp.rewardFailed", { msg: error.message }));
               return;
             }
             const r = (data ?? {}) as { gold_delta?: number; exp_delta?: number };
             const goldText = r.gold_delta ? `+${r.gold_delta}G` : "";
             const expText = r.exp_delta ? ` · +${r.exp_delta} exp` : "";
-            if (goldText) toast.success(`보상 ${goldText}${expText}`);
+            if (goldText) toast.success(t("pvp.rewardSuccess", { gold: goldText, exp: expText }));
           })();
           const delta =
             outcome === "win" ? RP_WIN_DELTA : outcome === "lose" ? RP_LOSS_DELTA : 0;
@@ -221,7 +223,7 @@ export function PvpView() {
             <Icon className="h-8 w-8" />
           </div>
           <h3 className="mt-3 text-xl font-bold">
-            {r.outcome === "win" ? "승리!" : r.outcome === "lose" ? "패배..." : "무승부"}
+            {r.outcome === "win" ? t("pvp.winLabel") : r.outcome === "lose" ? t("pvp.loseLabel") : t("pvp.drawLabel")}
           </h3>
           <p className="mt-1 text-xs opacity-80">vs {r.trainer}</p>
           <div className="mt-4 flex items-center justify-center gap-2 text-sm">
@@ -251,7 +253,7 @@ export function PvpView() {
           }}
           className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
         >
-          확인
+          {t("common.confirm")}
         </button>
         <button
           onClick={() => {
@@ -261,7 +263,7 @@ export function PvpView() {
           disabled={!deckReady}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:text-slate-600"
         >
-          다시 매칭
+          {t("pvp.rematch")}
         </button>
       </div>
     );
@@ -272,7 +274,7 @@ export function PvpView() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Swords className="h-5 w-5 text-rose-400" />
-        <h2 className="text-xl font-bold text-slate-100">PvP Arena · 3:3</h2>
+        <h2 className="text-xl font-bold text-slate-100">{t("pvp.title")}</h2>
       </div>
 
       <div className={`rounded-2xl border p-4 ${tier.tone}`}>
@@ -280,12 +282,12 @@ export function PvpView() {
           <div className="flex items-center gap-2">
             <Crown className="h-5 w-5" />
             <div>
-              <p className="text-[10px] uppercase tracking-widest opacity-70">랭크</p>
+              <p className="text-[10px] uppercase tracking-widest opacity-70">{t("pvp.rank")}</p>
               <p className="text-sm font-bold">{tier.label}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest opacity-70">랭크 점수</p>
+            <p className="text-[10px] uppercase tracking-widest opacity-70">{t("pvp.rankScore")}</p>
             <p className="text-2xl font-bold tabular-nums">
               {rp} <span className="text-xs opacity-70">RP</span>
             </p>
@@ -295,15 +297,15 @@ export function PvpView() {
 
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center">
-          <p className="text-[10px] uppercase text-emerald-400">Win</p>
+          <p className="text-[10px] uppercase text-emerald-400">{t("pvp.win")}</p>
           <p className="text-lg font-bold text-emerald-300">{pvpWins}</p>
         </div>
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-center">
-          <p className="text-[10px] uppercase text-rose-400">Lose</p>
+          <p className="text-[10px] uppercase text-rose-400">{t("pvp.lose")}</p>
           <p className="text-lg font-bold text-rose-300">{pvpLosses}</p>
         </div>
         <div className="rounded-xl border border-slate-500/30 bg-slate-500/10 px-3 py-2 text-center">
-          <p className="text-[10px] uppercase text-slate-400">Draw</p>
+          <p className="text-[10px] uppercase text-slate-400">{t("pvp.draw")}</p>
           <p className="text-lg font-bold text-slate-300">{pvpDraws}</p>
         </div>
       </div>
@@ -312,13 +314,13 @@ export function PvpView() {
       <div className="rounded-2xl border border-slate-700/60 bg-slate-800/60 p-3">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            출전 덱 ({playerDeck.length}/3)
+            {t("pvp.deckLabel", { count: playerDeck.length })}
           </p>
           <button
             onClick={() => setView("vault")}
             className="flex items-center gap-1 text-[10px] text-amber-300 underline-offset-2 hover:underline"
           >
-            <Library className="h-3 w-3" /> Vault에서 편성
+            <Library className="h-3 w-3" /> {t("pvp.vaultEdit")}
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -352,15 +354,15 @@ export function PvpView() {
         {phase === "searching" ? (
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-10 w-10 animate-spin text-amber-400" />
-            <p className="text-sm font-bold text-slate-100">상대 탐색 중...</p>
+            <p className="text-sm font-bold text-slate-100">{t("pvp.searching")}</p>
             <p className="text-[11px] text-slate-400">
-              비슷한 RP의 트레이너를 찾고 있습니다
+              {t("pvp.searchingDesc")}
             </p>
             <button
               onClick={cancelMatchmaking}
               className="mt-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
             >
-              취소
+              {t("common.cancel")}
             </button>
           </div>
         ) : (
@@ -369,19 +371,18 @@ export function PvpView() {
               <Shield className="h-6 w-6" />
             </div>
             <p className="text-xs text-slate-400">
-              승리 <span className="font-bold text-emerald-400">+{RP_WIN_DELTA}</span> · 패배{" "}
-              <span className="font-bold text-rose-400">{RP_LOSS_DELTA}</span> RP
+              {t("pvp.winLossInfo", { win: RP_WIN_DELTA, lose: RP_LOSS_DELTA })}
             </p>
             <button
               onClick={startMatchmaking}
               disabled={!deckReady}
               className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
-              <Search className="h-4 w-4" /> PvP 아레나 진입
+              <Search className="h-4 w-4" /> {t("pvp.enterArena")}
             </button>
             {!deckReady && (
               <p className="text-[10px] text-amber-300/90">
-                Vault에서 출전 덱 3마리를 먼저 편성하세요
+                {t("pvp.needDeckHint")}
               </p>
             )}
           </div>
@@ -390,7 +391,7 @@ export function PvpView() {
 
       {pvpRecords.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-widest text-slate-500">최근 기록</p>
+          <p className="text-xs uppercase tracking-widest text-slate-500">{t("pvp.recentTitle")}</p>
           <div className="space-y-1.5">
             {pvpRecords.slice(0, 5).map((r) => {
               const Icon = r.outcome === "win" ? Trophy : r.outcome === "lose" ? Skull : Minus;
@@ -412,7 +413,7 @@ export function PvpView() {
                     </span>
                   </span>
                   <span className="font-bold uppercase">
-                    {r.outcome === "win" ? "승" : r.outcome === "lose" ? "패" : "무"}
+                    {r.outcome === "win" ? t("pvp.shortWin") : r.outcome === "lose" ? t("pvp.shortLose") : t("pvp.shortDraw")}
                   </span>
                 </div>
               );
