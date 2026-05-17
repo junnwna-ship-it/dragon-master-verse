@@ -255,12 +255,13 @@ function Marquee({ items }: { items: ShowcaseDragon[] }) {
 
 /* -------------------- Nickname Signup Modal -------------------- */
 
-const nicknameSchema = z
-  .string()
-  .trim()
-  .min(2, () => i18n.t("landing.modal.errorMin"))
-  .max(20, () => i18n.t("landing.modal.errorMax"))
-  .regex(/^[\p{L}\p{N}_\- ]+$/u, () => i18n.t("landing.modal.errorChars"));
+const buildNicknameSchema = () =>
+  z
+    .string()
+    .trim()
+    .min(2, i18n.t("landing.modal.errorMin"))
+    .max(20, i18n.t("landing.modal.errorMax"))
+    .regex(/^[\p{L}\p{N}_\- ]+$/u, i18n.t("landing.modal.errorChars"));
 
 function generateGuestEmail(): string {
   const rand = Math.random().toString(36).slice(2, 10);
@@ -290,7 +291,7 @@ function NicknameSignupModal({
 
   const submit = async () => {
     setError(null);
-    const parsed = nicknameSchema.safeParse(nickname);
+    const parsed = buildNicknameSchema().safeParse(nickname);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? t("landing.modal.errorCheck"));
       return;
