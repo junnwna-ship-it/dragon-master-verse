@@ -73,7 +73,7 @@ export function useAppSettings() {
         .upsert({ key, value }, { onConflict: "key" });
       if (error) {
         console.error("[app_settings] update failed:", error);
-        toast.error(`설정 변경 실패: ${error.message}`);
+        toast.error(i18n.t("errors.settingsChangeFailed", { msg: error.message }));
         // Revert
         setSettings((s) => ({ ...s, [key]: !value }));
         throw error;

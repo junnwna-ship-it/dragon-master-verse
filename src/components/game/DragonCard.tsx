@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Heart, Droplet, Sword, Shield } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Dragon } from "@/store/dragons";
 import { DragonImage } from "./DragonImage";
 
@@ -10,13 +11,6 @@ const elementColors: Record<string, string> = {
   Earth: "from-amber-500/30 to-amber-700/10 text-amber-300 border-amber-500/40",
   Light: "from-yellow-300/30 to-yellow-600/10 text-yellow-200 border-yellow-400/40",
   Dark: "from-violet-500/30 to-violet-800/10 text-violet-300 border-violet-500/40",
-};
-
-const STAT_DESCRIPTIONS: Record<string, string> = {
-  ATK: "공격력. 한 번의 공격으로 입히는 기본 피해량입니다.",
-  DEF: "방어력. 받는 피해를 줄여주는 수치입니다.",
-  HP: "체력. 0이 되면 전투에서 패배합니다.",
-  MP: "마나. 스킬과 일부 행동에 소모되며, 0이 되면 지칩니다.",
 };
 
 /** Long-press threshold (ms) for showing the tooltip on touch devices. */
@@ -35,6 +29,7 @@ function StatBar({
   icon: React.ReactNode;
   color: string;
 }) {
+  const { t } = useTranslation();
   const pct = Math.min(100, (value / max) * 100);
   const [open, setOpen] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,7 +48,7 @@ function StatBar({
     return () => clearTimeout(t);
   }, [open]);
 
-  const desc = STAT_DESCRIPTIONS[label] ?? "";
+  const desc = t(`dragon.stats.${label}`, { defaultValue: "" });
   const tooltipId = `stat-${label.toLowerCase()}-tooltip`;
   // Full sentence used as the accessible name so screen readers announce
   // the stat label, current/max values, and the explanatory description in
@@ -92,7 +87,7 @@ function StatBar({
       <div
         className="h-2 w-full overflow-hidden rounded-full bg-slate-700/60"
         role="progressbar"
-        aria-label={`${label} 진행도`}
+        aria-label={t("dragon.stats2.progress", { label })}
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
@@ -134,6 +129,7 @@ function StatBar({
 }
 
 export function DragonCard({ dragon }: { dragon: Dragon }) {
+  const { t } = useTranslation();
   const tone = elementColors[dragon.element] ?? elementColors.Wood;
   const total = dragon.maxHp + dragon.mp + dragon.atk + dragon.def;
   return (
@@ -167,7 +163,7 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
       <div className="mt-3 flex items-baseline justify-between">
         <span className="text-[10px] font-mono text-slate-500">#{String(dragon.id).padStart(3, "0")}</span>
         <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-          {dragon.element} Class
+          {t("dragon.elementClass", { element: dragon.element })}
         </span>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2.5">

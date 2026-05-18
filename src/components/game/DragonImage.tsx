@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Dragon } from "@/store/dragons";
 
 /**
@@ -30,6 +31,7 @@ export function DragonImage({
   width?: number;
   height?: number;
 }) {
+  const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
   // Reset error state whenever we point at a different dragon/asset so a
   // transient network failure on one card doesn't permanently mask another.
@@ -45,7 +47,7 @@ export function DragonImage({
     return (
       <div
         role="img"
-        aria-label={`${dragon.name} 일러스트 (이미지 없음)`}
+        aria-label={t("dragon.noImage", { name: dragon.name })}
         className={`flex items-center justify-center bg-slate-700 ${className}`}
       >
         <span className="px-2 text-center text-sm font-bold tracking-wide text-slate-100">
@@ -59,7 +61,7 @@ export function DragonImage({
     <img
       src={primary}
       sizes={sizes}
-      alt={`${dragon.name} 일러스트`}
+      alt={t("dragon.alt", { name: dragon.name })}
       className={`${fit === "cover" ? "object-cover" : "object-contain"} ${className}`}
       loading={loading}
       decoding="async"
