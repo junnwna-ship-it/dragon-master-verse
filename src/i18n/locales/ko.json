@@ -17,7 +17,10 @@
     "locked": "Locked",
     "cleared": "Cleared",
     "loadingLine": "불러오는 중…",
-    "loadFailed": "불러오기 실패: {{msg}}"
+    "loadFailed": "불러오기 실패: {{msg}}",
+    "cancel2": "취소",
+    "remove": "제거",
+    "unknownError": "알 수 없는 오류"
   },
   "errorBoundary": {
     "title": "⚠️ {{label}}을 표시하는 중 오류가 발생했습니다",
@@ -79,8 +82,14 @@
     "purchaseFailed": "구매 실패: {{msg}}",
     "purchaseSuccess": "{{name}} 구매 완료!",
     "items": {
-      "exp_potion": { "name": "경험치 물약", "desc": "선택한 드래곤의 경험치를 +100 올립니다." },
-      "forget_potion": { "name": "망각의 물약", "desc": "선택한 드래곤의 미사용 스탯 포인트를 모두 초기화합니다." }
+      "exp_potion": {
+        "name": "경험치 물약",
+        "desc": "선택한 드래곤의 경험치를 +100 올립니다."
+      },
+      "forget_potion": {
+        "name": "망각의 물약",
+        "desc": "선택한 드래곤의 미사용 스탯 포인트를 모두 초기화합니다."
+      }
     }
   },
   "gold": {
@@ -192,7 +201,18 @@
     "nodeRest": "꽃의 휴식처",
     "nodeRestSub": "이벤트 · HP +30",
     "nodeBattle": "하늘의 무법자",
-    "nodeBattleSub": "전투 · Spike"
+    "nodeBattleSub": "전투 · Spike",
+    "title2": "Story · 여정의 맵",
+    "abandon2": "여정 포기",
+    "dismissBanner": "배너 닫기",
+    "settingsLabel": "배너 표시 설정",
+    "bannerSetting": "배너 {{value}}",
+    "bannerDurationRadio": "배너 표시 시간",
+    "closeSettings": "설정 닫기",
+    "playerName": "{{name}}",
+    "lockedAria": "{{title}} — 잠김. {{reason}}",
+    "clearedAria": "{{title}} — 클리어됨",
+    "cancelPick": "취소"
   },
   "merlin": {
     "stage": "Stage 1 · 입문",
@@ -274,36 +294,105 @@
       "bondSuccess": "{{name}}와(과)의 친밀도 상승! EXP +500"
     },
     "elementsKr": {
-      "Fire": "화염", "Water": "물", "Wood": "나무",
-      "Earth": "대지", "Light": "빛", "Dark": "어둠"
+      "Fire": "화염",
+      "Water": "물",
+      "Wood": "나무",
+      "Earth": "대지",
+      "Light": "빛",
+      "Dark": "어둠"
+    },
+    "modal2": {
+      "elementSuffix2": "{{label}} 속성",
+      "close": "닫기",
+      "statsLabel": "스탯",
+      "totalLabel": "합계 {{sum}}",
+      "matchupLabel": "속성 상성",
+      "strong": "강함",
+      "weak": "약함",
+      "recommended": "추천 빌드",
+      "tabsLabel": "빌드 분류",
+      "naturalBadge": "기본 추천",
+      "naturalTip": "기본 추천"
+    },
+    "stats2": {
+      "progress": "{{label}} 진행도"
+    },
+    "bonding": {
+      "title": "교감하기",
+      "tokens": "교감의 증표 × {{n}}",
+      "lowToken": "교감의 증표가 부족합니다",
+      "notInCloud": "이 드래곤은 클라우드에 저장되어 있지 않습니다",
+      "bondFailed": "교감 실패: {{msg}}",
+      "bondSuccess": "{{name}}와(과)의 친밀도 상승! EXP +500",
+      "needTokenCta": "증표 부족 — 퀴즈 시련에서 획득",
+      "useTokenCta": "교감의 증표 소모하고 EXP +500"
+    },
+    "training": {
+      "title": "훈련소",
+      "levelExp": "Lv.{{lvl}} · EXP {{exp}}",
+      "remaining": "남은 스탯 포인트",
+      "underConstruction": "🔧 드래곤 훈련소 공사 중",
+      "noPoints": "스탯 포인트 없음",
+      "spendFailed": "스탯 분배 실패: {{msg}}",
+      "spendSuccess": "{{stat}} 강화 완료!",
+      "notInCloud": "이 드래곤은 클라우드에 저장되어 있지 않습니다"
+    },
+    "exp": {
+      "level": "Lv.{{lvl}}",
+      "label": "EXP {{exp}} / {{next}}"
     }
   },
   "buildPresets": {
     "ATK": {
       "title": "공격형 딜러",
       "desc": "선공으로 적의 체력을 빠르게 깎는 빌드. 공격 보조 장비를 우선 장착하고, 치명타·관통 옵션을 노려 단기전을 끝내세요.",
-      "tags": ["선공", "치명타", "공격 버프"]
+      "tags": [
+        "선공",
+        "치명타",
+        "공격 버프"
+      ]
     },
     "DEF": {
       "title": "방어형 탱커",
       "desc": "긴 교전을 버티며 아군을 보호하는 빌드. 피해 감소·도발 효과와 회복 장비를 조합해 전선을 유지하세요.",
-      "tags": ["피해 감소", "도발", "회복"]
+      "tags": [
+        "피해 감소",
+        "도발",
+        "회복"
+      ]
     },
     "HP": {
       "title": "지속형 브루저",
       "desc": "높은 체력을 바탕으로 끈질기게 싸우는 빌드. 흡혈·재생 효과와 시너지가 좋아 장기전에서 유리합니다.",
-      "tags": ["체력", "흡혈", "재생"]
+      "tags": [
+        "체력",
+        "흡혈",
+        "재생"
+      ]
     },
     "MP": {
       "title": "마법형 캐스터",
       "desc": "MP를 활용한 스킬 위주 빌드. 마나 회복과 스킬 강화 장비를 권장하며, 원거리 견제로 거리를 유지하세요.",
-      "tags": ["스킬", "마나", "원거리"]
+      "tags": [
+        "스킬",
+        "마나",
+        "원거리"
+      ]
     }
   },
   "passives": {
-    "Comi":     { "name": "강철의 인내",   "desc": "피격 시 받는 데미지가 일정 비율 경감됩니다." },
-    "Snowy":    { "name": "빙결의 신중함", "desc": "짝수 턴에 30% 회피, 자신의 공격은 20% 약화됩니다." },
-    "Caminont": { "name": "맹독의 송곳니", "desc": "공격 시 적에게 지속 독 데미지를 부여합니다." }
+    "Comi": {
+      "name": "강철의 인내",
+      "desc": "피격 시 받는 데미지가 일정 비율 경감됩니다."
+    },
+    "Snowy": {
+      "name": "빙결의 신중함",
+      "desc": "짝수 턴에 30% 회피, 자신의 공격은 20% 약화됩니다."
+    },
+    "Caminont": {
+      "name": "맹독의 송곳니",
+      "desc": "공격 시 적에게 지속 독 데미지를 부여합니다."
+    }
   },
   "landing": {
     "metaTitle": "아티아티 드래곤 마스터즈 — 숨겨진 마법의 세계",
@@ -396,5 +485,77 @@
     "actor": "행위자",
     "logs": "전투 로그",
     "tableTitle": "턴별 상세 표"
+  },
+  "errors": {
+    "dragonLoadFailed": "드래곤 불러오기 실패: {{msg}}",
+    "loginRequired": "로그인이 필요합니다",
+    "registerFailed": "등록 실패: {{msg}}",
+    "bulkSaveFailed": "일괄 저장 실패: {{msg}}",
+    "deleteFailedAdmin": "삭제 실패: {{msg}} (관리자 권한이 필요합니다)",
+    "updateFailedAdmin": "수정 실패: {{msg}} (관리자 권한이 필요합니다)",
+    "settingsChangeFailed": "설정 변경 실패: {{msg}}",
+    "quizLoadFailed": "퀴즈 로드 실패: {{msg}}",
+    "quizSaveFailed": "저장 실패: {{msg}}",
+    "quizDeleteFailed": "삭제 실패: {{msg}}",
+    "quizImportFailed": "가져오기 실패: {{msg}}"
+  },
+  "quizAdmin": {
+    "title": "퀴즈 관리 ({{n}}/{{max}})",
+    "cancel": "취소",
+    "bulkTitle": "일괄 가져오기 (CSV / JSON)",
+    "bulkCsvHint": "CSV 헤더:",
+    "bulkJsonHint": "JSON:",
+    "pickFile": "파일 선택 (.csv / .json)",
+    "template": "템플릿",
+    "question": "질문",
+    "questionPlaceholder": "예) 드래곤은 어떤 알에서 부화할까요?",
+    "choicePlaceholder": "보기 {{n}}",
+    "selectAnswerAria": "보기 {{letter}} 정답으로 선택",
+    "category": "카테고리",
+    "saveChanges": "변경사항 저장",
+    "create": "퀴즈 등록",
+    "empty": "아직 등록된 퀴즈가 없습니다",
+    "correctAnswer": "정답:",
+    "edit": "편집",
+    "delete": "삭제",
+    "needQuestion": "질문을 입력하세요",
+    "needChoices": "보기 4개를 모두 입력하세요",
+    "badAnswer": "정답 인덱스가 잘못되었습니다",
+    "limitReached": "이미 최대 {{max}}개에 도달했습니다",
+    "saved": "수정 완료",
+    "savedNew": "퀴즈 등록 완료",
+    "deleted": "삭제됨",
+    "confirmDelete": "이 퀴즈를 삭제할까요?",
+    "loadFailed": "퀴즈 로드 실패: {{msg}}",
+    "importedSome": "{{n}}개 등록 · {{skipped}}개는 정원 초과로 건너뜀",
+    "imported": "{{n}}개 퀴즈를 가져왔습니다",
+    "noItems": "가져올 항목이 없습니다",
+    "csvBadHeader": "CSV 헤더는 question, choice_a, choice_b, choice_c, choice_d, answer 가 필요합니다",
+    "csvBadRow": "행 {{n}}: 필수 값이 비었거나 정답 형식이 잘못되었습니다 (A–D 또는 0–3)",
+    "csvMinRows": "CSV에 헤더와 최소 1개의 행이 필요합니다",
+    "jsonNotArray": "JSON은 배열이어야 합니다",
+    "jsonBadRow": "행 {{n}}: 객체가 아닙니다",
+    "jsonBadFields": "행 {{n}}: question + 4 choices + 정답(0–3 또는 A–D)이 필요합니다"
+  },
+  "debug2": {
+    "winner": "{{name}} 승",
+    "tableHeaders": {
+      "T": "T",
+      "actor": "행위자",
+      "raw": "Raw",
+      "cap": "Cap",
+      "applied": "Applied",
+      "aHp": "A HP",
+      "bHp": "B HP",
+      "aMp": "A MP",
+      "bMp": "B MP"
+    },
+    "summaryAvg": "평균 RawDamage: {{raw}} · 평균 Applied: {{applied}}",
+    "chartLabel": "{{label}} 차트",
+    "yAxis": "y: {{label}} · max {{max}}",
+    "initStats": "EngineHP {{hp}} · ATK {{atk}} · DEF {{def}} · MP {{mp}}"
+  },
+  "scanner": {
+    "elementLabel": "속성"
   }
 }
