@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Camera, Loader2, RotateCcw, Sparkles, Upload, X, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { recognizeCard } from "@/server/scan.functions";
 import { useGameStore, type Dragon } from "@/store/dragons";
@@ -45,6 +46,7 @@ async function compressImage(dataUrl: string, maxSize = 1024): Promise<string> {
 }
 
 export function CardScanner({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const { t } = useTranslation();
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const addDragon = useGameStore((s) => s.addDragon);
@@ -65,7 +67,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
       setStep("review");
     } catch (err) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : "인식에 실패했습니다");
+      toast.error(err instanceof Error ? err.message : t("scan.recognizeFailed"));
       setStep("capture");
       setPreview(null);
     }
@@ -115,10 +117,10 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
         def: result.def,
       });
 
-      toast.success(`${result.name} 카드가 등록되었습니다!`);
+      toast.success(t("scan.saved", { name: result.name }));
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "저장에 실패했습니다");
+      toast.error(err instanceof Error ? err.message : t("scan.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -130,7 +132,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-400" />
-            <h3 className="text-lg font-bold text-slate-100">카드 스캔</h3>
+            <h3 className="text-lg font-bold text-slate-100">{t("scan.title")}</h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
             <X className="h-5 w-5" />
@@ -140,7 +142,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
         {step === "capture" && (
           <div className="space-y-3">
             <p className="text-sm text-slate-400">
-              드래곤 카드를 카메라로 촬영하거나 갤러리에서 선택하면 AI가 자동으로 인식합니다.
+              {t("scan.intro")}
             </p>
             <input
               ref={cameraRef}
@@ -161,13 +163,13 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
               onClick={() => cameraRef.current?.click()}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-4 text-sm font-bold text-slate-950 hover:bg-amber-400"
             >
-              <Camera className="h-5 w-5" /> 카메라로 촬영
+              <Camera className="h-5 w-5" /> {t("scan.camera")}
             </button>
             <button
               onClick={() => galleryRef.current?.click()}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-700"
             >
-              <Upload className="h-4 w-4" /> 갤러리에서 선택
+              <Upload className="h-4 w-4" /> {t("scan.gallery")}
             </button>
           </div>
         )}
@@ -179,7 +181,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
             )}
             <div className="flex items-center justify-center gap-2 text-sm text-slate-300">
               <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
-              AI가 카드를 분석 중입니다...
+              {t("scan.analyzing")}
             </div>
           </div>
         )}
@@ -208,7 +210,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
                   ))}
                 </select>
                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                  신뢰도{" "}
+                  {t("scan.confidence")}{" "}
                   <span className="font-mono text-amber-300">
                     {Math.round(result.confidence * 100)}%
                   </span>
@@ -234,7 +236,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
                 disabled={saving}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
               >
-                <RotateCcw className="h-4 w-4" /> 다시 스캔
+                <RotateCcw className="h-4 w-4" /> {t("scan.rescan")}
               </button>
               <button
                 onClick={save}
@@ -242,7 +244,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                등록
+                {t("scan.register")}
               </button>
             </div>
           </div>

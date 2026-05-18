@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, CheckCircle2, XCircle, Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { fetchQuizSet, gradeAndReward } from "@/server/quiz.functions";
 import { emitInventoryChanged } from "@/hooks/useInventory";
 
@@ -24,6 +25,8 @@ interface Props {
  * 모두 맞히면 화려한 불꽃놀이 VFX, 틀리면 슬럼프 연출.
  */
 export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Props) {
+  const { t } = useTranslation();
+  const resolvedTitle = title === "지혜의 시련" ? t("quiz.defaultTitle") : title;
   const [loading, setLoading] = useState(true);
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
   const [picks, setPicks] = useState<{ quizId: string; pick: number }[]>([]);
@@ -43,11 +46,11 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
         setLoading(false);
       })
       .catch((err) => {
-        toast.error(`퀴즈 불러오기 실패: ${err.message ?? err}`);
+        toast.error(t("quiz.loadFailed", { msg: err.message ?? err }));
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [count]);
+  }, [count, t]);
 
   const cur = quizzes[step];
 
@@ -76,7 +79,7 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
         }
       } catch (err: unknown) {
         const m = err instanceof Error ? err.message : String(err);
-        toast.error(`채점 실패: ${m}`);
+        toast.error(t("quiz.gradeFailed", { msg: m }));
         setResult({ correct: 0, total: quizzes.length, rewarded: false });
       } finally {
         setGrading(false);
@@ -97,22 +100,22 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
             {allRight ? <Sparkles className="h-8 w-8 text-amber-300" /> : <XCircle className="h-8 w-8 text-rose-300" />}
           </div>
           <h3 className={`mt-3 text-2xl font-extrabold ${allRight ? "text-amber-200" : "text-rose-200"}`}>
-            {allRight ? "완벽해요!" : "아쉬워요..."}
+            {allRight ? t("quiz.perfect") : t("quiz.imperfect")}
           </h3>
           <p className="mt-1 text-sm text-slate-300">
-            정답 <span className="font-bold text-slate-100">{result.correct}/{result.total}</span>
+            {t("quiz.score", { correct: result.correct, total: result.total })}
           </p>
           {result.rewarded && (
             <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
               <Gift className="h-4 w-4" />
-              <span className="font-bold">교감의 증표</span> +1 획득!
+              {t("quiz.rewardEarned", { label: t("quiz.bondToken") })}
             </div>
           )}
           <button
             onClick={() => onClose(result)}
             className="mt-5 w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-extrabold text-slate-950 hover:bg-amber-400"
           >
-            계속하기
+            {t("quiz.continue")}
           </button>
         </div>
       </Backdrop>
@@ -124,7 +127,7 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
       <Backdrop>
         <div className="flex flex-col items-center gap-2 text-slate-300">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <p className="text-sm">퀴즈 불러오는 중...</p>
+          <p className="text-sm">{t("quiz.loading")}</p>
         </div>
       </Backdrop>
     );
@@ -134,11 +137,11 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
     return (
       <Backdrop>
         <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-slate-300">
-          <p className="font-bold">아직 등록된 퀴즈가 없습니다</p>
-          <p className="mt-1 text-xs text-slate-500">관리자가 문제를 등록한 뒤 다시 도전해 주세요.</p>
+          <p className="font-bold">{t("quiz.noQuizzes")}</p>
+          <p className="mt-1 text-xs text-slate-500">{t("quiz.noQuizzesHint")}</p>
           <button onClick={() => onClose({ correct: 0, total: 0, rewarded: false })}
             className="mt-4 w-full rounded-xl bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600">
-            닫기
+            {t("common.close")}
           </button>
         </div>
       </Backdrop>
@@ -149,8 +152,8 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
     <Backdrop>
       <div className="relative w-full max-w-md rounded-3xl border border-slate-700/60 bg-slate-900 p-5 shadow-2xl">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">{title}</p>
-          <p className="text-[10px] text-slate-400">문제 {step + 1} / {quizzes.length}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">{resolvedTitle}</p>
+          <p className="text-[10px] text-slate-400">{t("quiz.questionOf", { cur: step + 1, total: quizzes.length })}</p>
         </div>
         <div className="h-1 overflow-hidden rounded-full bg-slate-800">
           <motion.div
