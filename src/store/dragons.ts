@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import i18n from "@/i18n";
 
 export type Element = "Wood" | "Water" | "Fire" | "Earth" | "Light" | "Dark";
 
@@ -174,7 +175,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (error) {
       console.error("[dragons] fetch failed:", error);
       set({ loadingDragons: false, loadError: error.message });
-      toast.error(`드래곤 불러오기 실패: ${error.message}`);
+      toast.error(i18n.t("errors.dragonLoadFailed", { msg: error.message }));
       return;
     }
     const rows = (data ?? []) as DragonRow[];
@@ -192,7 +193,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth.user?.id;
     if (!uid) {
-      toast.error("로그인이 필요합니다");
+      toast.error(i18n.t("errors.loginRequired"));
       throw new Error("not authenticated");
     }
     const { error } = await supabase.from("dragons").insert({
@@ -209,7 +210,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
     if (error) {
       console.error("[dragons] insert failed:", error);
-      toast.error(`등록 실패: ${error.message}`);
+      toast.error(i18n.t("errors.registerFailed", { msg: error.message }));
       throw error;
     }
     await get().fetchDragons();
@@ -219,7 +220,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth.user?.id;
     if (!uid) {
-      toast.error("로그인이 필요합니다");
+      toast.error(i18n.t("errors.loginRequired"));
       throw new Error("not authenticated");
     }
     const rows = list.map((d) => ({
@@ -237,7 +238,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { error } = await supabase.from("dragons").insert(rows);
     if (error) {
       console.error("[dragons] bulk insert failed:", error);
-      toast.error(`일괄 저장 실패: ${error.message}`);
+      toast.error(i18n.t("errors.bulkSaveFailed", { msg: error.message }));
       throw error;
     }
     await get().fetchDragons();
@@ -248,7 +249,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { error } = await supabase.from("dragons").delete().eq("id", target.uuid);
     if (error) {
       console.error("[dragons] delete failed:", error);
-      toast.error(`삭제 실패: ${error.message} (관리자 권한이 필요합니다)`);
+      toast.error(i18n.t("errors.deleteFailedAdmin", { msg: error.message }));
       throw error;
     }
     await get().fetchDragons();
@@ -277,7 +278,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { error } = await supabase.from("dragons").update(update).eq("id", target.uuid);
     if (error) {
       console.error("[dragons] update failed:", error);
-      toast.error(`수정 실패: ${error.message} (관리자 권한이 필요합니다)`);
+      toast.error(i18n.t("errors.updateFailedAdmin", { msg: error.message }));
       throw error;
     }
     await get().fetchDragons();
