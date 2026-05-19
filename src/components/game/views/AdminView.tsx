@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud, ToggleRight, Settings2, HelpCircle, Loader2, FileUp, Download } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { useGameStore, type Element } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,12 +24,12 @@ import { useAppSettings, type AppSettings } from "@/hooks/useAppSettings";
  */
 
 const ELEMENTS: { value: Element; label: string }[] = [
-  { value: "Water", label: "Water (수)" },
-  { value: "Fire",  label: "Fire (화)" },
-  { value: "Wood",  label: "Wood (목)" },
-  { value: "Light", label: "Metal/Light (금)" },
-  { value: "Earth", label: "Earth (토)" },
-  { value: "Dark",  label: "Dark (암)" },
+  { value: "Water", label: "Water" },
+  { value: "Fire",  label: "Fire" },
+  { value: "Wood",  label: "Wood" },
+  { value: "Light", label: "Metal/Light" },
+  { value: "Earth", label: "Earth" },
+  { value: "Dark",  label: "Dark" },
 ];
 
 const MAX_DIM = 400;
@@ -198,7 +200,7 @@ export function AdminView() {
 
   function startEdit(id: number) {
     if (!isAdmin) {
-      toast.error("관리자만 수정할 수 있습니다");
+      toast.error(i18n.t("admin.adminOnlyEdit"));
       return;
     }
     const d = customDragons.find((x) => x.id === id);
@@ -214,7 +216,7 @@ export function AdminView() {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
     setImagePreview(d.imageUrl ?? "");
-    setImageName(d.imageUrl ? "기존 이미지" : "");
+    setImageName(d.imageUrl ? i18n.t("admin.existingImage") : "");
     setError("");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -232,11 +234,11 @@ export function AdminView() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!user) {
-      toast.error("로그인이 필요합니다");
+      toast.error(i18n.t("admin.needLogin"));
       return;
     }
     if (!name.trim()) {
-      setError("이름을 입력하세요");
+      setError(i18n.t("admin.needName"));
       return;
     }
     setBusy(true);
@@ -263,7 +265,7 @@ export function AdminView() {
           lore: lore.trim() || undefined,
         });
         setJustUpdatedId(editingId);
-        toast.success("드래곤이 수정되었습니다");
+        toast.success(i18n.t("admin.updatedToast"));
       } else {
         await addCustomDragon({
           name: name.trim(),
@@ -276,14 +278,14 @@ export function AdminView() {
           imageUrl,
           lore: lore.trim() || undefined,
         });
-        toast.success("드래곤이 등록되었습니다");
+        toast.success(i18n.t("admin.createdToast"));
       }
       resetForm();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "알 수 없는 오류";
+      const msg = err instanceof Error ? err.message : i18n.t("admin.unknownError");
       console.error("[admin] save failed:", err);
       setError(msg);
-      toast.error(`저장 실패: ${msg}`);
+      toast.error(i18n.t("admin.saveFailed", { msg }));
     } finally {
       setBusy(false);
     }
@@ -322,12 +324,12 @@ export function AdminView() {
 
   async function submitBulk() {
     if (!user) {
-      toast.error("로그인이 필요합니다");
+      toast.error(i18n.t("admin.needLogin"));
       return;
     }
     if (bulkRows.length === 0) return;
     if (bulkRows.some((r) => !r.name.trim())) {
-      toast.error("모든 행에 이름을 입력하세요");
+      toast.error(i18n.t("admin.bulkAllNeedNames"));
       return;
     }
     setBulkBusy(true);
@@ -358,15 +360,15 @@ export function AdminView() {
       }));
 
       await addCustomDragonsBulk(payload);
-      toast.success(`${payload.length}마리 일괄 등록 완료`);
+      toast.success(i18n.t("admin.bulkSavedToast", { n: payload.length }));
 
       // Cleanup previews.
       bulkRows.forEach((r) => URL.revokeObjectURL(r.previewUrl));
       setBulkRows([]);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "알 수 없는 오류";
+      const msg = err instanceof Error ? err.message : i18n.t("admin.unknownError");
       console.error("[admin] bulk save failed:", err);
-      toast.error(`일괄 저장 실패: ${msg}`);
+      toast.error(i18n.t("admin.bulkSaveFailed", { msg }));
     } finally {
       setBulkBusy(false);
       setBulkProgress(null);
@@ -380,26 +382,28 @@ export function AdminView() {
   }, [justUpdatedId]);
 
   if (!user) {
+    const t = i18n.t.bind(i18n);
     return (
       <div className="space-y-3 rounded-2xl border border-amber-700/50 bg-amber-900/20 p-4 text-sm text-amber-200">
         <div className="flex items-center gap-2 font-bold">
-          <ShieldAlert className="h-4 w-4" /> 로그인이 필요합니다
+          <ShieldAlert className="h-4 w-4" /> {t("admin.loginNeeded")}
         </div>
         <p className="text-xs text-amber-300/80">
-          드래곤을 등록하려면 먼저 로그인하세요.
+          {t("admin.loginNeededHint")}
         </p>
       </div>
     );
   }
+  const t = i18n.t.bind(i18n);
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-slate-100">관리자 페이지</h2>
+        <h2 className="text-xl font-bold text-slate-100">{t("admin.title")}</h2>
         <p className="text-xs text-slate-400">
           {isAdmin
-            ? "커스텀 드래곤을 생성·수정·삭제합니다 (클라우드 동기화)"
-            : "커스텀 드래곤을 생성합니다 (수정·삭제는 관리자 전용)"}
+            ? t("admin.subtitleAdmin")
+            : t("admin.subtitleUser")}
         </p>
         {adminLoading ? null : isAdmin ? (
           <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
@@ -412,26 +416,26 @@ export function AdminView() {
       {isAdmin && (
         <section className="space-y-2 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
           <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            <Settings2 className="h-3 w-3" /> Feature Flags (라이브 토글)
+            <Settings2 className="h-3 w-3" /> {t("admin.flagsTitle")}
           </p>
           <FeatureToggle
             flagKey="isShopOpen"
-            label="Shop 오픈"
-            description="상점 탭의 잠금 해제 / 구매 RPC 활성화"
+            label={t("admin.shopOpen")}
+            description={t("admin.shopOpenDesc")}
             value={settings.isShopOpen}
             onChange={setFlag}
             disabled={false}
           />
           <FeatureToggle
             flagKey="isTrainingOpen"
-            label="훈련소 오픈"
-            description="드래곤 스탯 분배(스탯 포인트 사용) 활성화"
+            label={t("admin.trainingOpen")}
+            description={t("admin.trainingOpenDesc")}
             value={settings.isTrainingOpen}
             onChange={setFlag}
             disabled={false}
           />
           <p className="pt-1 text-[10px] text-slate-500">
-            <ToggleRight className="mr-1 inline h-3 w-3" /> 변경 즉시 모든 클라이언트에 반영됩니다.
+            <ToggleRight className="mr-1 inline h-3 w-3" /> {t("admin.flagsHint")}
           </p>
         </section>
       )}
@@ -443,7 +447,7 @@ export function AdminView() {
       >
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            {editingId != null ? `드래곤 수정 #${editingId}` : "새 드래곤 카드"}
+            {editingId != null ? t("admin.editCard", { id: editingId }) : t("admin.newCard")}
           </p>
           {editingId != null && (
             <button
@@ -451,7 +455,7 @@ export function AdminView() {
               onClick={resetForm}
               className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-700"
             >
-              <X className="h-3 w-3" /> 취소
+              <X className="h-3 w-3" /> {t("quizAdmin.cancel")}
             </button>
           )}
         </div>
@@ -463,17 +467,17 @@ export function AdminView() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-amber-500"
-              placeholder="드래곤 이름"
+              placeholder={t("admin.namePlaceholder")}
             />
           </label>
           <label className="col-span-2 block text-xs">
-            <span className="mb-1 block text-slate-400">Lore (특징)</span>
+            <span className="mb-1 block text-slate-400">{t("admin.lore")}</span>
             <textarea
               value={lore}
               onChange={(e) => setLore(e.target.value)}
               rows={2}
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-amber-500"
-              placeholder="간단한 특징 설명"
+              placeholder={t("admin.lorePlaceholder")}
             />
           </label>
 
@@ -495,7 +499,7 @@ export function AdminView() {
           ))}
 
           <label className="col-span-2 block text-xs">
-            <span className="mb-1 block text-slate-400">속성</span>
+            <span className="mb-1 block text-slate-400">{t("admin.elementLabel")}</span>
             <select
               value={element}
               onChange={(e) => setElement(e.target.value as Element)}
@@ -510,11 +514,11 @@ export function AdminView() {
           </label>
 
           <label className="col-span-2 block text-xs">
-            <span className="mb-1 block text-slate-400">이미지 업로드 (Storage로 전송)</span>
+            <span className="mb-1 block text-slate-400">{t("admin.uploadLabel")}</span>
             <div className="flex items-center gap-2">
               <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600 bg-slate-950/60 px-3 py-2 text-xs text-slate-300 hover:border-amber-500">
                 <Upload className="h-3.5 w-3.5" />
-                <span className="truncate">{imageName || "파일 선택"}</span>
+                <span className="truncate">{imageName || t("admin.pickFile")}</span>
                 <input type="file" accept="image/*" onChange={onFileChange} className="hidden" />
               </label>
               {imagePreview && (
@@ -538,12 +542,12 @@ export function AdminView() {
           {editingId != null ? (
             <>
               <Pencil className="h-4 w-4" />
-              {busy ? "저장 중…" : "변경사항 저장"}
+              {busy ? t("admin.saving") : t("admin.saveChanges")}
             </>
           ) : (
             <>
               <Plus className="h-4 w-4" />
-              {busy ? "업로드 중…" : "새 드래곤 카드 생성하기"}
+              {busy ? t("admin.uploading") : t("admin.createNew")}
             </>
           )}
         </button>
@@ -553,10 +557,10 @@ export function AdminView() {
       <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            <Layers className="h-3 w-3" /> 일괄 업로드
+            <Layers className="h-3 w-3" /> {t("admin.bulkUpload")}
           </p>
           <label className="flex cursor-pointer items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-200 hover:bg-slate-700">
-            <Upload className="h-3 w-3" /> 파일 추가
+            <Upload className="h-3 w-3" /> {t("admin.addFiles")}
             <input
               type="file"
               accept="image/*"
@@ -569,8 +573,7 @@ export function AdminView() {
 
         {bulkRows.length === 0 ? (
           <p className="text-center text-[11px] text-slate-500">
-            여러 이미지 파일을 한 번에 선택해 자동으로 압축(400px, JPEG q0.8)한 뒤<br />
-            스탯을 매칭해 일괄 등록할 수 있습니다.
+            {t("admin.bulkHint")}
           </p>
         ) : (
           <ul className="space-y-2">
@@ -588,7 +591,7 @@ export function AdminView() {
                   <input
                     value={r.name}
                     onChange={(e) => updateBulk(r.key, { name: e.target.value })}
-                    placeholder="이름"
+                    placeholder={t("admin.namePlaceholder")}
                     className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
                   />
                   <select
@@ -608,7 +611,7 @@ export function AdminView() {
                     type="button"
                     onClick={() => removeBulk(r.key)}
                     className="flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
-                    aria-label="제거"
+                    aria-label={t("common.remove", { defaultValue: "Remove" })}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -648,9 +651,9 @@ export function AdminView() {
             <Cloud className="h-4 w-4" />
             {bulkBusy
               ? bulkProgress
-                ? `업로드 ${bulkProgress.done}/${bulkProgress.total}…`
-                : "업로드 중…"
-              : `전체 저장 (${bulkRows.length}마리)`}
+                ? t("admin.bulkSubmitProgress", { done: bulkProgress.done, total: bulkProgress.total })
+                : t("admin.uploading")
+              : t("admin.bulkSubmit", { n: bulkRows.length })}
           </button>
         )}
       </section>
@@ -661,7 +664,7 @@ export function AdminView() {
       {/* Manage list */}
       <section>
         <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-          전체 드래곤 ({dragons.length}) — 커스텀 {customDragons.length}
+          {t("admin.rosterTitle", { total: dragons.length, custom: customDragons.length })}
         </p>
         <ul className="space-y-1.5">
           {dragons.map((d) => {
@@ -700,7 +703,7 @@ export function AdminView() {
                     <button
                       type="button"
                       onClick={() => startEdit(d.id)}
-                      aria-label={`${d.name} 편집`}
+                      aria-label={`${d.name} ${t("quizAdmin.edit")}`}
                       className={`flex h-8 w-8 items-center justify-center rounded-lg ${
                         editingId === d.id
                           ? "bg-amber-500/20 text-amber-300"
@@ -715,12 +718,12 @@ export function AdminView() {
                         if (editingId === d.id) resetForm();
                         try {
                           await removeCustomDragon(d.id);
-                          toast.success(`${d.name} 삭제됨`);
+                          toast.success(t("admin.deletedToast", { name: d.name }));
                         } catch {
                           /* toast already shown by store */
                         }
                       }}
-                      aria-label={`${d.name} 삭제`}
+                      aria-label={`${d.name} ${t("quizAdmin.delete")}`}
                       className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -728,7 +731,7 @@ export function AdminView() {
                   </div>
                 ) : (
                   <span className="text-[9px] uppercase tracking-wider text-slate-600">
-                    {isCustom ? "잠김" : "기본"}
+                    {isCustom ? t("story.lockedNode") : t("common.default", { defaultValue: "Default" })}
                   </span>
                 )}
               </li>
@@ -790,7 +793,7 @@ function parseCsvLine(line: string): string[] {
  */
 function parseQuizCsv(text: string): ParsedQuiz[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) throw new Error("CSV에 헤더와 최소 1개의 행이 필요합니다");
+  if (lines.length < 2) throw new Error(i18n.t("quizAdmin.csvMinRows"));
   const header = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
   const idx = (name: string) => header.indexOf(name);
   const qi = idx("question");
@@ -798,7 +801,7 @@ function parseQuizCsv(text: string): ParsedQuiz[] {
   const ai = idx("answer");
   const cati = idx("category");
   if (qi < 0 || cIdx.some((n) => n < 0) || ai < 0) {
-    throw new Error("CSV 헤더는 question, choice_a, choice_b, choice_c, choice_d, answer 가 필요합니다");
+    throw new Error(i18n.t("quizAdmin.csvBadHeader"));
   }
   const out: ParsedQuiz[] = [];
   for (let i = 1; i < lines.length; i++) {
@@ -811,7 +814,7 @@ function parseQuizCsv(text: string): ParsedQuiz[] {
     else if (/^[0-3]$/.test(rawAns)) answer_index = Number(rawAns);
     const category = (cati >= 0 ? (cols[cati] ?? "") : "").trim() || "general";
     if (!question || choices.some((c) => !c) || answer_index < 0) {
-      throw new Error(`행 ${i + 1}: 필수 값이 비었거나 정답 형식이 잘못되었습니다 (A–D 또는 0–3)`);
+      throw new Error(i18n.t("quizAdmin.csvBadRow", { n: i + 1 }));
     }
     out.push({ question, choices, answer_index, category });
   }
@@ -821,9 +824,9 @@ function parseQuizCsv(text: string): ParsedQuiz[] {
 /** Parse a JSON array of quiz objects. Accepts either answer_index (0–3) or answer (A–D). */
 function parseQuizJson(text: string): ParsedQuiz[] {
   const data = JSON.parse(text);
-  if (!Array.isArray(data)) throw new Error("JSON은 배열이어야 합니다");
+  if (!Array.isArray(data)) throw new Error(i18n.t("quizAdmin.jsonNotArray"));
   return data.map((row, i) => {
-    if (!row || typeof row !== "object") throw new Error(`행 ${i + 1}: 객체가 아닙니다`);
+    if (!row || typeof row !== "object") throw new Error(i18n.t("quizAdmin.jsonBadRow", { n: i + 1 }));
     const question = String(row.question ?? "").trim();
     const choices = Array.isArray(row.choices) ? row.choices.map((c: unknown) => String(c ?? "").trim()) : [];
     let answer_index = -1;
@@ -835,7 +838,7 @@ function parseQuizJson(text: string): ParsedQuiz[] {
     }
     const category = String(row.category ?? "general").trim() || "general";
     if (!question || choices.length !== 4 || choices.some((c: string) => !c) || answer_index < 0 || answer_index > 3) {
-      throw new Error(`행 ${i + 1}: question + 4 choices + 정답(0–3 또는 A–D)이 필요합니다`);
+      throw new Error(i18n.t("quizAdmin.jsonBadFields", { n: i + 1 }));
     }
     return { question, choices, answer_index, category };
   });
@@ -843,9 +846,10 @@ function parseQuizJson(text: string): ParsedQuiz[] {
 
 const CSV_TEMPLATE =
   'question,choice_a,choice_b,choice_c,choice_d,answer,category\n' +
-  '"드래곤은 어떤 알에서 부화할까요?","돌알","불알","물알","바람알",B,general\n';
+  '"What egg do dragons hatch from?","Stone","Fire","Water","Wind",B,general\n';
 
 function QuizManager() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<QuizRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -862,7 +866,7 @@ function QuizManager() {
       .select("id, question, choices, answer_index, category")
       .order("created_at", { ascending: false });
     setLoading(false);
-    if (error) { toast.error(`퀴즈 로드 실패: ${error.message}`); return; }
+    if (error) { toast.error(t("quizAdmin.loadFailed", { msg: error.message })); return; }
     setRows((data ?? []).map((r) => ({
       id: r.id, question: r.question, choices: r.choices as string[],
       answer_index: r.answer_index, category: r.category,
@@ -885,11 +889,11 @@ function QuizManager() {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    if (!question.trim()) { toast.error("질문을 입력하세요"); return; }
-    if (choices.some((c) => !c.trim())) { toast.error("보기 4개를 모두 입력하세요"); return; }
-    if (answerIdx < 0 || answerIdx > 3) { toast.error("정답 인덱스가 잘못되었습니다"); return; }
+    if (!question.trim()) { toast.error(t("quizAdmin.needQuestion")); return; }
+    if (choices.some((c) => !c.trim())) { toast.error(t("quizAdmin.needChoices")); return; }
+    if (answerIdx < 0 || answerIdx > 3) { toast.error(t("quizAdmin.badAnswer")); return; }
     if (!editingId && rows.length >= MAX_QUIZZES) {
-      toast.error(`최대 ${MAX_QUIZZES}개까지 등록할 수 있습니다`); return;
+      toast.error(t("quizAdmin.limitReached", { max: MAX_QUIZZES })); return;
     }
     setBusy(true);
     const payload = {
@@ -902,16 +906,16 @@ function QuizManager() {
       ? await supabase.from("quizzes").update(payload).eq("id", editingId)
       : await supabase.from("quizzes").insert(payload);
     setBusy(false);
-    if (error) { toast.error(`저장 실패: ${error.message}`); return; }
-    toast.success(editingId ? "수정 완료" : "퀴즈 등록 완료");
+    if (error) { toast.error(t("admin.saveFailed", { msg: error.message })); return; }
+    toast.success(editingId ? t("quizAdmin.saved") : t("quizAdmin.savedNew"));
     reset(); await load();
   };
 
   const remove = async (id: string) => {
-    if (!confirm("이 퀴즈를 삭제할까요?")) return;
+    if (!confirm(t("quizAdmin.confirmDelete"))) return;
     const { error } = await supabase.from("quizzes").delete().eq("id", id);
-    if (error) { toast.error(`삭제 실패: ${error.message}`); return; }
-    toast.success("삭제됨"); await load();
+    if (error) { toast.error(t("admin.saveFailed", { msg: error.message })); return; }
+    toast.success(t("quizAdmin.deleted")); await load();
     if (editingId === id) reset();
   };
 
@@ -925,10 +929,10 @@ function QuizManager() {
       const text = await file.text();
       const isJson = /\.json$/i.test(file.name) || text.trim().startsWith("[");
       const parsed = isJson ? parseQuizJson(text) : parseQuizCsv(text);
-      if (parsed.length === 0) throw new Error("가져올 항목이 없습니다");
+      if (parsed.length === 0) throw new Error(t("quizAdmin.noItems"));
 
       const remaining = MAX_QUIZZES - rows.length;
-      if (remaining <= 0) throw new Error(`이미 최대 ${MAX_QUIZZES}개에 도달했습니다`);
+      if (remaining <= 0) throw new Error(t("quizAdmin.limitReached", { max: MAX_QUIZZES }));
       const toInsert = parsed.slice(0, remaining);
       const skipped = parsed.length - toInsert.length;
 
@@ -937,12 +941,12 @@ function QuizManager() {
 
       toast.success(
         skipped > 0
-          ? `${toInsert.length}개 등록 · ${skipped}개는 정원 초과로 건너뜀`
-          : `${toInsert.length}개 퀴즈를 가져왔습니다`,
+          ? t("quizAdmin.importedSome", { n: toInsert.length, skipped })
+          : t("quizAdmin.imported", { n: toInsert.length }),
       );
       await load();
     } catch (err) {
-      toast.error(`가져오기 실패: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(t("admin.saveFailed", { msg: err instanceof Error ? err.message : String(err) }));
     } finally {
       setBusy(false);
     }
@@ -961,46 +965,46 @@ function QuizManager() {
     <section className="space-y-3 rounded-2xl border border-purple-500/40 bg-slate-900/60 p-4">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-300">
-          <HelpCircle className="h-3 w-3" /> 퀴즈 관리 ({rows.length}/{MAX_QUIZZES})
+          <HelpCircle className="h-3 w-3" /> {t("quizAdmin.title", { n: rows.length, max: MAX_QUIZZES })}
         </p>
         {editingId && (
           <button type="button" onClick={reset}
             className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-700">
-            <X className="h-3 w-3" /> 취소
+            <X className="h-3 w-3" /> {t("quizAdmin.cancel")}
           </button>
         )}
       </div>
 
-      {/* 일괄 가져오기 — CSV / JSON */}
+      {/* Bulk import — CSV / JSON */}
       <div className="space-y-2 rounded-xl border border-dashed border-purple-500/30 bg-slate-950/40 p-3">
         <p className="text-[10px] font-bold uppercase tracking-widest text-purple-300">
-          일괄 가져오기 (CSV / JSON)
+          {t("quizAdmin.bulkTitle")}
         </p>
         <p className="text-[11px] leading-relaxed text-slate-400">
-          CSV 헤더: <code className="text-slate-300">question, choice_a, choice_b, choice_c, choice_d, answer, category</code>
+          {t("quizAdmin.bulkCsvHint")} <code className="text-slate-300">question, choice_a, choice_b, choice_c, choice_d, answer, category</code>
           <br />
-          JSON: <code className="text-slate-300">{`[{ question, choices:[a,b,c,d], answer_index:0–3, category? }]`}</code>
+          {t("quizAdmin.bulkJsonHint")} <code className="text-slate-300">{`[{ question, choices:[a,b,c,d], answer_index:0–3, category? }]`}</code>
         </p>
         <div className="flex flex-wrap gap-2">
           <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-500/20 px-3 py-2 text-xs font-semibold text-purple-200 transition hover:bg-purple-500/30">
             <FileUp className="h-3.5 w-3.5" />
-            파일 선택 (.csv / .json)
+            {t("quizAdmin.pickFile")}
             <input type="file" accept=".csv,.json,text/csv,application/json"
               onChange={handleBulkFile} disabled={busy} className="hidden" />
           </label>
           <button type="button" onClick={downloadTemplate}
             className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700">
             <Download className="h-3.5 w-3.5" />
-            템플릿
+            {t("quizAdmin.template")}
           </button>
         </div>
       </div>
 
       <form onSubmit={save} className="space-y-2">
         <label className="block text-xs">
-          <span className="mb-1 block text-slate-400">질문</span>
+          <span className="mb-1 block text-slate-400">{t("quizAdmin.question")}</span>
           <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={2}
-            placeholder="예) 드래곤은 어떤 알에서 부화할까요?"
+            placeholder={t("quizAdmin.questionPlaceholder")}
             className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500" />
         </label>
         <div className="grid grid-cols-1 gap-2">
@@ -1008,27 +1012,27 @@ function QuizManager() {
             <label key={i} className="flex items-center gap-2 text-xs">
               <input type="radio" name="answer" checked={answerIdx === i}
                 onChange={() => setAnswerIdx(i)}
-                className="h-4 w-4 accent-emerald-500" aria-label={`보기 ${String.fromCharCode(65 + i)} 정답으로 선택`} />
+                className="h-4 w-4 accent-emerald-500" aria-label={t("quizAdmin.selectAnswerAria", { letter: String.fromCharCode(65 + i) })} />
               <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                 answerIdx === i ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400"
               }`}>{String.fromCharCode(65 + i)}</span>
               <input value={c} onChange={(e) => {
                 const next = [...choices] as [string, string, string, string];
                 next[i] = e.target.value; setChoices(next);
-              }} placeholder={`보기 ${i + 1}`}
+              }} placeholder={t("quizAdmin.choicePlaceholder", { n: i + 1 })}
                 className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 outline-none focus:border-purple-500" />
             </label>
           ))}
         </div>
         <label className="block text-xs">
-          <span className="mb-1 block text-slate-400">카테고리</span>
+          <span className="mb-1 block text-slate-400">{t("quizAdmin.category")}</span>
           <input value={category} onChange={(e) => setCategory(e.target.value)}
             className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500" />
         </label>
         <button type="submit" disabled={busy}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-400 disabled:opacity-50">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          {editingId ? "변경사항 저장" : "퀴즈 등록"}
+          {editingId ? t("quizAdmin.saveChanges") : t("quizAdmin.create")}
         </button>
       </form>
 
@@ -1036,7 +1040,7 @@ function QuizManager() {
         <div className="flex justify-center py-4 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
       ) : rows.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-700 px-3 py-4 text-center text-xs text-slate-500">
-          아직 등록된 퀴즈가 없습니다
+          {t("quizAdmin.empty")}
         </p>
       ) : (
         <ul className="space-y-1.5">
@@ -1046,19 +1050,19 @@ function QuizManager() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-100">{q.question}</p>
                 <p className="truncate text-[10px] text-slate-400">
-                  정답: <span className="font-bold text-emerald-300">{String.fromCharCode(65 + q.answer_index)}. {q.choices[q.answer_index]}</span>
+                  {t("quizAdmin.correctAnswer")} <span className="font-bold text-emerald-300">{String.fromCharCode(65 + q.answer_index)}. {q.choices[q.answer_index]}</span>
                   {" · "}{q.category}
                 </p>
               </div>
               <button type="button" onClick={() => startEdit(q)}
-                aria-label="편집"
+                aria-label={t("quizAdmin.edit")}
                 className={`flex h-7 w-7 items-center justify-center rounded-lg ${
                   editingId === q.id ? "bg-amber-500/20 text-amber-300" : "bg-sky-500/10 text-sky-400 hover:bg-sky-500/20"
                 }`}>
                 <Pencil className="h-3.5 w-3.5" />
               </button>
               <button type="button" onClick={() => remove(q.id)}
-                aria-label="삭제"
+                aria-label={t("quizAdmin.delete")}
                 className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
