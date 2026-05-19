@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2, HeartHandshake, Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 /**
  * BondingSection이 성공할 때 모달 내 다른 컴포넌트(카드 이미지 영역, EXP 게이지)에
  * 동시에 VFX를 트리거하기 위한 가벼운 이벤트 버스.
@@ -32,41 +34,52 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useInventory, emitInventoryChanged } from "@/hooks/useInventory";
 
-const ELEMENT_META: Record<Element, { label: string; color: string; icon: React.ComponentType<{ className?: string }>; strong: Element; weak: Element }> = {
-  Fire:  { label: "화염",   color: "text-rose-300",    icon: Flame,    strong: "Wood",  weak: "Water" },
-  Water: { label: "물",     color: "text-sky-300",     icon: Droplets, strong: "Fire",  weak: "Earth" },
-  Wood:  { label: "나무",   color: "text-emerald-300", icon: Leaf,     strong: "Earth", weak: "Fire" },
-  Earth: { label: "대지",   color: "text-amber-300",   icon: Mountain, strong: "Water", weak: "Wood" },
-  Light: { label: "빛",     color: "text-yellow-200",  icon: Sun,      strong: "Dark",  weak: "Dark" },
-  Dark:  { label: "어둠",   color: "text-violet-300",  icon: Moon,     strong: "Light", weak: "Light" },
+type ElementMeta = { labelKey: string; color: string; icon: React.ComponentType<{ className?: string }>; strong: Element; weak: Element };
+const ELEMENT_META: Record<Element, ElementMeta> = {
+  Fire:  { labelKey: "dragon.elementsKr.Fire",  color: "text-rose-300",    icon: Flame,    strong: "Wood",  weak: "Water" },
+  Water: { labelKey: "dragon.elementsKr.Water", color: "text-sky-300",     icon: Droplets, strong: "Fire",  weak: "Earth" },
+  Wood:  { labelKey: "dragon.elementsKr.Wood",  color: "text-emerald-300", icon: Leaf,     strong: "Earth", weak: "Fire" },
+  Earth: { labelKey: "dragon.elementsKr.Earth", color: "text-amber-300",   icon: Mountain, strong: "Water", weak: "Wood" },
+  Light: { labelKey: "dragon.elementsKr.Light", color: "text-yellow-200",  icon: Sun,      strong: "Dark",  weak: "Dark" },
+  Dark:  { labelKey: "dragon.elementsKr.Dark",  color: "text-violet-300",  icon: Moon,     strong: "Light", weak: "Light" },
 };
 
 // Build presets keyed by stat focus. Each preset carries a title, narrative
 // description, suggested gameplay tags, and a recommended-stat scalar so we
 // can pick a sensible default tab from the dragon's strongest attribute.
 type BuildKey = "ATK" | "DEF" | "HP" | "MP";
-const BUILD_PRESETS: Record<BuildKey, { title: string; desc: string; tags: string[] }> = {
-  ATK: {
-    title: "공격형 딜러",
-    desc: "선공으로 적의 체력을 빠르게 깎는 빌드. 공격 보조 장비를 우선 장착하고, 치명타·관통 옵션을 노려 단기전을 끝내세요.",
-    tags: ["선공", "치명타", "공격 버프"],
-  },
-  DEF: {
-    title: "방어형 탱커",
-    desc: "긴 교전을 버티며 아군을 보호하는 빌드. 피해 감소·도발 효과와 회복 장비를 조합해 전선을 유지하세요.",
-    tags: ["피해 감소", "도발", "회복"],
-  },
-  HP: {
-    title: "지속형 브루저",
-    desc: "높은 체력을 바탕으로 끈질기게 싸우는 빌드. 흡혈·재생 효과와 시너지가 좋아 장기전에서 유리합니다.",
-    tags: ["체력", "흡혈", "재생"],
-  },
-  MP: {
-    title: "마법형 캐스터",
-    desc: "MP를 활용한 스킬 위주 빌드. 마나 회복과 스킬 강화 장비를 권장하며, 원거리 견제로 거리를 유지하세요.",
-    tags: ["스킬", "마나", "원거리"],
-  },
-};
+function getBuildPresets(): Record<BuildKey, { title: string; desc: string; tags: string[] }> {
+  const tt = (k: string, fallback: string) => {
+    const v = i18n.t(`buildPresets.${k}`, { defaultValue: "" });
+    return v && typeof v === "string" ? v : fallback;
+  };
+  const tagList = (k: string, fb: string[]) => {
+    const v = i18n.t(`buildPresets.${k}`, { returnObjects: true, defaultValue: fb }) as unknown;
+    return Array.isArray(v) ? (v as string[]) : fb;
+  };
+  return {
+    ATK: {
+      title: tt("ATK.title", "Attacker"),
+      desc: tt("ATK.desc", "Burst-damage build focused on quick kills."),
+      tags: tagList("ATK.tags", ["First strike", "Crit", "ATK buff"]),
+    },
+    DEF: {
+      title: tt("DEF.title", "Tank"),
+      desc: tt("DEF.desc", "Soaks hits and protects allies."),
+      tags: tagList("DEF.tags", ["Mitigation", "Taunt", "Recovery"]),
+    },
+    HP: {
+      title: tt("HP.title", "Bruiser"),
+      desc: tt("HP.desc", "High-HP fighter that scales into late game."),
+      tags: tagList("HP.tags", ["HP", "Lifesteal", "Regen"]),
+    },
+    MP: {
+      title: tt("MP.title", "Caster"),
+      desc: tt("MP.desc", "MP-driven skill caster with ranged poke."),
+      tags: tagList("MP.tags", ["Skill", "Mana", "Ranged"]),
+    },
+  };
+}
 
 // Returns the build key whose normalized stat is highest — used as the
 // default selected tab so the modal opens on the dragon's natural strength.
@@ -203,7 +216,7 @@ export function DragonDetailModal({
             <h3 id="dragon-detail-title" className="truncate text-xl font-bold text-slate-100">{dragon.name}</h3>
             <div className={`mt-1 inline-flex items-center gap-1 rounded-full bg-slate-800/80 px-2 py-0.5 text-[11px] ${meta.color}`}>
               <ElIcon className="h-3 w-3" />
-              <span className="font-semibold">{meta.label} 속성</span>
+              <span className="font-semibold">{i18n.t("dragon.modal2.elementSuffix2", { label: i18n.t(meta.labelKey) })}</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -213,7 +226,7 @@ export function DragonDetailModal({
                   type="button"
                   onClick={onPrev}
                   disabled={!hasPrev}
-                  aria-label="이전 드래곤"
+                  aria-label={i18n.t("dragon.modal.prev")}
                   className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -222,7 +235,7 @@ export function DragonDetailModal({
                   type="button"
                   onClick={onNext}
                   disabled={!hasNext}
-                  aria-label="다음 드래곤"
+                  aria-label={i18n.t("dragon.modal.next")}
                   className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -231,7 +244,7 @@ export function DragonDetailModal({
             )}
             <button
               onClick={onClose}
-              aria-label="닫기"
+              aria-label={i18n.t("dragon.modal2.close")}
               className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
             >
               <X className="h-4 w-4" />
@@ -244,8 +257,8 @@ export function DragonDetailModal({
           <ExpGauge dragon={dragon} />
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">스탯</h4>
-              <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-mono font-bold text-amber-300">합계 {total}</span>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{i18n.t("dragon.modal.stats")}</h4>
+              <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-mono font-bold text-amber-300">{i18n.t("dragon.modal.totalSum", { sum: total })}</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {stats.map((s) => {
@@ -266,33 +279,33 @@ export function DragonDetailModal({
           </section>
 
           <section>
-            <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">속성 상성</h4>
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">{i18n.t("dragon.modal.elementMatchup")}</h4>
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
-                <p className="text-[10px] uppercase text-emerald-400/80">강함</p>
+                <p className="text-[10px] uppercase text-emerald-400/80">{i18n.t("dragon.modal2.strong")}</p>
                 <p className={`flex items-center gap-1 text-sm font-bold ${strongMeta.color}`}>
                   <strongMeta.icon className="h-3.5 w-3.5" />
-                  {strongMeta.label}
+                  {i18n.t(strongMeta.labelKey)}
                 </p>
               </div>
               <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2">
-                <p className="text-[10px] uppercase text-rose-400/80">약함</p>
+                <p className="text-[10px] uppercase text-rose-400/80">{i18n.t("dragon.modal2.weak")}</p>
                 <p className={`flex items-center gap-1 text-sm font-bold ${weakMeta.color}`}>
                   <weakMeta.icon className="h-3.5 w-3.5" />
-                  {weakMeta.label}
+                  {i18n.t(weakMeta.labelKey)}
                 </p>
               </div>
             </div>
           </section>
 
           <section>
-            <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">추천 빌드</h4>
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">{i18n.t("dragon.modal.recommendedBuild")}</h4>
             {/* Tab bar: one button per stat focus. The dragon's natural
                 strength is highlighted with a small badge so the user can
                 tell at a glance which preset matches its raw stats best. */}
             <div
               role="tablist"
-              aria-label="빌드 분류"
+              aria-label={i18n.t("dragon.modal.tabsLabel")}
               className="mb-2 grid grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1"
             >
               {stats.map((s) => {
@@ -319,7 +332,7 @@ export function DragonDetailModal({
                       <span
                         aria-hidden
                         className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400"
-                        title="기본 추천"
+                        title={i18n.t("dragon.modal2.naturalTip")}
                       />
                     )}
                   </button>
@@ -337,7 +350,7 @@ export function DragonDetailModal({
                 <p className="text-sm font-bold text-amber-200">{build.title}</p>
                 {naturalKey === buildTab && (
                   <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
-                    기본 추천
+                    {i18n.t("dragon.modal2.naturalBadge")}
                   </span>
                 )}
               </div>
@@ -361,7 +374,7 @@ export function DragonDetailModal({
             onClick={onClose}
             className="w-full rounded-xl bg-slate-800 py-2.5 text-sm font-bold text-slate-100 hover:bg-slate-700"
           >
-            닫기
+            {i18n.t("dragon.modal2.close")}
           </button>
         </div>
         </div>
@@ -390,6 +403,7 @@ export function DragonDetailModal({
  * - 잠금 시 회색 + 툴팁("드래곤 훈련소 공사 중") 표시.
  */
 export function TrainingSection({ dragon }: { dragon: Dragon }) {
+  const { t } = useTranslation();
   const { settings } = useAppSettings();
   const refetchDragons = useGameStore((s) => s.fetchDragons);
   const [busyStat, setBusyStat] = useState<string | null>(null);
@@ -405,7 +419,7 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
 
   const spend = async (stat: "atk" | "hp" | "def" | "mp") => {
     if (!dragon.uuid) {
-      toast.error("이 드래곤은 클라우드에 저장되어 있지 않습니다");
+      toast.error(t("dragon.bonding.notInCloud"));
       return;
     }
     setBusyStat(stat);
@@ -416,10 +430,10 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
     setBusyStat(null);
     if (error) {
       console.error("[training] spend failed:", error);
-      toast.error(`스탯 분배 실패: ${error.message}`);
+      toast.error(t("dragon.training.spendFailed", { msg: error.message, defaultValue: `Stat allocation failed: ${error.message}` }));
       return;
     }
-    toast.success(`${stat.toUpperCase()} 강화 완료!`);
+    toast.success(t("dragon.training.spendSuccess", { stat: stat.toUpperCase(), defaultValue: `${stat.toUpperCase()} upgraded!` }));
     void refetchDragons();
   };
 
@@ -427,7 +441,7 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
     <section>
       <div className="mb-2 flex items-center justify-between">
         <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
-          <Dumbbell className="h-3 w-3" /> 훈련소
+          <Dumbbell className="h-3 w-3" /> {t("dragon.modal.training")}
           {!open && <Lock className="h-3 w-3 text-slate-500" />}
         </h4>
         <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-mono font-bold text-amber-300">
@@ -435,7 +449,7 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
         </span>
       </div>
       <div className="mb-2 flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5">
-        <span className="text-[11px] text-slate-400">남은 스탯 포인트</span>
+        <span className="text-[11px] text-slate-400">{t("dragon.training.remainingPoints", { defaultValue: "Remaining stat points" })}</span>
         <span className="font-mono text-sm font-bold text-amber-300">{points}</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -447,7 +461,13 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
               type="button"
               onClick={() => spend(b.stat)}
               disabled={disabled}
-              title={!open ? "드래곤 훈련소 공사 중" : points < 1 ? "스탯 포인트 없음" : `${b.label} ${b.gain}`}
+              title={
+                !open
+                  ? t("dragon.training.closed", { defaultValue: "Training ground under construction" })
+                  : points < 1
+                    ? t("dragon.training.noPoints", { defaultValue: "No stat points" })
+                    : `${b.label} ${b.gain}`
+              }
               className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-bold transition ${
                 open
                   ? "border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
@@ -463,7 +483,7 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
         })}
       </div>
       {!open && (
-        <p className="mt-2 text-center text-[11px] text-slate-500">🔧 드래곤 훈련소 공사 중</p>
+        <p className="mt-2 text-center text-[11px] text-slate-500">🔧 {t("dragon.training.closed", { defaultValue: "Training ground under construction" })}</p>
       )}
     </section>
   );
@@ -650,6 +670,7 @@ function ExpGauge({ dragon }: { dragon: Dragon }) {
  * - 성공 시 EXP 게이지 위로 솟구치는 하트/스파크 VFX를 잠깐 띄운다.
  */
 export function BondingSection({ dragon }: { dragon: Dragon }) {
+  const { t } = useTranslation();
   const refetchDragons = useGameStore((s) => s.fetchDragons);
   const { qty, loading: invLoading } = useInventory();
   const tokens = qty("bonding_token");
@@ -657,17 +678,16 @@ export function BondingSection({ dragon }: { dragon: Dragon }) {
   const [vfx, setVfx] = useState(false);
 
   const bond = async () => {
-    if (!dragon.uuid) { toast.error("이 드래곤은 클라우드에 저장되어 있지 않습니다"); return; }
-    if (tokens < 1) { toast.error("교감의 증표가 부족합니다"); return; }
+    if (!dragon.uuid) { toast.error(t("dragon.bonding.notInCloud")); return; }
+    if (tokens < 1) { toast.error(t("dragon.modal.tokenLow")); return; }
     setBusy(true);
     const { error } = await supabase.rpc("bond_with_dragon", { _dragon_uuid: dragon.uuid });
     setBusy(false);
-    if (error) { toast.error(`교감 실패: ${error.message}`); return; }
+    if (error) { toast.error(t("dragon.bonding.bondFailed", { msg: error.message })); return; }
     setVfx(true);
-    // 인벤토리 / 카드 / EXP 게이지 모두 동기화
     emitInventoryChanged({ itemKey: "bonding_token", delta: -1 });
     emitBondSuccess({ dragonId: dragon.id, expGain: 500 });
-    toast.success(`${dragon.name}와(과)의 친밀도 상승! EXP +500`);
+    toast.success(t("dragon.bonding.bondSuccess", { name: dragon.name }));
     setTimeout(() => setVfx(false), 1200);
     await refetchDragons();
   };
@@ -678,10 +698,10 @@ export function BondingSection({ dragon }: { dragon: Dragon }) {
     <section className="relative">
       <div className="mb-2 flex items-center justify-between">
         <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-pink-300">
-          <HeartHandshake className="h-3.5 w-3.5" /> 교감하기
+          <HeartHandshake className="h-3.5 w-3.5" /> {t("dragon.bonding.title")}
         </h4>
         <span className="rounded-md bg-pink-500/15 px-2 py-0.5 text-[11px] font-mono font-bold text-pink-200">
-          교감의 증표 × {invLoading ? "…" : tokens}
+          {t("dragon.bonding.tokens", { n: invLoading ? "…" : tokens })}
         </span>
       </div>
       <button
@@ -691,7 +711,7 @@ export function BondingSection({ dragon }: { dragon: Dragon }) {
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-pink-500/40 bg-gradient-to-r from-pink-500/20 to-rose-500/20 px-3 py-3 text-sm font-extrabold text-pink-100 transition hover:from-pink-500/30 hover:to-rose-500/30 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-        {tokens < 1 ? "증표 부족 — 퀴즈 시련에서 획득" : "교감의 증표 소모하고 EXP +500"}
+        {tokens < 1 ? t("dragon.modal.needToken") : t("dragon.modal.useToken")}
       </button>
       {vfx && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
