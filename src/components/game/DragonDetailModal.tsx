@@ -179,7 +179,7 @@ export function DragonDetailModal({
   useEffect(() => {
     setBuildTab(naturalKey);
   }, [naturalKey]);
-  const build = BUILD_PRESETS[buildTab];
+  const build = getBuildPresets()[buildTab];
 
   const stats: { label: BuildKey; value: number; icon: typeof Swords; color: string; bg: string }[] = [
     { label: "ATK", value: dragon.atk, icon: Swords, color: "text-rose-300", bg: "bg-rose-500/20" },
@@ -356,9 +356,9 @@ export function DragonDetailModal({
               </div>
               <p className="mt-1 text-xs leading-relaxed text-slate-300">{build.desc}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {build.tags.map((t) => (
-                  <span key={t} className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
-                    #{t}
+                {build.tags.map((tag: string) => (
+                  <span key={tag} className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
+                    #{tag}
                   </span>
                 ))}
               </div>
