@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 import { MerlinStageView } from "./MerlinStageView";
@@ -18,36 +20,39 @@ interface MapNode {
   y: number;
 }
 
-const NODES: MapNode[] = [
-  {
-    id: 3,
-    title: "정령의 숲 보스",
-    subtitle: "최종 보스 · Puri",
-    kind: "boss",
-    enemyName: "Puri",
-    enemy: { id: 9003, name: "Puri", element: "Wood", hp: 90, maxHp: 90, mp: 60, atk: 60, def: 55 },
-    x: 50,
-    y: 12,
-  },
-  {
-    id: 2,
-    title: "꽃의 휴식처",
-    subtitle: "이벤트 · HP +30",
-    kind: "event",
-    x: 28,
-    y: 50,
-  },
-  {
-    id: 1,
-    title: "하늘의 무법자",
-    subtitle: "전투 · Spike",
-    kind: "battle",
-    enemyName: "Spike",
-    enemy: { id: 9001, name: "Spike", element: "Water", hp: 70, maxHp: 70, mp: 90, atk: 80, def: 20 },
-    x: 70,
-    y: 88,
-  },
-];
+function buildNodes(): MapNode[] {
+  return [
+    {
+      id: 3,
+      title: i18n.t("story.nodeBoss"),
+      subtitle: i18n.t("story.nodeBossSub"),
+      kind: "boss",
+      enemyName: "Puri",
+      enemy: { id: 9003, name: "Puri", element: "Wood", hp: 90, maxHp: 90, mp: 60, atk: 60, def: 55 },
+      x: 50,
+      y: 12,
+    },
+    {
+      id: 2,
+      title: i18n.t("story.nodeRest"),
+      subtitle: i18n.t("story.nodeRestSub"),
+      kind: "event",
+      x: 28,
+      y: 50,
+    },
+    {
+      id: 1,
+      title: i18n.t("story.nodeBattle"),
+      subtitle: i18n.t("story.nodeBattleSub"),
+      kind: "battle",
+      enemyName: "Spike",
+      enemy: { id: 9001, name: "Spike", element: "Water", hp: 70, maxHp: 70, mp: 90, atk: 80, def: 20 },
+      x: 70,
+      y: 88,
+    },
+  ];
+}
+const NODES: MapNode[] = buildNodes();
 
 // Edges connect adjacent nodes by id (ascending order: 1 → 2 → 3)
 const EDGES: Array<[number, number]> = [
@@ -66,12 +71,14 @@ const TOTAL_NODES = NODES.length;
  */
 type BannerDuration = 1500 | 3500 | "manual" | "off";
 const BANNER_DURATION_KEY = "story.bannerDuration";
-const BANNER_OPTIONS: Array<{ value: BannerDuration; label: string }> = [
-  { value: 1500, label: "1.5s" },
-  { value: 3500, label: "3.5s" },
-  { value: "manual", label: "수동" },
-  { value: "off", label: "끄기" },
-];
+function getBannerOptions(): Array<{ value: BannerDuration; label: string }> {
+  return [
+    { value: 1500, label: "1.5s" },
+    { value: 3500, label: "3.5s" },
+    { value: "manual", label: i18n.t("story.bannerManual") },
+    { value: "off", label: i18n.t("story.bannerOff") },
+  ];
+}
 
 function loadBannerDuration(): BannerDuration {
   if (typeof window === "undefined") return 3500;
@@ -100,6 +107,7 @@ function BattleResultBanner({
   result: BattleResultData | null;
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
   // Keep the last result around through the exit animation so we can render
   // it while it's animating out. Tracks the latest non-null content.
   const [shown, setShown] = useState<BattleResultData | null>(result);
@@ -151,18 +159,18 @@ function BattleResultBanner({
           <p className="leading-snug">
             <span className="font-bold">
               {shown.outcome === "win"
-                ? "승리!"
+                ? t("story.winText")
                 : shown.outcome === "draw"
-                  ? "무승부"
-                  : "패배..."}
+                  ? t("story.drawText")
+                  : t("story.loseText")}
             </span>{" "}
             {shown.nodeTitle}
             {shown.enemyName ? ` · ${shown.enemyName}` : ""}
-            {shown.outcome === "win" && " — 다음 노드로 진행합니다"}
+            {shown.outcome === "win" && t("story.winSuffix")}
           </p>
           <button
             onClick={onDismiss}
-            aria-label="배너 닫기"
+            aria-label={t("story.dismissBanner")}
             className="ml-auto rounded px-2 text-[10px] opacity-70 transition-opacity hover:opacity-100"
           >
             ✕
@@ -188,6 +196,7 @@ function nodeIcon(kind: NodeKind, cleared: boolean) {
 }
 
 export function StoryView() {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const { isTrainee, loading: ownedLoading, refetch: refetchOwned } = useOwnedDragons();
   const [stage1Done, setStage1Done] = useState(false);
@@ -343,9 +352,9 @@ export function StoryView() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
             <Skull className="h-8 w-8" />
           </div>
-          <h3 className="mt-3 text-xl font-bold text-rose-200">여정 실패</h3>
+          <h3 className="mt-3 text-xl font-bold text-rose-200">{t("story.defeatTitle")}</h3>
           <p className="mt-1 text-xs text-slate-400">
-            {selectedDragon.name}이(가) 쓰러졌습니다. 처음부터 다시 도전하세요.
+            {t("story.defeatDesc", { name: selectedDragon.name })}
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2 text-left">
             <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2">
@@ -380,7 +389,7 @@ export function StoryView() {
           }}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-rose-400"
         >
-          <RotateCcw className="h-4 w-4" /> 1단계부터 다시 시작
+          <RotateCcw className="h-4 w-4" /> {t("story.restart")}
         </button>
       </div>
     );
@@ -390,8 +399,8 @@ export function StoryView() {
   if (picker) {
     return (
       <div className="space-y-3">
-        <p className="text-xs uppercase tracking-widest text-slate-500">정령의 숲 여정</p>
-        <h2 className="text-xl font-bold text-slate-100">출전할 드래곤 선택</h2>
+        <p className="text-xs uppercase tracking-widest text-slate-500">{t("story.subtitle")}</p>
+        <h2 className="text-xl font-bold text-slate-100">{t("story.pickDragon")}</h2>
         <div className="grid gap-2">
           {dragons.map((d) => (
             <button
@@ -422,7 +431,7 @@ export function StoryView() {
           onClick={() => setPicker(false)}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
         >
-          취소
+          {t("story.cancelPick")}
         </button>
       </div>
     );
@@ -436,14 +445,14 @@ export function StoryView() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MapIcon className="h-5 w-5 text-amber-400" />
-          <h2 className="text-xl font-bold text-slate-100">Story · 여정의 맵</h2>
+          <h2 className="text-xl font-bold text-slate-100">{t("story.title")}</h2>
         </div>
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setShowBannerSettings((v) => !v)}
-            aria-label="배너 표시 설정"
+            aria-label={t("story.settingsLabel")}
             aria-expanded={showBannerSettings}
-            title="전투 결과 배너 표시 시간"
+            title={t("story.bannerDurationTitle")}
             className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] transition ${
               showBannerSettings
                 ? "border-amber-500/60 bg-amber-500/10 text-amber-200"
@@ -451,7 +460,14 @@ export function StoryView() {
             }`}
           >
             <Settings2 className="h-3 w-3" />
-            배너 {bannerDuration === "off" ? "끔" : bannerDuration === "manual" ? "수동" : `${bannerDuration / 1000}s`}
+            {t("story.bannerSetting", {
+              value:
+                bannerDuration === "off"
+                  ? t("story.bannerOff")
+                  : bannerDuration === "manual"
+                    ? t("story.bannerManual")
+                    : `${bannerDuration / 1000}s`,
+            })}
           </button>
           {run && selectedDragon && (
             <button
@@ -461,7 +477,7 @@ export function StoryView() {
               }}
               className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
             >
-              여정 포기
+              {t("story.abandon")}
             </button>
           )}
         </div>
@@ -471,21 +487,21 @@ export function StoryView() {
       {showBannerSettings && (
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-slate-200">전투 결과 배너 표시 시간</p>
+            <p className="text-[11px] font-semibold text-slate-200">{t("story.bannerDurationTitle")}</p>
             <button
               onClick={() => setShowBannerSettings(false)}
               className="rounded px-1 text-[10px] text-slate-500 hover:text-slate-300"
-              aria-label="설정 닫기"
+              aria-label={t("story.closeSettings")}
             >
               ✕
             </button>
           </div>
           <div
             role="radiogroup"
-            aria-label="배너 표시 시간"
+            aria-label={t("story.bannerDurationRadio")}
             className="mt-2 grid grid-cols-4 gap-1.5"
           >
-            {BANNER_OPTIONS.map((opt) => {
+            {getBannerOptions().map((opt) => {
               const active = bannerDuration === opt.value;
               return (
                 <button
@@ -505,7 +521,7 @@ export function StoryView() {
             })}
           </div>
           <p className="mt-2 text-[10px] text-slate-500">
-            "수동" 선택 시 배너는 직접 닫을 때까지 유지됩니다.
+            {t("story.bannerManualHint")}
           </p>
         </div>
       )}
@@ -516,7 +532,7 @@ export function StoryView() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-slate-100">{selectedDragon.name}</span>
             <span className="text-[10px] uppercase tracking-widest text-slate-500">
-              진행 {Math.min(run.visited.length, TOTAL_NODES)} / {TOTAL_NODES}
+              {t("story.progress", { cur: Math.min(run.visited.length, TOTAL_NODES), total: TOTAL_NODES })}
             </span>
           </div>
           <div key={gaugePulseKey} className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
@@ -573,7 +589,7 @@ export function StoryView() {
       {/* All-cleared banner */}
       {allCleared && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300">
-          <Crown className="h-4 w-4" /> 모든 노드를 클리어했습니다!
+          <Crown className="h-4 w-4" /> {t("story.allCleared")}
         </div>
       )}
 
@@ -583,7 +599,7 @@ export function StoryView() {
           onClick={() => setPicker(true)}
           className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
         >
-          여정 시작하기
+          {t("story.startJourney")}
         </button>
       )}
 
@@ -662,10 +678,10 @@ export function StoryView() {
             const locked = run ? node.id > activeNodeId : node.id !== FIRST_NODE_ID;
             const lockReason = locked
               ? !run
-                ? "여정을 시작하면 잠금이 해제됩니다"
-                : `이전 노드를 먼저 클리어하세요 (현재: ${activeNodeId}단계)`
+                ? t("story.lockedFirst")
+                : t("story.lockedPrev", { cur: activeNodeId })
               : cleared
-                ? "이미 클리어한 노드입니다"
+                ? t("story.alreadyCleared")
                 : "";
 
             const ring =
@@ -692,7 +708,7 @@ export function StoryView() {
                 // Heal +30 HP, no battle
                 const healed = Math.min(selectedDragon.maxHp, run.playerHp + 30);
                 applyRunUpdate({ hp: healed, clearNodeId: node.id });
-                setEventMessage(`Bella의 장미꽃 향기로 HP 30 회복! (${run.playerHp} → ${healed})`);
+                setEventMessage(t("story.eventHeal", { from: run.playerHp, to: healed }));
                 return;
               }
               // battle / boss → open battle
@@ -714,9 +730,9 @@ export function StoryView() {
                 style={{ left: `${node.x}%`, top: `${node.y}%` }}
                 aria-label={
                   locked
-                    ? `${node.title} — 잠김. ${lockReason}`
+                    ? t("story.lockedAria", { title: node.title, reason: lockReason })
                     : cleared
-                      ? `${node.title} — 클리어됨`
+                      ? t("story.clearedAria", { title: node.title })
                       : node.title
                 }
                 aria-disabled={locked && !cleared}
@@ -778,7 +794,7 @@ export function StoryView() {
                     className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-44 -translate-x-1/2 rounded-md border border-slate-700 bg-slate-950/95 px-2 py-1 text-center text-[10px] font-medium text-slate-200 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100"
                   >
                     <span className="flex items-center justify-center gap-1 text-slate-300">
-                      <Lock className="h-3 w-3" /> 잠긴 노드
+                      <Lock className="h-3 w-3" /> {t("story.lockedNode")}
                     </span>
                     <span className="mt-0.5 block text-slate-400">{lockReason}</span>
                   </span>
@@ -790,7 +806,7 @@ export function StoryView() {
       </div>
 
       <p className="text-center text-[10px] text-slate-500">
-        노드를 따라 위로 진행하세요 · 전투 종료 시 HP/MP는 그대로 유지됩니다
+        {t("story.footerHint")}
       </p>
     </div>
   );
