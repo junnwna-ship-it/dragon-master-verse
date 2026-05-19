@@ -141,6 +141,7 @@ function FeatureToggle({
 }
 
 export function AdminView() {
+  const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const customDragons = useGameStore((s) => s.customDragons);
   const addCustomDragon = useGameStore((s) => s.addCustomDragon);
@@ -382,7 +383,6 @@ export function AdminView() {
   }, [justUpdatedId]);
 
   if (!user) {
-    const t = i18n.t.bind(i18n);
     return (
       <div className="space-y-3 rounded-2xl border border-amber-700/50 bg-amber-900/20 p-4 text-sm text-amber-200">
         <div className="flex items-center gap-2 font-bold">
@@ -394,7 +394,6 @@ export function AdminView() {
       </div>
     );
   }
-  const t = i18n.t.bind(i18n);
 
   return (
     <div className="space-y-5">
