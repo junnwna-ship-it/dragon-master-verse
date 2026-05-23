@@ -598,7 +598,7 @@ export function TagBattleEngine({
       if (prevActive && !wasAlive) {
         pushLogs([
           {
-            text: `💀 [KO] ${label} 진영의 ${prevActive.base.name}이(가) 쓰러졌습니다!`,
+            text: t("battle.ko", { side: label, name: prevActive.base.name }),
             tone: "penalty",
           },
         ]);
@@ -607,7 +607,7 @@ export function TagBattleEngine({
       const remaining = next.members.filter((m) => m.engineHp > 0).length;
       pushLogs([
         {
-          text: `🔁 [자동 출전] ${label} 진영 - ${incoming.base.name} 등장! (남은 생존자 ${remaining}/3)`,
+          text: t("battle.autoEnter", { side: label, name: incoming.base.name, n: remaining }),
           tone: "system",
         },
       ]);
@@ -615,7 +615,7 @@ export function TagBattleEngine({
       // 더 이상 출전할 드래곤이 없음 = 진영 전멸
       pushLogs([
         {
-          text: `💀 [KO] ${label} 진영의 ${prevActive.base.name}이(가) 쓰러졌습니다! ${label} 진영 전멸!`,
+          text: t("battle.koWipe", { side: label, name: prevActive.base.name }),
           tone: "penalty",
         },
       ]);
@@ -861,15 +861,15 @@ export function TagBattleEngine({
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100">
-          3:3 Tag Battle
-          <span className="ml-2 text-xs font-normal text-slate-400">턴 {turnNumber}</span>
+          {t("battle.headerTag")}
+          <span className="ml-2 text-xs font-normal text-slate-400">{t("battle.turn", { n: turnNumber })}</span>
         </h2>
         {onExit && (
           <button
             onClick={onExit}
             className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-700"
           >
-            <Flag className="h-3 w-3" /> 종료
+            <Flag className="h-3 w-3" /> {t("battle.end")}
           </button>
         )}
       </div>
@@ -944,12 +944,12 @@ export function TagBattleEngine({
 
       {pickingSwap && (
         <p className="text-center text-[11px] text-amber-300">
-          교체할 대기석 드래곤을 선택하세요 (턴 소모) ·{" "}
+          {t("battle.pickSwap")}
           <button
             onClick={() => setPickingSwap(false)}
             className="underline-offset-2 hover:underline"
           >
-            취소
+            {t("battle.cancel")}
           </button>
         </p>
       )}
@@ -969,7 +969,7 @@ export function TagBattleEngine({
               onClick={handleAttack}
               disabled={turn !== "player" || pickingSwap}
               whileTap={{ scale: 0.92 }}
-              aria-label="공격"
+              aria-label={t("battle.ariaAttack")}
               className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-900/50 transition hover:bg-rose-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
               <Sword className="h-7 w-7" />
@@ -978,8 +978,8 @@ export function TagBattleEngine({
               onClick={handleSkill}
               disabled={!canSkill}
               whileTap={{ scale: 0.92 }}
-              title={`MP ${skillCost} 소모, RawDamage x1.5 (하드캡 유지)`}
-              aria-label={`특수 스킬 (-${skillCost} MP)`}
+              title={t("battle.skillTitle", { cost: skillCost })}
+              aria-label={t("battle.ariaSkill", { cost: skillCost })}
               className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white shadow-xl shadow-violet-900/50 transition hover:from-violet-400 hover:to-fuchsia-500 active:scale-95 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:shadow-none"
             >
               <Wand2 className="h-8 w-8" />
@@ -991,7 +991,7 @@ export function TagBattleEngine({
               onClick={() => setPickingSwap((v) => !v)}
               disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
               whileTap={{ scale: 0.92 }}
-              aria-label="교체"
+              aria-label={t("battle.ariaSwap")}
               className={`flex h-16 w-16 items-center justify-center rounded-full transition active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 ${
                 pickingSwap
                   ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-900/50 ring-2 ring-amber-200"
@@ -1004,7 +1004,7 @@ export function TagBattleEngine({
               onClick={handlePass}
               disabled={turn !== "player" || pickingSwap}
               whileTap={{ scale: 0.92 }}
-              aria-label="턴 넘기기"
+              aria-label={t("battle.ariaPass")}
               className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-slate-100 transition hover:bg-slate-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
             >
               <Zap className="h-7 w-7" />
@@ -1015,9 +1015,9 @@ export function TagBattleEngine({
 
       <div className="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-2 opacity-80">
         <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-slate-500">
-          <span>Battle Log</span>
+          <span>{t("battle.battleLog")}</span>
           <span className={turn === "player" ? "text-emerald-400" : "text-rose-400"}>
-            {winner ? "전투 종료" : turn === "player" ? "내 턴" : "상대 턴"}
+            {winner ? t("battle.battleEnded") : turn === "player" ? t("battle.myTurn") : t("battle.enemyTurn")}
           </span>
         </div>
         <div className="max-h-32 space-y-0.5 overflow-y-auto pr-1 text-xs leading-snug">
@@ -1071,30 +1071,28 @@ export function TagBattleEngine({
                 winner === "player" ? "text-amber-300" : "text-rose-300"
               }`}
             >
-              {winner === "player" ? "VICTORY" : "DEFEAT"}
+              {winner === "player" ? t("battle.victory") : t("battle.defeat")}
             </p>
             <p className="mt-1 text-sm text-slate-300">
-              {winner === "player"
-                ? "적 진영을 전멸시켰습니다!"
-                : "우리 진영이 전멸했습니다..."}
+              {winner === "player" ? t("battle.victoryDesc") : t("battle.defeatDesc")}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 p-2 text-left">
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">내 진영</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">{t("battle.myTeam")}</p>
                 <p className="font-mono text-sm text-emerald-300">
-                  생존 {pTeam.members.filter((m) => m.engineHp > 0).length}/3
+                  {t("battle.survivors", { n: pTeam.members.filter((m) => m.engineHp > 0).length })}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">적 진영</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">{t("battle.enemyTeam")}</p>
                 <p className="font-mono text-sm text-rose-300">
-                  생존 {eTeam.members.filter((m) => m.engineHp > 0).length}/3
+                  {t("battle.survivors", { n: eTeam.members.filter((m) => m.engineHp > 0).length })}
                 </p>
               </div>
               <div className="col-span-2">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">진행 턴</p>
-                <p className="font-mono text-sm text-slate-200">{turnNumber} 턴</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">{t("battle.turnsPlayed")}</p>
+                <p className="font-mono text-sm text-slate-200">{t("battle.turnsPlayedVal", { n: turnNumber })}</p>
               </div>
             </div>
 
@@ -1109,15 +1107,15 @@ export function TagBattleEngine({
                   }`}
                 >
                   {autoExitEnabled && countdown != null
-                    ? `돌아가기 (${countdown}s)`
-                    : "돌아가기"}
+                    ? t("battle.backCountdown", { n: countdown })
+                    : t("battle.back")}
                 </button>
                 {autoExitMs > 0 && (
                   <button
                     onClick={() => setAutoExitEnabled((v) => !v)}
                     className="text-[10px] text-slate-400 underline-offset-2 hover:underline"
                   >
-                    {autoExitEnabled ? "자동 돌아가기 취소" : "자동 돌아가기 활성화"}
+                    {autoExitEnabled ? t("battle.autoBackOff") : t("battle.autoBackOn")}
                   </button>
                 )}
               </div>
