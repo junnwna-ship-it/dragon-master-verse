@@ -615,6 +615,8 @@
       "poison": "독",
       "rage": "격노"
     },
+    "defTooltip": "기본 DEF {{base}} → 현재 {{cur}} (디버프 {{pct}}%)",
+    "defStackTooltip": "방어 디버프 스택 {{n}}/3 — 남은 {{remaining}}회 적용 가능",
     "log": {
       "skill": "[특수 스킬] {{name}}이(가) MP {{spent}} 소모하여 스킬 발동! (MaxMp 20%)",
       "exhaustion": "[탈진] {{name}}의 MP 고갈 — ATK/DEF 50% 감소",
