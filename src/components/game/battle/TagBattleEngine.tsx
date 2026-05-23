@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
@@ -82,14 +83,13 @@ function autoAdvance(t: Team): { team: Team; advancedTo: number | null } {
  * 회복 발생 시 로그 항목도 함께 반환한다.
  */
 function tickBenchMp(t: Team): { team: Team; logs: Omit<LogEntry, "id">[] } {
-  const i18nMod = require("@/i18n").default as typeof import("@/i18n").default;
   const logs: Omit<LogEntry, "id">[] = [];
   const members = t.members.map((m, i) => {
     if (i === t.activeIdx) return m;
     const { next, recovered } = recoverBenchMp(m);
     if (recovered > 0) {
       logs.push({
-        text: i18nMod.t("battle.benchRecover", {
+        text: i18n.t("battle.benchRecover", {
           name: m.base.name,
           n: recovered,
           pct: Math.round(MP_BENCH_RECOVER_PCT * 100),
