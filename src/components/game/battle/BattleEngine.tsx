@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Heart, Droplet, Sword, Shield, Zap, BatteryWarning, Flag, Sparkles, Skull, Flame } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 import {
@@ -43,6 +44,7 @@ function uiHp(c: Combatant): number {
 }
 
 function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" }) {
+  const { t } = useTranslation();
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
   const mpPct = Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100));
@@ -60,17 +62,17 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
         <h3 className="text-sm font-bold text-slate-100">{c.base.name}</h3>
         {c.exhausted && (
           <span className="flex items-center gap-1 rounded-full border border-rose-500/50 bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-300">
-            <BatteryWarning className="h-3 w-3" /> 탈진
+            <BatteryWarning className="h-3 w-3" /> {t("battle.tag.exhausted")}
           </span>
         )}
         {c.poisoned && (
           <span className="flex items-center gap-1 rounded-full border border-purple-500/50 bg-purple-500/15 px-2 py-0.5 text-[10px] font-bold text-purple-300">
-            <Skull className="h-3 w-3" /> 독
+            <Skull className="h-3 w-3" /> {t("battle.tag.poison")}
           </span>
         )}
         {c.rageUsed && c.base.name === "Younigon" && (
           <span className="flex items-center gap-1 rounded-full border border-orange-500/60 bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300">
-            <Flame className="h-3 w-3" /> 격노
+            <Flame className="h-3 w-3" /> {t("battle.tag.rage")}
           </span>
         )}
       </div>
@@ -126,6 +128,7 @@ export function BattleEngine({
   initialPlayerMp,
   autoExitMs = 1000,
 }: BattleEngineProps) {
+  const { t } = useTranslation();
   const [pState, setPState] = useState<Combatant>(() => {
     const c = makeCombatant(player);
     // initialPlayerHp/Mp는 UI 단위. 엔진으로 변환.
@@ -144,7 +147,11 @@ export function BattleEngine({
   const [turn, setTurn] = useState<"player" | "enemy">("player");
   const [turnNumber, setTurnNumber] = useState(1);
   const [logs, setLogs] = useState<LogEntry[]>([
-    { id: 0, text: `${context === "pvp" ? "PvP" : "Story"} 전투 개시! (15턴 룰 적용)`, tone: "system" },
+    {
+      id: 0,
+      text: t("battle.openLog", { context: context === "pvp" ? t("battle.openLogPvp") : t("battle.openLogStory") }),
+      tone: "system",
+    },
   ]);
   const logIdRef = useRef(1);
   const reportedRef = useRef(false);
@@ -285,7 +292,7 @@ export function BattleEngine({
 
         // 15턴 룰 검사
         if (turnNumber >= 15) {
-          pushLogs([{ text: `[15턴 룰] 시간 초과 — 무승부!`, tone: "system" }]);
+          pushLogs([{ text: t("battle.fifteenTurnDraw"), tone: "system" }]);
           setDrawByTimeout(true);
           return;
         }
@@ -306,15 +313,15 @@ export function BattleEngine({
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100">
-          {context === "pvp" ? "PvP Arena" : "Story Battle"}
-          <span className="ml-2 text-xs font-normal text-slate-400">턴 {turnNumber}/15</span>
+          {context === "pvp" ? t("battle.header1v1Pvp") : t("battle.header1v1Story")}
+          <span className="ml-2 text-xs font-normal text-slate-400">{t("battle.turnOfMax", { n: turnNumber, max: 15 })}</span>
         </h2>
         {onExit && (
           <button
             onClick={onExit}
             className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-700"
           >
-            <Flag className="h-3 w-3" /> 종료
+            <Flag className="h-3 w-3" /> {t("battle.end")}
           </button>
         )}
       </div>
@@ -328,7 +335,7 @@ export function BattleEngine({
       {winner ? (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 text-center">
           <p className="text-sm font-bold text-amber-300">
-            {winner === "draw" ? "무승부" : winner === "player" ? "승리!" : "패배..."}
+            {winner === "draw" ? t("battle.draw") : winner === "player" ? t("battle.win") : t("battle.lose")}
           </p>
           {onExit && (
             <div className="mt-2 flex flex-col items-center gap-1.5">
@@ -337,15 +344,15 @@ export function BattleEngine({
                 className="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400"
               >
                 {autoExitEnabled && countdown != null
-                  ? `돌아가기 (${countdown}s)`
-                  : "돌아가기"}
+                  ? t("battle.backCountdown", { n: countdown })
+                  : t("battle.back")}
               </button>
               {autoExitMs > 0 && (
                 <button
                   onClick={() => setAutoExitEnabled((v) => !v)}
                   className="text-[10px] text-amber-300/80 underline-offset-2 hover:underline"
                 >
-                  {autoExitEnabled ? "자동 돌아가기 취소" : "자동 돌아가기 활성화"}
+                  {autoExitEnabled ? t("battle.autoBackOff") : t("battle.autoBackOn")}
                 </button>
               )}
             </div>
@@ -358,23 +365,23 @@ export function BattleEngine({
             disabled={turn !== "player"}
             className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-4 text-base font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
           >
-            <Sword className="h-5 w-5" /> 공격
+            <Sword className="h-5 w-5" /> {t("battle.btnAttack")}
           </button>
           <button
             onClick={handlePassTurn}
             disabled={turn !== "player"}
             className="flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-4 text-base font-bold text-slate-100 transition hover:bg-slate-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
           >
-            <Zap className="h-5 w-5" /> 턴 넘기기
+            <Zap className="h-5 w-5" /> {t("battle.btnPass")}
           </button>
         </div>
       )}
 
       <div className="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-2 opacity-80">
         <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-slate-500">
-          <span>Battle Log</span>
+          <span>{t("battle.battleLog")}</span>
           <span className={turn === "player" ? "text-emerald-400" : "text-rose-400"}>
-            {winner ? "전투 종료" : turn === "player" ? "내 턴" : "상대 턴"}
+            {winner ? t("battle.battleEnded") : turn === "player" ? t("battle.myTurn") : t("battle.enemyTurn")}
           </span>
         </div>
         <div className="max-h-32 space-y-0.5 overflow-y-auto pr-1 text-xs leading-snug">

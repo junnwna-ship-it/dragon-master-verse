@@ -1,4 +1,5 @@
 import type { Dragon, Element } from "@/store/dragons";
+import i18n from "@/i18n";
 
 // 5행 원소: Wood, Soil(=Earth), Water, Fire, Metal
 // store의 Light/Dark는 5행으로 정규화: Light→Metal, Dark→Soil
@@ -122,7 +123,7 @@ export function hpPercent(c: Combatant): number {
  * 형식: `[<이벤트>] <이름> DEF <prev>→<next> (<±delta>, <±pct>%) | 스택 <prev>/3 → <next>/3 (남은 <N>회)`
  */
 export function formatDefChangeLog(
-  event: "원소 공포" | "디버프 감쇠" | "디버프 캡",
+  event: "fear" | "decay" | "cap",
   c: Combatant,
   prevStacks: number,
   prevDef: number,
@@ -132,12 +133,23 @@ export function formatDefChangeLog(
   const deltaDef = newDef - prevDef;
   const deltaPct = (newStacks - prevStacks) * 10; // 스택 +1 = -10%, -1 = +10%
   const sign = deltaDef >= 0 ? "+" : "";
-  const pctSign = deltaPct >= 0 ? "+" : ""; // 스택이 줄면 양수(=DEF 회복)
   // 스택 표기 방향을 통일하기 위해 부호 반전: 스택 증가는 -%, 감소는 +%
   const dispPct = -deltaPct;
   const dispSign = dispPct >= 0 ? "+" : "";
   const remaining = Math.max(0, 3 - newStacks);
-  return `[${event}] ${c.base.name} DEF ${prevDef}→${newDef} (${sign}${deltaDef}, ${dispSign}${dispPct}%) | 스택 ${prevStacks}/3 → ${newStacks}/3 (남은 ${remaining}회)`;
+  return i18n.t("battle.log.defChange", {
+    event: i18n.t(`battle.log.defEvent.${event}`),
+    name: c.base.name,
+    prevDef,
+    newDef,
+    sign,
+    deltaDef,
+    pctSign: dispSign,
+    pct: dispPct,
+    prevStacks,
+    newStacks,
+    remaining,
+  });
 }
 
 export interface AttackResult {
@@ -170,12 +182,12 @@ export function performAttack(
     const { next, spent } = spendPctMp(attacker, MP_SKILL_COST_PCT);
     attacker = next;
     logs.push({
-      text: `[특수 스킬] ${attacker.base.name}이(가) MP ${spent} 소모하여 스킬 발동! (MaxMp 20%)`,
+      text: i18n.t("battle.log.skill", { name: attacker.base.name, spent }),
       tone: "info",
     });
     if (attacker.exhausted) {
       logs.push({
-        text: `[탈진] ${attacker.base.name}의 MP 고갈 — ATK/DEF 50% 감소`,
+        text: i18n.t("battle.log.exhaustion", { name: attacker.base.name }),
         tone: "penalty",
       });
     }
@@ -184,7 +196,7 @@ export function performAttack(
   // ----- Snowy: 짝수 턴 회피율 30% 부여 (방어자가 Snowy일 때) -----
   if (defender.base.name === "Snowy" && ctx.turnNumber % 2 === 0) {
     if (Math.random() < 0.3) {
-      logs.push({ text: `[회피] ${defender.base.name}이(가) 공격을 회피했습니다!`, tone: "system" });
+      logs.push({ text: i18n.t("battle.log.dodge", { name: defender.base.name }), tone: "system" });
       return { attacker, defender, logs, dodged: true };
     }
   }
@@ -202,13 +214,13 @@ export function performAttack(
   if (ctx.skill) {
     const before = raw;
     raw = Math.round(raw * SKILL_RAW_MULT);
-    logs.push({ text: `[스킬 증폭] RawDamage ${before} → ${raw} (x1.5)`, tone: "info" });
+    logs.push({ text: i18n.t("battle.log.skillAmp", { before, after: raw }), tone: "info" });
   }
 
   // Snowy: 짝수 턴 자신이 가하는 데미지 20% 감소
   if (attacker.base.name === "Snowy" && ctx.turnNumber % 2 === 0) {
     raw = Math.round(raw * 0.8);
-    logs.push({ text: `[빙결의 신중함] Snowy의 공격이 20% 약화되었습니다`, tone: "system" });
+    logs.push({ text: i18n.t("battle.log.snowyWeaken"), tone: "system" });
   }
 
   // Hard cap: defender.engineMaxHp * 22% (체감 데미지 상향, 5턴 보장 유지)
@@ -216,7 +228,7 @@ export function performAttack(
   let dmg = Math.min(raw, cap);
 
   logs.push({
-    text: `${attacker.base.name}의 공격! (raw ${raw}, cap ${cap} → ${dmg})`,
+    text: i18n.t("battle.log.attack", { name: attacker.base.name, raw, cap, dmg }),
     tone: "info",
   });
 
@@ -230,7 +242,7 @@ export function performAttack(
     reflect = dmg - halved;
     dmg = halved;
     logs.push({
-      text: `[상성 반사] 데미지 50% 삭감, 공격자에게 ${reflect} 반사`,
+      text: i18n.t("battle.log.reflect", { n: reflect }),
       tone: "penalty",
     });
     // 패시브 발동 비용 (MaxMp 5%)
@@ -239,7 +251,7 @@ export function performAttack(
       attacker = next;
       if (spent > 0) {
         logs.push({
-          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          text: i18n.t("battle.log.passiveSpend", { name: attacker.base.name, spent }),
           tone: "system",
         });
       }
@@ -251,13 +263,13 @@ export function performAttack(
       const newDef = Math.max(0, Math.round(attacker.base.def * (1 - newStacks * 0.1)));
       attacker = { ...attacker, defDebuffStacks: newStacks, engineDef: newDef };
       logs.push({
-        text: formatDefChangeLog("원소 공포", attacker, prevStacks, prevDef, newStacks, newDef),
+        text: formatDefChangeLog("fear", attacker, prevStacks, prevDef, newStacks, newDef),
         tone: "penalty",
       });
     } else {
       // 캡 도달 — 변화 없음을 동일 포맷으로 표기
       logs.push({
-        text: formatDefChangeLog("디버프 캡", attacker, 3, attacker.engineDef, 3, attacker.engineDef),
+        text: formatDefChangeLog("cap", attacker, 3, attacker.engineDef, 3, attacker.engineDef),
         tone: "system",
       });
     }
@@ -268,7 +280,7 @@ export function performAttack(
       attacker = next;
       if (spent > 0) {
         logs.push({
-          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          text: i18n.t("battle.log.passiveSpend", { name: attacker.base.name, spent }),
           tone: "system",
         });
       }
@@ -276,7 +288,7 @@ export function performAttack(
     if (attacker.atkBuffStacks < 3) {
       attacker = { ...attacker, atkBuffStacks: attacker.atkBuffStacks + 1 };
       logs.push({
-        text: `[원소 각성] ${attacker.base.name}의 공격력이 상승했습니다! (스택 ${attacker.atkBuffStacks}/3)`,
+        text: i18n.t("battle.log.awaken", { name: attacker.base.name, n: attacker.atkBuffStacks }),
         tone: "info",
       });
       // 영구 ATK 상승 (격노 적용된 base 유지 위해 engineAtk에 5% 가산)
@@ -289,7 +301,7 @@ export function performAttack(
     const before = dmg;
     dmg = Math.round(dmg * 0.9);
     logs.push({
-      text: `[금속 보호막] Comi가 피해를 10% 경감 (${before}→${dmg})`,
+      text: i18n.t("battle.log.comiShield", { before, after: dmg }),
       tone: "system",
     });
     // 패시브 발동 비용 (방어자, MaxMp 5%)
@@ -297,7 +309,7 @@ export function performAttack(
     defender = next;
     if (spent > 0) {
       logs.push({
-        text: `[패시브 소모] ${defender.base.name} MP -${spent} (MaxMp 5%)`,
+        text: i18n.t("battle.log.passiveSpend", { name: defender.base.name, spent }),
         tone: "system",
       });
     }
@@ -305,7 +317,12 @@ export function performAttack(
 
   defender.engineHp = Math.max(0, defender.engineHp - dmg);
   logs.push({
-    text: `${defender.base.name} -${dmg} HP (${defender.engineHp}/${defender.engineMaxHp})`,
+    text: i18n.t("battle.log.hpDelta", {
+      name: defender.base.name,
+      dmg,
+      hp: defender.engineHp,
+      max: defender.engineMaxHp,
+    }),
     tone: "damage",
   });
 
@@ -317,13 +334,13 @@ export function performAttack(
   if (attacker.base.name === "Caminont" && !defender.poisoned) {
     if (Math.random() < 0.5) {
       defender = { ...defender, poisoned: true };
-      logs.push({ text: `[중독] ${defender.base.name}이(가) 독에 걸렸습니다`, tone: "penalty" });
+      logs.push({ text: i18n.t("battle.log.poisoned", { name: defender.base.name }), tone: "penalty" });
       // 패시브 발동 비용 (공격자, MaxMp 5%)
       const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
       attacker = next;
       if (spent > 0) {
         logs.push({
-          text: `[패시브 소모] ${attacker.base.name} MP -${spent} (MaxMp 5%)`,
+          text: i18n.t("battle.log.passiveSpend", { name: attacker.base.name, spent }),
           tone: "system",
         });
       }
@@ -342,12 +359,12 @@ export function onTurnStart(c: Combatant): { next: Combatant; logs: Omit<LogEntr
   if (next.base.name === "Bella" && next.engineHp > 0 && next.engineHp < next.engineMaxHp * 0.5) {
     const heal = Math.round(next.engineMaxHp * 0.05);
     next.engineHp = Math.min(next.engineMaxHp, next.engineHp + heal);
-    logs.push({ text: `[가호의 물결] Bella가 ${heal} HP 회복`, tone: "system" });
+    logs.push({ text: i18n.t("battle.log.bellaHeal", { heal }), tone: "system" });
     const { next: afterCost, spent } = spendPctMp(next, MP_PASSIVE_PCT);
     next = afterCost;
     if (spent > 0) {
       logs.push({
-        text: `[패시브 소모] ${next.base.name} MP -${spent} (MaxMp 5%)`,
+        text: i18n.t("battle.log.passiveSpend", { name: next.base.name, spent }),
         tone: "system",
       });
     }
@@ -371,7 +388,12 @@ export function endTurnDrain(
   let opponent: Combatant = { ...opponentIn };
 
   logs.push({
-    text: `${self.base.name}의 MP -${turnDrain} (MaxMp 5%, 잔량 ${Math.max(0, self.mp)}/${self.maxMp})`,
+    text: i18n.t("battle.log.turnDrain", {
+      name: self.base.name,
+      drain: turnDrain,
+      mp: Math.max(0, self.mp),
+      max: self.maxMp,
+    }),
     tone: "system",
   });
 
@@ -384,7 +406,7 @@ export function endTurnDrain(
     const newDef = Math.max(0, Math.round(c.base.def * (1 - newStacks * 0.1)));
     const next = { ...c, defDebuffStacks: newStacks, engineDef: newDef };
     logs.push({
-      text: formatDefChangeLog("디버프 감쇠", next, prevStacks, prevDef, newStacks, newDef),
+      text: formatDefChangeLog("decay", next, prevStacks, prevDef, newStacks, newDef),
       tone: "system",
     });
     return next;
@@ -395,7 +417,7 @@ export function endTurnDrain(
   if (self.mp <= 0 && !self.exhausted) {
     self.exhausted = true;
     logs.push({
-      text: `[탈진] ${self.base.name}의 MP 고갈 — ATK/DEF 50% 감소`,
+      text: i18n.t("battle.log.exhaustion", { name: self.base.name }),
       tone: "penalty",
     });
   }
@@ -404,7 +426,7 @@ export function endTurnDrain(
   if (self.poisoned && self.engineHp > 0) {
     const poisonDmg = Math.round(self.engineMaxHp * 0.03);
     self.engineHp = Math.max(0, self.engineHp - poisonDmg);
-    logs.push({ text: `[독] ${self.base.name}이(가) ${poisonDmg} 피해 (하드캡 무시)`, tone: "penalty" });
+    logs.push({ text: i18n.t("battle.log.poisonTick", { name: self.base.name, dmg: poisonDmg }), tone: "penalty" });
   }
 
   // Elia: 매 3턴째 턴 종료 시 적 MP 15% 흡수
@@ -414,14 +436,14 @@ export function endTurnDrain(
       opponent = { ...opponent, mp: Math.max(0, opponent.mp - drained) };
       self.mp = Math.min(self.maxMp, self.mp + drained);
       logs.push({
-        text: `[수류 흡수] Elia가 ${opponent.base.name}의 MP ${drained}을 흡수`,
+        text: i18n.t("battle.log.eliaDrain", { name: opponent.base.name, n: drained }),
         tone: "system",
       });
       const { next: afterCost, spent } = spendPctMp(self, MP_PASSIVE_PCT);
       self = afterCost;
       if (spent > 0) {
         logs.push({
-          text: `[패시브 소모] ${self.base.name} MP -${spent} (MaxMp 5%)`,
+          text: i18n.t("battle.log.passiveSpend", { name: self.base.name, spent }),
           tone: "system",
         });
       }
@@ -432,12 +454,12 @@ export function endTurnDrain(
   if (self.base.name === "Younigon" && !self.rageUsed && self.engineHp > 0 && self.engineHp <= self.engineMaxHp * 0.3) {
     self.rageUsed = true;
     self.engineAtk = Math.round(self.engineAtk * 1.5);
-    logs.push({ text: `[화염 격노] Younigon의 공격력이 1.5배로 증폭!`, tone: "penalty" });
+    logs.push({ text: i18n.t("battle.log.younigonRage"), tone: "penalty" });
     const { next: afterCost, spent } = spendPctMp(self, MP_PASSIVE_PCT);
     self = afterCost;
     if (spent > 0) {
       logs.push({
-        text: `[패시브 소모] ${self.base.name} MP -${spent} (MaxMp 5%)`,
+        text: i18n.t("battle.log.passiveSpend", { name: self.base.name, spent }),
         tone: "system",
       });
     }
