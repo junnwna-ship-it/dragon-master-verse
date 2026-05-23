@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
@@ -81,13 +82,18 @@ function autoAdvance(t: Team): { team: Team; advancedTo: number | null } {
  * 회복 발생 시 로그 항목도 함께 반환한다.
  */
 function tickBenchMp(t: Team): { team: Team; logs: Omit<LogEntry, "id">[] } {
+  const i18nMod = require("@/i18n").default as typeof import("@/i18n").default;
   const logs: Omit<LogEntry, "id">[] = [];
   const members = t.members.map((m, i) => {
     if (i === t.activeIdx) return m;
     const { next, recovered } = recoverBenchMp(m);
     if (recovered > 0) {
       logs.push({
-        text: `[벤치 회복] ${m.base.name} MP +${recovered} (MaxMp ${Math.round(MP_BENCH_RECOVER_PCT * 100)}%)`,
+        text: i18nMod.t("battle.benchRecover", {
+          name: m.base.name,
+          n: recovered,
+          pct: Math.round(MP_BENCH_RECOVER_PCT * 100),
+        }),
         tone: "system",
       });
     }
@@ -202,6 +208,7 @@ function ActivePanel({
   /** 스킬 시전 중인 공격자: 화면 중앙으로 zoom + 확대 */
   cinematic?: boolean;
 }) {
+  const { t } = useTranslation();
   const stats = effectiveStats(c);
   const hpPct = hpPercent(c);
   const mpPct = Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100));
@@ -300,17 +307,17 @@ function ActivePanel({
         <h3 className="text-sm font-extrabold text-slate-100">{c.base.name}</h3>
         {c.exhausted && (
           <span className="flex items-center gap-0.5 rounded-full border border-rose-500/50 bg-rose-500/15 px-1 py-0 text-[9px] font-bold text-rose-300">
-            <BatteryWarning className="h-2.5 w-2.5" /> 탈진
+            <BatteryWarning className="h-2.5 w-2.5" /> {t("battle.tag.exhausted")}
           </span>
         )}
         {c.poisoned && (
           <span className="flex items-center gap-0.5 rounded-full border border-purple-500/50 bg-purple-500/15 px-1 py-0 text-[9px] font-bold text-purple-300">
-            <Skull className="h-2.5 w-2.5" /> 독
+            <Skull className="h-2.5 w-2.5" /> {t("battle.tag.poison")}
           </span>
         )}
         {c.rageUsed && c.base.name === "Younigon" && (
           <span className="flex items-center gap-0.5 rounded-full border border-orange-500/60 bg-orange-500/15 px-1 py-0 text-[9px] font-bold text-orange-300">
-            <Flame className="h-2.5 w-2.5" /> 격노
+            <Flame className="h-2.5 w-2.5" /> {t("battle.tag.rage")}
           </span>
         )}
       </div>
@@ -395,6 +402,7 @@ export function TagBattleEngine({
   onResolved,
   autoExitMs = 1500,
 }: TagBattleEngineProps) {
+  const { t } = useTranslation();
   const [pTeam, setPTeam] = useState<Team>(() => buildTeam(playerDeck));
   const [eTeam, setETeam] = useState<Team>(() => buildTeam(enemyDeck));
   const [turn, setTurn] = useState<"player" | "enemy">("player");
@@ -403,7 +411,9 @@ export function TagBattleEngine({
   const [logs, setLogs] = useState<LogEntry[]>([
     {
       id: 0,
-      text: `${context === "pvp" ? "PvP" : "Story"} 3:3 태그 배틀 개시!`,
+      text: t("battle.tagOpenLog", {
+        context: context === "pvp" ? t("battle.openLogPvp") : t("battle.openLogStory"),
+      }),
       tone: "system",
     },
   ]);
@@ -487,7 +497,7 @@ export function TagBattleEngine({
     }, 500);
   };
   /** 큰 데미지 임팩트: 화면 전체 흔들림 + 의성어. */
-  const playBigImpact = (target: "player" | "enemy", word = "콰광!") => {
+  const playBigImpact = (target: "player" | "enemy", word = t("battle.ono.boom")) => {
     setScreenShakeKey((k) => k + 1);
     triggerEffect(target, "burst", 3);
     popOno(word, "boom");
@@ -634,14 +644,14 @@ export function TagBattleEngine({
     if (selfActive.poisoned && drained.self.engineHp < selfActive.engineHp) {
       const poisonTarget: "player" | "enemy" = actor === "player" ? "player" : "enemy";
       triggerEffect(poisonTarget, "poison");
-      popOno("치익-", "hiss");
+      popOno(t("battle.ono.hiss"), "hiss");
     }
 
     let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
     let nextOppTeam = setActive(oppTeam, oppTeam.activeIdx, drained.opponent);
 
-    nextSelfTeam = advanceIfDead(nextSelfTeam, actor === "player" ? "내" : "적");
-    nextOppTeam = advanceIfDead(nextOppTeam, actor === "player" ? "적" : "내");
+    nextSelfTeam = advanceIfDead(nextSelfTeam, actor === "player" ? t("battle.sideMine") : t("battle.sideEnemy"));
+    nextOppTeam = advanceIfDead(nextOppTeam, actor === "player" ? t("battle.sideEnemy") : t("battle.sideMine"));
 
     {
       const r1 = tickBenchMp(nextSelfTeam);
@@ -707,7 +717,7 @@ export function TagBattleEngine({
     const reflect = Math.max(0, a.engineHp - r.attacker.engineHp);
     setTimeout(() => {
       playAttackFx("player", dmgDealt, true, a.base.element);
-      if (dmgDealt > 0) playBigImpact("enemy", "콰광!");
+      if (dmgDealt > 0) playBigImpact("enemy", t("battle.ono.boom"));
     }, 320);
     if (reflect > 0) popDamage("player", reflect);
     const nextP = setActive(curP, curP.activeIdx, r.attacker);
@@ -722,7 +732,7 @@ export function TagBattleEngine({
     const target = curP.members[idx];
     if (!target || target.engineHp <= 0) return;
     pushLogs([
-      { text: `[교체] ${curP.members[curP.activeIdx].base.name} → ${target.base.name}`, tone: "system" },
+      { text: t("battle.swap", { from: curP.members[curP.activeIdx].base.name, to: target.base.name }), tone: "system" },
     ]);
     setPickingSwap(false);
     const swapped: Team = { ...curP, activeIdx: idx };
