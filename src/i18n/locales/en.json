@@ -615,6 +615,8 @@
       "poison": "Poison",
       "rage": "Rage"
     },
+    "defTooltip": "Base DEF {{base}} → current {{cur}} (debuff {{pct}}%)",
+    "defStackTooltip": "Def debuff stack {{n}}/3 — {{remaining}} more applicable",
     "log": {
       "skill": "[Skill] {{name}} spent {{spent}} MP to cast a skill! (MaxMp 20%)",
       "exhaustion": "[Exhaustion] {{name}} is out of MP — ATK/DEF -50%",
