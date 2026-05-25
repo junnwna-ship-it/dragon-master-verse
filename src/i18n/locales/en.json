@@ -69,7 +69,9 @@
     "loggedInToast": "Signed in",
     "errorGeneric": "Something went wrong",
     "switchToSignup": "No account? Sign up",
-    "switchToSignin": "Already have an account? Sign in"
+    "switchToSignin": "Already have an account? Sign in",
+    "google": "Continue with Google",
+    "orDivider": "or"
   },
   "shop": {
     "title": "Shop",
