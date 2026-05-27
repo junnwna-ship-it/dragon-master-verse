@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Returns N random quizzes (default 3) without revealing the correct answer
@@ -13,8 +14,10 @@ export const fetchQuizSet = createServerFn({ method: "POST" })
     return { count: Math.min(10, Math.max(1, Number(d.count ?? 3))) };
   })
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: rows, error } = await supabase
+    void context;
+    // Use service-role client: quizzes are admin-only via RLS so players
+    // can't read answer_index directly. Server-side selection is safe.
+    const { data: rows, error } = await supabaseAdmin
       .from("quizzes")
       .select("id, question, choices, answer_index");
     if (error) throw new Error(error.message);
@@ -50,9 +53,8 @@ export const gradeAndReward = createServerFn({ method: "POST" })
     return { picks: d.picks };
   })
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
     const ids = data.picks.map((p) => p.quizId);
-    const { data: rows, error } = await supabase
+    const { data: rows, error } = await supabaseAdmin
       .from("quizzes")
       .select("id, answer_index")
       .in("id", ids);
@@ -62,6 +64,9 @@ export const gradeAndReward = createServerFn({ method: "POST" })
       const row = rows?.find((r) => r.id === p.quizId);
       if (row && row.answer_index === p.pick) correct++;
     }
+    // Reward must be credited to the authenticated user, so use the
+    // user-scoped client from auth middleware here (auth.uid() inside RPC).
+    const { supabase } = context;
     const { data: rewardData, error: rewardErr } = await supabase.rpc("claim_quiz_reward", {
       _correct: correct,
     });
