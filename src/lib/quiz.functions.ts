@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Returns N random quizzes (default 3) without revealing the correct answer
@@ -15,6 +14,7 @@ export const fetchQuizSet = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     void context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Use service-role client: quizzes are admin-only via RLS so players
     // can't read answer_index directly. Server-side selection is safe.
     const { data: rows, error } = await supabaseAdmin
@@ -54,6 +54,7 @@ export const gradeAndReward = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const ids = data.picks.map((p) => p.quizId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
       .from("quizzes")
       .select("id, answer_index")
