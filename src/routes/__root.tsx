@@ -29,6 +29,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "google-site-verification", content: "QT5aLYeZpyBB60PrI4ULzMVmqTCpLSq5XnPX4g8M86o" },
       { title: "Lovable App" },
       { name: "description", content: "Dragon Masters Hub is a mobile-first web game framework for managing dragons, battling, and progressing through a story." },
       { name: "author", content: "Lovable" },

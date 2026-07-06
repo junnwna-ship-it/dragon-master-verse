@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, CheckCircle2, XCircle, Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { fetchQuizSet, gradeAndReward } from "@/server/quiz.functions";
+import { fetchQuizSet, gradeAndReward } from "@/lib/quiz.functions";
 import { emitInventoryChanged } from "@/hooks/useInventory";
 
 interface QuizItem {
