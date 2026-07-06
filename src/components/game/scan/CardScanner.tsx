@@ -3,7 +3,7 @@ import { Camera, Loader2, RotateCcw, Sparkles, Upload, X, Check } from "lucide-r
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
-import { recognizeCard } from "@/server/scan.functions";
+import { recognizeCard } from "@/lib/scan.functions";
 import { useGameStore, type Dragon } from "@/store/dragons";
 
 type Recognized = {
