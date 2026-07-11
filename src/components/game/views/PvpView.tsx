@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Swords,
+  Sword,
   Trophy,
   Skull,
   Minus,
   Loader2,
   Shield,
+  Heart,
+  Droplet,
   Crown,
   Search,
   TrendingUp,
