@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Swords,
+  Sword,
   Trophy,
   Skull,
   Minus,
   Loader2,
   Shield,
+  Heart,
+  Droplet,
   Crown,
   Search,
   TrendingUp,
@@ -323,28 +326,10 @@ export function PvpView() {
             <Library className="h-3 w-3" /> {t("pvp.vaultEdit")}
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="-mx-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[0, 1, 2].map((i) => {
             const d = playerDeck[i];
-            return (
-              <div
-                key={i}
-                className={`rounded-lg border px-2 py-2 text-center text-[11px] ${
-                  d
-                    ? "border-amber-500/50 bg-slate-900/60 text-slate-100"
-                    : "border-dashed border-slate-600/60 bg-slate-900/40 text-slate-500"
-                }`}
-              >
-                {d ? (
-                  <>
-                    <p className="truncate font-bold">{d.name}</p>
-                    <p className="text-[9px] text-slate-400">{d.element}</p>
-                  </>
-                ) : (
-                  <span className="text-lg font-bold">{i + 1}</span>
-                )}
-              </div>
-            );
+            return d ? <DeckDragonCard key={d.id} dragon={d} /> : <EmptyDeckSlot key={i} index={i} />;
           })}
         </div>
       </div>
@@ -421,6 +406,53 @@ export function PvpView() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DeckDragonCard({ dragon }: { dragon: Dragon }) {
+  const maxStat = Math.max(dragon.maxHp, dragon.mp, dragon.atk, dragon.def, 1);
+  const bars = [
+    { label: "ATK", value: dragon.atk, icon: Sword, color: "bg-rose-500" },
+    { label: "DEF", value: dragon.def, icon: Shield, color: "bg-amber-500" },
+    { label: "HP", value: dragon.maxHp, icon: Heart, color: "bg-emerald-500" },
+    { label: "MP", value: dragon.mp, icon: Droplet, color: "bg-sky-500" },
+  ];
+  return (
+    <div className="w-40 shrink-0 snap-start rounded-2xl border border-slate-700/60 bg-slate-900/60 p-2.5">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <span className="truncate text-xs font-bold text-slate-100">{dragon.name}</span>
+        <span className="shrink-0 rounded-full border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-300">
+          {dragon.element}
+        </span>
+      </div>
+      <div className="mb-2 flex aspect-[4/3] items-center justify-center rounded-xl bg-slate-700 text-center text-xs font-bold text-slate-300">
+        {dragon.name}
+      </div>
+      <div className="space-y-1.5">
+        {bars.map(({ label, value, icon: Icon, color }) => (
+          <div key={label}>
+            <div className="flex items-center justify-between text-[9px] text-slate-400">
+              <span className="flex items-center gap-1">
+                <Icon className="h-2.5 w-2.5" /> {label}
+              </span>
+              <span className="font-mono text-slate-200">{value}</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+              <div className={`h-full ${color}`} style={{ width: `${Math.min(100, (value / maxStat) * 100)}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyDeckSlot({ index }: { index: number }) {
+  return (
+    <div className="flex w-40 shrink-0 snap-start flex-col items-center justify-center rounded-2xl border border-dashed border-slate-600/60 bg-slate-900/40 p-2.5 text-slate-500">
+      <span className="text-lg font-bold">{index + 1}</span>
+      <span className="text-[9px] uppercase tracking-wider">Empty</span>
     </div>
   );
 }
