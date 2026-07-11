@@ -449,10 +449,39 @@ function DeckDragonCard({ dragon }: { dragon: Dragon }) {
 }
 
 function EmptyDeckSlot({ index }: { index: number }) {
+  const bars = [
+    { label: "ATK", icon: Sword, color: "bg-rose-500/30" },
+    { label: "DEF", icon: Shield, color: "bg-amber-500/30" },
+    { label: "HP", icon: Heart, color: "bg-emerald-500/30" },
+    { label: "MP", icon: Droplet, color: "bg-sky-500/30" },
+  ];
   return (
-    <div className="flex w-40 shrink-0 snap-start flex-col items-center justify-center rounded-2xl border border-dashed border-slate-600/60 bg-slate-900/40 p-2.5 text-slate-500">
-      <span className="text-lg font-bold">{index + 1}</span>
-      <span className="text-[9px] uppercase tracking-wider">Empty</span>
+    <div className="w-40 shrink-0 snap-start rounded-2xl border border-dashed border-slate-600/60 bg-slate-900/40 p-2.5">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <span className="h-3.5 w-16 rounded bg-slate-700/60" />
+        <span className="shrink-0 rounded-full border border-slate-700/60 bg-slate-800/60 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-500">
+          #{index + 1}
+        </span>
+      </div>
+      <div className="mb-2 flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl bg-slate-700/40 text-center text-xs font-bold text-slate-500">
+        <Library className="h-5 w-5 opacity-50" />
+        <span className="text-[9px] uppercase tracking-wider">Empty</span>
+      </div>
+      <div className="space-y-1.5">
+        {bars.map(({ label, icon: Icon, color }) => (
+          <div key={label}>
+            <div className="flex items-center justify-between text-[9px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <Icon className="h-2.5 w-2.5" /> {label}
+              </span>
+              <span className="font-mono">—</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-700/60">
+              <div className={`h-full ${color}`} style={{ width: "0%" }} />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
