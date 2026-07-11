@@ -326,28 +326,10 @@ export function PvpView() {
             <Library className="h-3 w-3" /> {t("pvp.vaultEdit")}
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="-mx-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[0, 1, 2].map((i) => {
             const d = playerDeck[i];
-            return (
-              <div
-                key={i}
-                className={`rounded-lg border px-2 py-2 text-center text-[11px] ${
-                  d
-                    ? "border-amber-500/50 bg-slate-900/60 text-slate-100"
-                    : "border-dashed border-slate-600/60 bg-slate-900/40 text-slate-500"
-                }`}
-              >
-                {d ? (
-                  <>
-                    <p className="truncate font-bold">{d.name}</p>
-                    <p className="text-[9px] text-slate-400">{d.element}</p>
-                  </>
-                ) : (
-                  <span className="text-lg font-bold">{i + 1}</span>
-                )}
-              </div>
-            );
+            return d ? <DeckDragonCard key={d.id} dragon={d} /> : <EmptyDeckSlot key={i} index={i} />;
           })}
         </div>
       </div>
