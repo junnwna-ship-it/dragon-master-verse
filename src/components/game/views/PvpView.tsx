@@ -528,6 +528,24 @@ function DragonPickerModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const [elementFilter, setElementFilter] = useState<string>("all");
+
+  const elements = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of candidates) set.add(d.element);
+    return Array.from(set);
+  }, [candidates]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return candidates.filter((d) => {
+      if (elementFilter !== "all" && d.element !== elementFilter) return false;
+      if (q && !d.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [candidates, query, elementFilter]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
@@ -553,8 +571,41 @@ function DragonPickerModal({
         {candidates.length === 0 ? (
           <p className="py-8 text-center text-xs text-slate-400">{t("pvp.pickerEmpty")}</p>
         ) : (
+          <>
+            <div className="mb-2 relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("pvp.pickerSearchPlaceholder")}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800/60 py-1.5 pl-7 pr-2 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
+              />
+            </div>
+            <div className="mb-3 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {(["all", ...elements] as const).map((el) => {
+                const active = elementFilter === el;
+                return (
+                  <button
+                    key={el}
+                    type="button"
+                    onClick={() => setElementFilter(el)}
+                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
+                      active
+                        ? "border-amber-400 bg-amber-400/20 text-amber-200"
+                        : "border-slate-700 bg-slate-800/60 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {el === "all" ? t("pvp.pickerFilterAll") : el}
+                  </button>
+                );
+              })}
+            </div>
+            {filtered.length === 0 ? (
+              <p className="py-8 text-center text-xs text-slate-400">{t("pvp.pickerNoMatch")}</p>
+            ) : (
           <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-            {candidates.map((d) => (
+            {filtered.map((d) => (
               <button
                 key={d.id}
                 type="button"
@@ -579,6 +630,8 @@ function DragonPickerModal({
               </button>
             ))}
           </div>
+            )}
+          </>
         )}
       </div>
     </div>

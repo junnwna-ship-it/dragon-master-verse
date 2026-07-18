@@ -151,7 +151,10 @@
     "pickerTitle": "Pick a dragon for slot {{slot}}",
     "pickerEmpty": "No available dragons. Collect more in the Vault first.",
     "pickerClose": "Close",
-    "emptySlotCta": "Tap to pick"
+    "emptySlotCta": "Tap to pick",
+    "pickerSearchPlaceholder": "Search by name",
+    "pickerFilterAll": "All",
+    "pickerNoMatch": "No dragons match your filters."
   },
   "training": {
     "title": "Training",

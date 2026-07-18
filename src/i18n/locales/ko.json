@@ -151,7 +151,10 @@
     "pickerTitle": "슬롯 {{slot}}에 넣을 드래곤 선택",
     "pickerEmpty": "선택할 수 있는 드래곤이 없습니다. Vault에서 먼저 획득하세요.",
     "pickerClose": "닫기",
-    "emptySlotCta": "탭하여 드래곤 선택"
+    "emptySlotCta": "탭하여 드래곤 선택",
+    "pickerSearchPlaceholder": "이름으로 검색",
+    "pickerFilterAll": "전체",
+    "pickerNoMatch": "조건에 맞는 드래곤이 없습니다."
   },
   "training": {
     "title": "훈련소",
