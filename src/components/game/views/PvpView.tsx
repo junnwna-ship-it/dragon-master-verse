@@ -15,6 +15,8 @@ import {
   TrendingDown,
   Library,
   ChevronRight,
+  Plus,
+  X,
 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useTranslation } from "react-i18next";
@@ -88,6 +90,10 @@ export function PvpView() {
   const enemyDeckIds = useGameStore((s) => s.enemyDeck);
   const setEnemyDeckStore = useGameStore((s) => s.setEnemyDeck);
   const setView = useGameStore((s) => s.setView);
+  const ownedDragonIds = useGameStore((s) => s.ownedDragonIds);
+  const toggleDeckMember = useGameStore((s) => s.toggleDeckMember);
+
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
 
   const playerDeck = useMemo(
     () => selectedDeck.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
@@ -329,10 +335,28 @@ export function PvpView() {
         <div className="-mx-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[0, 1, 2].map((i) => {
             const d = playerDeck[i];
-            return d ? <DeckDragonCard key={d.id} dragon={d} /> : <EmptyDeckSlot key={i} index={i} />;
+            return d ? (
+              <DeckDragonCard key={d.id} dragon={d} />
+            ) : (
+              <EmptyDeckSlot key={i} index={i} onClick={() => setPickerSlot(i)} />
+            );
           })}
         </div>
       </div>
+
+      {pickerSlot !== null && (
+        <DragonPickerModal
+          slotIndex={pickerSlot}
+          candidates={ownedDragonIds
+            .map((id) => dragons.find((d) => d.id === id))
+            .filter((d): d is Dragon => !!d && !selectedDeck.includes(d.id))}
+          onPick={(id) => {
+            toggleDeckMember(id);
+            setPickerSlot(null);
+          }}
+          onClose={() => setPickerSlot(null)}
+        />
+      )}
 
       {/* 매칭 */}
       <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 text-center">
@@ -449,6 +473,8 @@ function DeckDragonCard({ dragon }: { dragon: Dragon }) {
 }
 
 function EmptyDeckSlot({ index }: { index: number }) {
+  return null;
+}
   const bars = [
     { label: "ATK", icon: Sword, color: "bg-rose-500/30" },
     { label: "DEF", icon: Shield, color: "bg-amber-500/30" },
