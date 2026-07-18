@@ -147,7 +147,11 @@
     "rewardFailed": "보상 지급 실패: {{msg}}",
     "shortWin": "승",
     "shortLose": "패",
-    "shortDraw": "무"
+    "shortDraw": "무",
+    "pickerTitle": "슬롯 {{slot}}에 넣을 드래곤 선택",
+    "pickerEmpty": "선택할 수 있는 드래곤이 없습니다. Vault에서 먼저 획득하세요.",
+    "pickerClose": "닫기",
+    "emptySlotCta": "탭하여 드래곤 선택"
   },
   "training": {
     "title": "훈련소",

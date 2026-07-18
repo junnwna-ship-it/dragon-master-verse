@@ -15,6 +15,8 @@ import {
   TrendingDown,
   Library,
   ChevronRight,
+  Plus,
+  X,
 } from "lucide-react";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useTranslation } from "react-i18next";
@@ -88,6 +90,10 @@ export function PvpView() {
   const enemyDeckIds = useGameStore((s) => s.enemyDeck);
   const setEnemyDeckStore = useGameStore((s) => s.setEnemyDeck);
   const setView = useGameStore((s) => s.setView);
+  const ownedDragonIds = useGameStore((s) => s.ownedDragonIds);
+  const toggleDeckMember = useGameStore((s) => s.toggleDeckMember);
+
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
 
   const playerDeck = useMemo(
     () => selectedDeck.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
@@ -329,10 +335,28 @@ export function PvpView() {
         <div className="-mx-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[0, 1, 2].map((i) => {
             const d = playerDeck[i];
-            return d ? <DeckDragonCard key={d.id} dragon={d} /> : <EmptyDeckSlot key={i} index={i} />;
+            return d ? (
+              <DeckDragonCard key={d.id} dragon={d} />
+            ) : (
+              <EmptyDeckSlot key={i} index={i} onClick={() => setPickerSlot(i)} />
+            );
           })}
         </div>
       </div>
+
+      {pickerSlot !== null && (
+        <DragonPickerModal
+          slotIndex={pickerSlot}
+          candidates={ownedDragonIds
+            .map((id) => dragons.find((d) => d.id === id))
+            .filter((d): d is Dragon => !!d && !selectedDeck.includes(d.id))}
+          onPick={(id) => {
+            toggleDeckMember(id);
+            setPickerSlot(null);
+          }}
+          onClose={() => setPickerSlot(null)}
+        />
+      )}
 
       {/* 매칭 */}
       <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 text-center">
@@ -448,7 +472,8 @@ function DeckDragonCard({ dragon }: { dragon: Dragon }) {
   );
 }
 
-function EmptyDeckSlot({ index }: { index: number }) {
+function EmptyDeckSlot({ index, onClick }: { index: number; onClick: () => void }) {
+  const { t } = useTranslation();
   const bars = [
     { label: "ATK", icon: Sword, color: "bg-rose-500/30" },
     { label: "DEF", icon: Shield, color: "bg-amber-500/30" },
@@ -456,16 +481,21 @@ function EmptyDeckSlot({ index }: { index: number }) {
     { label: "MP", icon: Droplet, color: "bg-sky-500/30" },
   ];
   return (
-    <div className="w-40 shrink-0 snap-start rounded-2xl border border-dashed border-slate-600/60 bg-slate-900/40 p-2.5">
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-40 shrink-0 snap-start rounded-2xl border border-dashed border-slate-600/60 bg-slate-900/40 p-2.5 text-left transition hover:border-amber-400/60 hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+      aria-label={t("pvp.pickerTitle", { slot: index + 1 })}
+    >
       <div className="mb-2 flex items-start justify-between gap-2">
         <span className="h-3.5 w-16 rounded bg-slate-700/60" />
         <span className="shrink-0 rounded-full border border-slate-700/60 bg-slate-800/60 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-500">
           #{index + 1}
         </span>
       </div>
-      <div className="mb-2 flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl bg-slate-700/40 text-center text-xs font-bold text-slate-500">
-        <Library className="h-5 w-5 opacity-50" />
-        <span className="text-[9px] uppercase tracking-wider">Empty</span>
+      <div className="mb-2 flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl bg-slate-700/40 text-center text-xs font-bold text-slate-500 transition group-hover:bg-slate-700/70 group-hover:text-amber-300">
+        <Plus className="h-6 w-6 opacity-70" />
+        <span className="text-[9px] uppercase tracking-wider">{t("pvp.emptySlotCta")}</span>
       </div>
       <div className="space-y-1.5">
         {bars.map(({ label, icon: Icon, color }) => (
@@ -481,6 +511,75 @@ function EmptyDeckSlot({ index }: { index: number }) {
             </div>
           </div>
         ))}
+      </div>
+    </button>
+  );
+}
+
+function DragonPickerModal({
+  slotIndex,
+  candidates,
+  onPick,
+  onClose,
+}: {
+  slotIndex: number;
+  candidates: Dragon[];
+  onPick: (id: number) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-t-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-slate-100">
+            {t("pvp.pickerTitle", { slot: slotIndex + 1 })}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("pvp.pickerClose")}
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {candidates.length === 0 ? (
+          <p className="py-8 text-center text-xs text-slate-400">{t("pvp.pickerEmpty")}</p>
+        ) : (
+          <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+            {candidates.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => onPick(d.id)}
+                className="rounded-xl border border-slate-700 bg-slate-800/60 p-2 text-left transition hover:border-amber-400 hover:bg-slate-800"
+              >
+                <div className="mb-1.5 flex items-start justify-between gap-1">
+                  <span className="truncate text-[11px] font-bold text-slate-100">{d.name}</span>
+                  <span className="shrink-0 rounded-full border border-slate-600 bg-slate-900 px-1 py-0.5 text-[8px] font-bold uppercase text-slate-300">
+                    {d.element}
+                  </span>
+                </div>
+                <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-slate-700 text-[10px] font-bold text-slate-300">
+                  {d.name}
+                </div>
+                <div className="mt-1.5 grid grid-cols-2 gap-0.5 text-[9px] text-slate-400">
+                  <span className="flex items-center gap-0.5"><Sword className="h-2.5 w-2.5" />{d.atk}</span>
+                  <span className="flex items-center gap-0.5"><Shield className="h-2.5 w-2.5" />{d.def}</span>
+                  <span className="flex items-center gap-0.5"><Heart className="h-2.5 w-2.5" />{d.maxHp}</span>
+                  <span className="flex items-center gap-0.5"><Droplet className="h-2.5 w-2.5" />{d.mp}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

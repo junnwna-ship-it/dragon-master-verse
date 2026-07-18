@@ -147,7 +147,11 @@
     "rewardFailed": "Reward failed: {{msg}}",
     "shortWin": "W",
     "shortLose": "L",
-    "shortDraw": "D"
+    "shortDraw": "D",
+    "pickerTitle": "Pick a dragon for slot {{slot}}",
+    "pickerEmpty": "No available dragons. Collect more in the Vault first.",
+    "pickerClose": "Close",
+    "emptySlotCta": "Tap to pick"
   },
   "training": {
     "title": "Training",
