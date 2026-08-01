@@ -259,7 +259,7 @@ export function DragonDetailModal({
               </>
             )}
             <button
-              onClick={onClose}
+              onClick={requestClose}
               aria-label={i18n.t("dragon.modal2.close")}
               className="rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
             >
