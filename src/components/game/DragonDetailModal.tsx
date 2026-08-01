@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Swords, Shield, Heart, Sparkles, Flame, Droplets, Leaf, Mountain, Sun, Moon, ChevronLeft, ChevronRight, Dumbbell, Lock, Loader2, HeartHandshake, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from "framer-motion";
 import i18n from "@/i18n";
 /**
  * BondingSection이 성공할 때 모달 내 다른 컴포넌트(카드 이미지 영역, EXP 게이지)에
@@ -117,11 +118,16 @@ export function DragonDetailModal({
   hasNext?: boolean;
   hasPrev?: boolean;
 }) {
+  // Exit animation gate: closing sets `visible` to false, and the real
+  // onClose fires once the exit transition finishes.
+  const [visible, setVisible] = useState(true);
+  const requestClose = useCallback(() => setVisible(false), []);
+
   // Keyboard: ESC closes; ←/→ navigate when handlers are wired.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        requestClose();
       } else if (e.key === "ArrowRight" && onNext) {
         e.preventDefault();
         onNext();
@@ -137,7 +143,7 @@ export function DragonDetailModal({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose, onNext, onPrev]);
+  }, [requestClose, onNext, onPrev]);
 
   // Touch swipe — horizontal gesture > 50px and at least 1.5× the vertical
   // delta counts as a navigation. Anything else is treated as a regular
