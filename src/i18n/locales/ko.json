@@ -122,7 +122,9 @@
     "deckFullHint": "덱이 가득 찼어요 — 교체하려면 슬롯을 탭하세요",
     "removeFromDeck": "{{name}} 덱에서 제외",
     "enterPvp": "PvP 아레나 진입",
-    "needDeck": "덱 편성 필요 ({{count}}/3)"
+    "needDeck": "덱 편성 필요 ({{count}}/3)",
+    "openDetail": "{{name}} 상세 보기",
+    "toggleDeck": "{{name}} 덱에 추가/제거"
   },
   "pvp": {
     "title": "PvP Arena · 3:3",
