@@ -407,8 +407,10 @@ export function DragonDetailModal({
             <img src={prevDragon.imageUrl} alt="" decoding="async" loading="eager" />
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
