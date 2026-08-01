@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { X, Swords, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 import { GlassDragonCard } from "../GlassDragonCard";
+import { DragonDetailModal } from "../DragonDetailModal";
 
 /**
  * 내 카드 저장소 — 보유 드래곤 그리드와 출전 덱(0/3) 슬롯.
@@ -17,6 +18,7 @@ export function VaultView() {
   const toggleDeckMember = useGameStore((s) => s.toggleDeckMember);
   const clearDeck = useGameStore((s) => s.clearDeck);
   const setView = useGameStore((s) => s.setView);
+  const [detailId, setDetailId] = useState<number | null>(null);
 
   const owned = useMemo(
     () => ownedIds.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
@@ -171,7 +173,9 @@ export function VaultView() {
               <GlassDragonCard
                 key={d.id}
                 dragon={d}
-                onClick={() => toggleDeckMember(d.id)}
+                onClick={() => setDetailId(d.id)}
+                onToggleSelect={() => toggleDeckMember(d.id)}
+                toggleLabel={t("vault.toggleDeck", { name: d.name })}
                 selected={sel}
                 dim={dim}
                 slotIndex={sel ? slotIdx + 1 : undefined}
@@ -180,6 +184,26 @@ export function VaultView() {
           })}
         </div>
       </section>
+
+      {detailId !== null &&
+        (() => {
+          const idx = owned.findIndex((d) => d.id === detailId);
+          if (idx < 0) return null;
+          const n = owned.length;
+          const goTo = (i: number) => setDetailId(owned[((i % n) + n) % n]!.id);
+          return (
+            <DragonDetailModal
+              dragon={owned[idx]!}
+              nextDragon={n > 1 ? owned[(idx + 1) % n] : undefined}
+              prevDragon={n > 1 ? owned[(idx - 1 + n) % n] : undefined}
+              onClose={() => setDetailId(null)}
+              onNext={n > 1 ? () => goTo(idx + 1) : undefined}
+              onPrev={n > 1 ? () => goTo(idx - 1) : undefined}
+              hasNext={n > 1}
+              hasPrev={n > 1}
+            />
+          );
+        })()}
     </div>
   );
 }

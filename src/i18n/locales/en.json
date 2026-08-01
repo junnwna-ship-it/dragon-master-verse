@@ -122,7 +122,9 @@
     "deckFullHint": "Deck is full — tap a slot to swap",
     "removeFromDeck": "Remove {{name}} from deck",
     "enterPvp": "Enter PvP arena",
-    "needDeck": "Build deck ({{count}}/3)"
+    "needDeck": "Build deck ({{count}}/3)",
+    "openDetail": "View {{name}} details",
+    "toggleDeck": "Add/remove {{name}} from deck"
   },
   "pvp": {
     "title": "PvP Arena · 3v3",

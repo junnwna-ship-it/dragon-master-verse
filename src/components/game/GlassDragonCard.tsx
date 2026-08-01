@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Heart, Droplet, Sword, Shield } from "lucide-react";
+import { Heart, Droplet, Sword, Shield, Plus, Check } from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 import { DragonImage } from "./DragonImage";
 
@@ -31,6 +31,8 @@ const elementGlow: Record<string, string> = {
 export function GlassDragonCard({
   dragon,
   onClick,
+  onToggleSelect,
+  toggleLabel,
   selected = false,
   dim = false,
   slotIndex,
@@ -38,6 +40,9 @@ export function GlassDragonCard({
 }: {
   dragon: Dragon;
   onClick?: () => void;
+  /** 우상단 원형 버튼(덱 추가/제거). 지정하면 카드 탭과 분리된다. */
+  onToggleSelect?: () => void;
+  toggleLabel?: string;
   selected?: boolean;
   dim?: boolean;
   /** 1-based slot index (1..3) — 표시되면 우상단에 번호 배지가 뜬다 */
@@ -85,11 +90,38 @@ export function GlassDragonCard({
         >
           {dragon.element}
         </span>
-        {slotIndex && (
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-[11px] font-extrabold text-slate-950 shadow ring-2 ring-amber-200/60">
-            {slotIndex}
-          </span>
-        )}
+        <span className="flex items-center gap-1">
+          {slotIndex && (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-[11px] font-extrabold text-slate-950 shadow ring-2 ring-amber-200/60">
+              {slotIndex}
+            </span>
+          )}
+          {onToggleSelect && (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={toggleLabel}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleSelect();
+                }
+              }}
+              className={`flex h-6 w-6 items-center justify-center rounded-full border backdrop-blur-md transition ${
+                selected
+                  ? "border-amber-200/60 bg-amber-400 text-slate-950"
+                  : "border-white/30 bg-slate-950/50 text-white hover:bg-slate-950/80"
+              }`}
+            >
+              {selected ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            </span>
+          )}
+        </span>
       </div>
 
       {/* 하단: 이름 + 스탯 합계 진행 바 */}
