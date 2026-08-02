@@ -89,6 +89,36 @@ export type Database = {
         }
         Relationships: []
       }
+      game_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_published: boolean
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
       gold_packages: {
         Row: {
           created_at: string
@@ -257,6 +287,123 @@ export type Database = {
           mp?: number
           name?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      store_items: {
+        Row: {
+          created_at: string
+          gold_reward: number
+          id: string
+          image_url: string | null
+          is_published: boolean
+          item_type: string
+          name: string
+          price_usd: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gold_reward?: number
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          item_type?: string
+          name: string
+          price_usd?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gold_reward?: number
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          item_type?: string
+          name?: string
+          price_usd?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      story_nodes: {
+        Row: {
+          background_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_published: boolean
+          node_type: string
+          quiz_ids: string[]
+          stage_number: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          background_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          node_type?: string
+          quiz_ids?: string[]
+          stage_number?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          background_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          node_type?: string
+          quiz_ids?: string[]
+          stage_number?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      training_stats: {
+        Row: {
+          base_cost: number
+          created_at: string
+          icon_url: string | null
+          id: string
+          is_published: boolean
+          sort_order: number
+          stat_code: string
+          stat_increase: number
+          stat_name: string
+          updated_at: string
+        }
+        Insert: {
+          base_cost?: number
+          created_at?: string
+          icon_url?: string | null
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          stat_code: string
+          stat_increase?: number
+          stat_name: string
+          updated_at?: string
+        }
+        Update: {
+          base_cost?: number
+          created_at?: string
+          icon_url?: string | null
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          stat_code?: string
+          stat_increase?: number
+          stat_name?: string
+          updated_at?: string
         }
         Relationships: []
       }
