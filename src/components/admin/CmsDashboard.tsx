@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2 } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, Eye, EyeOff, X } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { CmsStoreItems, CmsStoryNodes, CmsTrainingStats } from "@/components/game/cms/CmsSections";
 import {
   useCmsList,
   useCmsMutations,
@@ -169,6 +170,8 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
   const { data, isLoading, error } = useCmsList<AnyRow>(tab.id);
   const { create, update, remove } = useCmsMutations(tab.id);
   const [draft, setDraft] = useState<Record<string, unknown>>(() => ({ ...tab.blank }));
+  const [previewAll, setPreviewAll] = useState(false);
+  const [previewRow, setPreviewRow] = useState<Record<string, unknown> | null>(null);
 
   const rows = useMemo(() => data ?? [], [data]);
 
@@ -184,6 +187,39 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
 
   return (
     <div className="space-y-5">
+      {/* Preview mode — see unpublished / unsaved content exactly as players will */}
+      <section className="rounded-2xl border border-sky-500/40 bg-sky-500/5 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-100">
+              <Eye className="h-4 w-4 text-sky-300" /> 프리뷰 모드
+            </h2>
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              공개 토글을 켜기 전에, 저장된 비공개 항목까지 플레이어 화면과 동일한 UI로 확인합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPreviewAll((v) => !v)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition ${
+              previewAll
+                ? "border-sky-400 bg-sky-500/20 text-sky-200"
+                : "border-slate-600 bg-slate-900/60 text-slate-300 hover:border-sky-400"
+            }`}
+          >
+            {previewAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {previewAll ? "닫기" : "열기"}
+          </button>
+        </div>
+
+        {previewAll && (
+          <div className="mt-3 rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
+            <PreviewLegend />
+            <CmsPreviewSurface tab={tab} rows={[...rows, ...(isDraftFilled(tab, draft) ? [draft] : [])]} />
+          </div>
+        )}
+      </section>
+
       {/* Create */}
       <section className="rounded-2xl border border-slate-700/70 bg-slate-800/40 p-4">
         <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-100">
@@ -205,9 +241,16 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
         </div>
         <button
           type="button"
+          onClick={() => setPreviewRow({ ...draft })}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-sky-500/50 bg-sky-500/10 py-2.5 text-sm font-semibold text-sky-200 hover:bg-sky-500/20"
+        >
+          <Eye className="h-4 w-4" /> 이 항목만 미리보기
+        </button>
+        <button
+          type="button"
           onClick={submitNew}
           disabled={create.isPending}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
         >
           {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           추가하기
@@ -236,6 +279,7 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
           key={String(row.id)}
           tab={tab}
           row={row}
+          onPreview={(snapshot) => setPreviewRow(snapshot)}
           onSave={(patch) =>
             update
               .mutateAsync({ id: String(row.id), patch })
@@ -250,6 +294,103 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
           }
         />
       ))}
+
+      {previewRow && (
+        <PreviewModal tab={tab} row={previewRow} onClose={() => setPreviewRow(null)} />
+      )}
+    </div>
+  );
+}
+
+/** True once the "new item" draft has enough content to be worth previewing. */
+function isDraftFilled(tab: TabDef, draft: Record<string, unknown>) {
+  return String(draft[tab.titleField] ?? "").trim().length > 0;
+}
+
+function PreviewLegend() {
+  return (
+    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-sky-300">
+      Preview · 비공개 항목 포함 (실제 플레이어에게는 공개된 항목만 보입니다)
+    </p>
+  );
+}
+
+/** Renders CMS rows through the exact player-facing components. */
+function CmsPreviewSurface({ tab, rows }: { tab: TabDef; rows: Record<string, unknown>[] }) {
+  if (rows.length === 0) {
+    return <p className="py-2 text-center text-[11px] text-slate-500">미리볼 항목이 없습니다.</p>;
+  }
+
+  if (tab.id === "store_items") return <CmsStoreItems rows={rows as unknown as StoreItem[]} />;
+  if (tab.id === "training_stats") return <CmsTrainingStats rows={rows as unknown as TrainingStat[]} />;
+  if (tab.id === "story_nodes") return <CmsStoryNodes rows={rows as unknown as StoryNode[]} />;
+
+  // game_settings has no dedicated player component — show the resolved values.
+  return (
+    <div className="space-y-2">
+      {(rows as unknown as GameSetting[]).map((s, i) => (
+        <div
+          key={String(s.id ?? i)}
+          className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-3"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{s.key}</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-slate-100">{s.value || "(빈 값)"}</p>
+          {s.description && <p className="mt-1 text-[11px] text-slate-500">{s.description}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PreviewModal({
+  tab,
+  row,
+  onClose,
+}: {
+  tab: TabDef;
+  row: Record<string, unknown>;
+  onClose: () => void;
+}) {
+  const published = Boolean(row["is_published"]);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-slate-700 bg-slate-900 p-4 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-sky-300">
+              Preview · {published ? "공개 예정 상태: 공개" : "현재 비공개"}
+            </p>
+            <h3 className="text-base font-bold text-slate-100">
+              {String(row[tab.titleField] ?? "(제목 없음)")}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="rounded-lg border border-slate-700 bg-slate-800 p-2 text-slate-300 hover:border-slate-500"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-slate-700/70 bg-slate-950/60 p-3">
+          <CmsPreviewSurface tab={tab} rows={[row]} />
+        </div>
+
+        <p className="mt-3 text-[11px] text-slate-500">
+          저장하지 않은 편집 내용까지 그대로 반영된 미리보기입니다. 공개 토글을 켜면 플레이어 화면에
+          동일하게 노출됩니다.
+        </p>
+      </div>
     </div>
   );
 }
@@ -259,11 +400,13 @@ function RowEditor({
   row,
   onSave,
   onDelete,
+  onPreview,
 }: {
   tab: TabDef;
   row: AnyRow;
   onSave: (patch: Record<string, unknown>) => Promise<unknown>;
   onDelete: () => Promise<unknown>;
+  onPreview: (snapshot: Record<string, unknown>) => void;
 }) {
   const [form, setForm] = useState<Record<string, unknown>>(() => ({ ...row }));
   const [busy, setBusy] = useState(false);
@@ -329,9 +472,17 @@ function RowEditor({
 
       <button
         type="button"
+        onClick={() => onPreview({ ...form })}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-sky-500/50 bg-sky-500/10 py-2.5 text-sm font-semibold text-sky-200 hover:bg-sky-500/20"
+      >
+        <Eye className="h-4 w-4" /> 미리보기
+      </button>
+
+      <button
+        type="button"
         onClick={() => void save()}
         disabled={busy}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-900/60 py-2.5 text-sm font-semibold text-slate-100 hover:border-amber-400 disabled:opacity-50"
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-900/60 py-2.5 text-sm font-semibold text-slate-100 hover:border-amber-400 disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         변경사항 저장
