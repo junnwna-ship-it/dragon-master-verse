@@ -400,11 +400,13 @@ function RowEditor({
   row,
   onSave,
   onDelete,
+  onPreview,
 }: {
   tab: TabDef;
   row: AnyRow;
   onSave: (patch: Record<string, unknown>) => Promise<unknown>;
   onDelete: () => Promise<unknown>;
+  onPreview: (snapshot: Record<string, unknown>) => void;
 }) {
   const [form, setForm] = useState<Record<string, unknown>>(() => ({ ...row }));
   const [busy, setBusy] = useState(false);
@@ -470,9 +472,17 @@ function RowEditor({
 
       <button
         type="button"
+        onClick={() => onPreview({ ...form })}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-sky-500/50 bg-sky-500/10 py-2.5 text-sm font-semibold text-sky-200 hover:bg-sky-500/20"
+      >
+        <Eye className="h-4 w-4" /> 미리보기
+      </button>
+
+      <button
+        type="button"
         onClick={() => void save()}
         disabled={busy}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-900/60 py-2.5 text-sm font-semibold text-slate-100 hover:border-amber-400 disabled:opacity-50"
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-900/60 py-2.5 text-sm font-semibold text-slate-100 hover:border-amber-400 disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         변경사항 저장
