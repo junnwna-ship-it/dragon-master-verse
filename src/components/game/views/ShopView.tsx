@@ -9,6 +9,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { DragonImage } from "../DragonImage";
 import { GoldRecharge } from "../GoldRecharge";
 import { PaymentHistory } from "../PaymentHistory";
+import { CmsStoreItems } from "../cms/CmsSections";
 
 /**
  * Shop view — gated by the `isShopOpen` feature flag.
