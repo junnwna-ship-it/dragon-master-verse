@@ -3,6 +3,9 @@ import {
   usePublishedStoreItems,
   usePublishedStoryNodes,
   usePublishedTrainingStats,
+  type StoreItem,
+  type StoryNode,
+  type TrainingStat,
 } from "@/hooks/useCms";
 
 /**
@@ -10,6 +13,11 @@ import {
  * is_published = true (enforced both by the query filter and by RLS), and
  * renders nothing at all when the admin has not published anything yet — so
  * existing hardcoded gameplay UI stays untouched.
+ *
+ * Each section also accepts an optional `rows` override. When it is provided
+ * the component skips the query entirely and renders exactly those rows —
+ * that's what the admin preview mode uses to show unpublished / unsaved
+ * drafts with the same markup a player would eventually see.
  */
 
 function Spinner() {
@@ -20,9 +28,10 @@ function Spinner() {
   );
 }
 
-export function CmsStoreItems() {
-  const { data, isLoading } = usePublishedStoreItems();
-  if (isLoading) return <Spinner />;
+export function CmsStoreItems({ rows }: { rows?: StoreItem[] }) {
+  const query = usePublishedStoreItems();
+  const data = rows ?? query.data;
+  if (!rows && query.isLoading) return <Spinner />;
   if (!data || data.length === 0) return null;
 
   return (
