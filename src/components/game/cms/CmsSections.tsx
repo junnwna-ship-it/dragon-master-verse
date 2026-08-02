@@ -67,9 +67,10 @@ export function CmsStoreItems({ rows }: { rows?: StoreItem[] }) {
   );
 }
 
-export function CmsTrainingStats() {
-  const { data, isLoading } = usePublishedTrainingStats();
-  if (isLoading) return <Spinner />;
+export function CmsTrainingStats({ rows }: { rows?: TrainingStat[] }) {
+  const query = usePublishedTrainingStats();
+  const data = rows ?? query.data;
+  if (!rows && query.isLoading) return <Spinner />;
   if (!data || data.length === 0) return null;
 
   return (
@@ -106,9 +107,10 @@ export function CmsTrainingStats() {
   );
 }
 
-export function CmsStoryNodes() {
-  const { data, isLoading } = usePublishedStoryNodes();
-  if (isLoading) return <Spinner />;
+export function CmsStoryNodes({ rows }: { rows?: StoryNode[] }) {
+  const query = usePublishedStoryNodes();
+  const data = rows ?? query.data;
+  if (!rows && query.isLoading) return <Spinner />;
   if (!data || data.length === 0) return null;
 
   return (
