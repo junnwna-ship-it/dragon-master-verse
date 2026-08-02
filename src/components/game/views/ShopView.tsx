@@ -152,6 +152,9 @@ export function ShopView() {
               );
             })}
           </section>
+
+          {/* CMS-managed featured items (published only) */}
+          <CmsStoreItems />
         </div>
       </div>
 
