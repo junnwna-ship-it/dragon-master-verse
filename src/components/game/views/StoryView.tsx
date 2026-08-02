@@ -6,6 +6,7 @@ import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 import { MerlinStageView } from "./MerlinStageView";
 import { useOwnedDragons } from "@/hooks/useOwnedDragons";
+import { CmsStoryNodes } from "../cms/CmsSections";
 
 type NodeKind = "battle" | "event" | "boss";
 interface MapNode {
@@ -427,6 +428,9 @@ export function StoryView() {
             </button>
           ))}
         </div>
+
+        {/* CMS-managed story map nodes (published only) */}
+        <CmsStoryNodes />
         <button
           onClick={() => setPicker(false)}
           className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
