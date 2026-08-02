@@ -5,6 +5,7 @@ import { useGameStore, type Dragon } from "@/store/dragons";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { DragonImage } from "../DragonImage";
 import { TrainingSection } from "../DragonDetailModal";
+import { CmsTrainingStats } from "../cms/CmsSections";
 
 /**
  * Training view — dedicated tab for distributing stat points.
@@ -248,6 +249,11 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
       {/* Stat-point spend (reuses the modal's section) */}
       <div className="border-t border-slate-800 pt-3">
         <TrainingSection dragon={dragon} />
+      </div>
+
+      {/* CMS-managed training stats (published only) */}
+      <div className="border-t border-slate-800 pt-3">
+        <CmsTrainingStats />
       </div>
     </section>
   );
