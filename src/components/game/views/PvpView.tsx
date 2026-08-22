@@ -21,6 +21,7 @@ import {
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useTranslation } from "react-i18next";
 import { TagBattleEngine } from "../battle/TagBattleEngine";
+import { DragonDetailModal } from "../DragonDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -94,6 +95,7 @@ export function PvpView() {
   const toggleDeckMember = useGameStore((s) => s.toggleDeckMember);
 
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
 
   const playerDeck = useMemo(
     () => selectedDeck.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
@@ -336,7 +338,7 @@ export function PvpView() {
           {[0, 1, 2].map((i) => {
             const d = playerDeck[i];
             return d ? (
-              <DeckDragonCard key={d.id} dragon={d} />
+              <DeckDragonCard key={d.id} dragon={d} onClick={() => setDetailId(d.id)} />
             ) : (
               <EmptyDeckSlot key={i} index={i} onClick={() => setPickerSlot(i)} />
             );
@@ -357,6 +359,31 @@ export function PvpView() {
           onClose={() => setPickerSlot(null)}
         />
       )}
+
+      {detailId !== null && (() => {
+        const idx = playerDeck.findIndex((d) => d.id === detailId);
+        if (idx < 0) return null;
+        const n = playerDeck.length;
+        const d = playerDeck[idx];
+        if (!d) return null;
+        const goTo = (i: number) => {
+          const wrapped = ((i % n) + n) % n;
+          const target = playerDeck[wrapped];
+          if (target) setDetailId(target.id);
+        };
+        return (
+          <DragonDetailModal
+            dragon={d}
+            nextDragon={n > 1 ? playerDeck[(idx + 1) % n] : undefined}
+            prevDragon={n > 1 ? playerDeck[(idx - 1 + n) % n] : undefined}
+            onClose={() => setDetailId(null)}
+            onNext={n > 1 ? () => goTo(idx + 1) : undefined}
+            onPrev={n > 1 ? () => goTo(idx - 1) : undefined}
+            hasNext={n > 1}
+            hasPrev={n > 1}
+          />
+        );
+      })()}
 
       {/* 매칭 */}
       <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 text-center">
@@ -434,7 +461,7 @@ export function PvpView() {
   );
 }
 
-function DeckDragonCard({ dragon }: { dragon: Dragon }) {
+function DeckDragonCard({ dragon, onClick }: { dragon: Dragon; onClick: () => void }) {
   const maxStat = Math.max(dragon.maxHp, dragon.mp, dragon.atk, dragon.def, 1);
   const bars = [
     { label: "ATK", value: dragon.atk, icon: Sword, color: "bg-rose-500" },
@@ -443,7 +470,11 @@ function DeckDragonCard({ dragon }: { dragon: Dragon }) {
     { label: "MP", value: dragon.mp, icon: Droplet, color: "bg-sky-500" },
   ];
   return (
-    <div className="w-40 shrink-0 snap-start rounded-2xl border border-slate-700/60 bg-slate-900/60 p-2.5">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-40 shrink-0 snap-start rounded-2xl border border-slate-700/60 bg-slate-900/60 p-2.5 text-left transition hover:border-amber-400/60 hover:bg-slate-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+    >
       <div className="mb-2 flex items-start justify-between gap-2">
         <span className="truncate text-xs font-bold text-slate-100">{dragon.name}</span>
         <span className="shrink-0 rounded-full border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-300">
@@ -468,7 +499,7 @@ function DeckDragonCard({ dragon }: { dragon: Dragon }) {
           </div>
         ))}
       </div>
-    </div>
+    </button>
   );
 }
 
