@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Package, Sparkles, ScanLine, LogOut } from "lucide-react";
+import { Package, Sparkles, ScanLine, LogOut, ScrollText, ChevronRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonCard } from "../DragonCard";
@@ -230,6 +231,20 @@ export function LobbyView() {
           </button>
         )}
       </div>
+      <Link
+        to="/story/play/$chapterId"
+        params={{ chapterId: "dragon_master" }}
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-sky-500/10 px-4 py-3 hover:from-violet-500/30 hover:to-sky-500/20"
+      >
+        <span className="flex items-center gap-2 text-sm font-bold text-violet-100">
+          <ScrollText className="h-4 w-4" />
+          {t("lobby.storyCta")}
+        </span>
+        <span className="flex items-center gap-1 text-[11px] text-violet-300/80">
+          {t("lobby.storyCtaSub")}
+          <ChevronRight className="h-3 w-3" />
+        </span>
+      </Link>
       <button
         onClick={handleScanClick}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-rose-500/10 px-4 py-3 text-sm font-bold text-amber-200 hover:from-amber-500/25 hover:to-rose-500/20"
@@ -237,6 +252,7 @@ export function LobbyView() {
         <ScanLine className="h-4 w-4" />
         {user ? t("lobby.scanCta") : t("lobby.scanLoginCta")}
       </button>
+
       <div
         ref={scrollerRef}
         role="region"

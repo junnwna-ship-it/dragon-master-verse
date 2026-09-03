@@ -57,7 +57,9 @@
     "inventoryItems": "{{count}} items",
     "inventoryEmpty": "Story 스테이지를 클리어해 아이템을 모아보세요",
     "cardLabel": "{{name}}, {{element}} 속성. ATK {{atk}}, DEF {{def}}, HP {{hp}} of {{maxHp}}, MP {{mp}}.{{selectedSuffix}} 누르면 상세 모달이 열립니다.",
-    "currentlySelected": " 현재 선택됨."
+    "currentlySelected": " 현재 선택됨.",
+    "storyCta": "스토리 모드",
+    "storyCtaSub": "이야기를 이어가세요"
   },
   "auth": {
     "signin": "로그인",
