@@ -15,7 +15,12 @@ function parseOptions(raw: unknown): VnOption[] {
   return raw
     .filter((o): o is Record<string, unknown> => !!o && typeof o === "object")
     .map((o) => ({
-      label: typeof o.label === "string" ? o.label : "…",
+      label:
+        typeof o.label === "string"
+          ? o.label
+          : typeof o.choice_text === "string"
+            ? o.choice_text
+            : "…",
       next_node: typeof o.next_node === "string" ? o.next_node : null,
       state_changes:
         o.state_changes && typeof o.state_changes === "object"
