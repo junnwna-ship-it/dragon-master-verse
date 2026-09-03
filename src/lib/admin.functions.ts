@@ -47,14 +47,29 @@ export const claimFirstAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = (context.claims as { email?: string }).email ?? null;
     if (await isAdmin(context.userId)) return { ok: true, alreadyAdmin: true };
     if ((await adminCount()) > 0) {
+      await writeAudit({
+        action: "denied:claim_first_admin",
+        actorId: context.userId,
+        actorEmail: email,
+        success: false,
+      });
       throw new Error("이미 관리자 계정이 존재합니다. 기존 관리자에게 권한을 요청해 주세요.");
     }
     const { error } = await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: context.userId, role: "admin" });
     if (error) throw new Error(error.message);
+    await writeAudit({
+      action: "admin_account_created",
+      actorId: context.userId,
+      actorEmail: email,
+      targetUserId: context.userId,
+      targetEmail: email,
+      detail: { bootstrap: true },
+    });
     return { ok: true, alreadyAdmin: false };
   });
 
@@ -63,9 +78,8 @@ export const grantAdminByEmail = createServerFn({ method: "POST" })
   .inputValidator((data) => z.object({ email: z.string().email() }).parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data, context }) => {
-    if (!(await isAdmin(context.userId))) {
-      throw new Error("관리자만 다른 사용자에게 권한을 부여할 수 있습니다.");
-    }
+    const actorEmail = (context.claims as { email?: string }).email ?? null;
+    await assertAdmin(context.userId, "grant_admin", actorEmail);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const target = data.email.trim().toLowerCase();
 
@@ -82,8 +96,55 @@ export const grantAdminByEmail = createServerFn({ method: "POST" })
       .from("user_roles")
       .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
     if (insertError) throw new Error(insertError.message);
+    await writeAudit({
+      action: "role_granted",
+      actorId: context.userId,
+      actorEmail: actorEmail,
+      targetUserId: userId,
+      targetEmail: target,
+      detail: { role: "admin" },
+    });
     return { ok: true, email: target };
   });
+
+/** Admin-only: revoke the admin role from another account. */
+export const revokeAdminByEmail = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ email: z.string().email() }).parse(data))
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    const actorEmail = (context.claims as { email?: string }).email ?? null;
+    await assertAdmin(context.userId, "revoke_admin", actorEmail);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const target = data.email.trim().toLowerCase();
+
+    let userId: string | null = null;
+    for (let page = 1; page <= 10 && !userId; page++) {
+      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      if (error) throw new Error(error.message);
+      userId = list.users.find((u) => u.email?.toLowerCase() === target)?.id ?? null;
+      if (list.users.length < 200) break;
+    }
+    if (!userId) throw new Error("해당 이메일로 가입된 사용자를 찾을 수 없습니다.");
+    if (userId === context.userId) throw new Error("자신의 관리자 권한은 해제할 수 없습니다.");
+    if ((await adminCount()) <= 1) throw new Error("마지막 관리자 권한은 해제할 수 없습니다.");
+
+    const { error } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .eq("role", "admin");
+    if (error) throw new Error(error.message);
+    await writeAudit({
+      action: "role_revoked",
+      actorId: context.userId,
+      actorEmail: actorEmail,
+      targetUserId: userId,
+      targetEmail: target,
+      detail: { role: "admin" },
+    });
+    return { ok: true, email: target };
+  });
+
 
 /* ------------------------------------------------------------------ *
  * Audit log + admin-only gate for admin server endpoints.
