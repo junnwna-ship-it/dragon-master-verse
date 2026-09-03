@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { CmsStoreItems, CmsStoryNodes, CmsTrainingStats } from "@/components/game/cms/CmsSections";
+import { StorySeedButton } from "@/components/admin/StorySeedButton";
 import {
   useCmsList,
   useCmsMutations,
