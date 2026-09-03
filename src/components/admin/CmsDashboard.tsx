@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
-import { Crown, PenSquare } from "lucide-react";
+import { Crown, PenSquare, ScrollText } from "lucide-react";
 import { UgcReviewPanel } from "./UgcReviewPanel";
+import { AuditLogPanel } from "@/components/admin/AuditLogPanel";
 import { StoryMapEditor } from "./StoryMapEditor";
 
 import { toast } from "sonner";
@@ -261,6 +262,13 @@ const HALL_OF_FAME_TAB = {
   icon: Crown,
 } as const;
 
+/** Custom tab: admin audit log viewer. */
+const AUDIT_LOG_TAB = {
+  key: "audit_logs",
+  label: "11. 감사 로그",
+  icon: ScrollText,
+} as const;
+
 /** Custom tab: structured story-map (scene / choice / quiz) editor. */
 const STORY_MAP_TAB = {
   key: "story_map_editor",
@@ -309,7 +317,7 @@ export function CmsDashboard() {
 
       <nav className="-mx-4 mb-5 overflow-x-auto px-4">
         <div className="flex gap-2">
-          {[...TABS, HALL_OF_FAME_TAB, STORY_MAP_TAB].map((x) => {
+          {[...TABS, HALL_OF_FAME_TAB, STORY_MAP_TAB, AUDIT_LOG_TAB].map((x) => {
             const Icon = x.icon;
             const active = x.key === tabKey;
             return (
@@ -335,6 +343,8 @@ export function CmsDashboard() {
         <UgcReviewPanel />
       ) : tabKey === "story_map_editor" ? (
         <StoryMapEditor />
+      ) : tabKey === "audit_logs" ? (
+        <AuditLogPanel />
       ) : (
         <CmsTableEditor key={tab.key} tab={tab} />
       )}

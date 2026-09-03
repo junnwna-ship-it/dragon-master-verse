@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Loader2, LogIn, ShieldCheck, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { claimFirstAdmin, getAdminStatus, grantAdminByEmail } from "@/lib/admin.functions";
+import { claimFirstAdmin, getAdminStatus, grantAdminByEmail, recordAdminLogin } from "@/lib/admin.functions";
 
 type Status = { isAdmin: boolean; adminExists: boolean; canBootstrap: boolean };
 
@@ -22,6 +22,7 @@ export function AdminLogin() {
   const fetchStatus = useServerFn(getAdminStatus);
   const claim = useServerFn(claimFirstAdmin);
   const grant = useServerFn(grantAdminByEmail);
+  const logLogin = useServerFn(recordAdminLogin);
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -69,6 +70,11 @@ export function AdminLogin() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("로그인되었습니다.");
+        try {
+          await logLogin();
+        } catch (logErr) {
+          console.error("[AdminLogin] audit log failed:", logErr);
+        }
       }
       setPassword("");
     } catch (err) {
