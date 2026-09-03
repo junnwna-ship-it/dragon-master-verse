@@ -398,7 +398,29 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                 <div className="mt-2">
                   <Typewriter text={body} />
                 </div>
+                {(() => {
+                  const reward = (node as VnNode & { rewards?: StoryReward | null }).rewards;
+                  if (!reward) return null;
+                  const chips: string[] = [];
+                  if ((reward.gold ?? 0) > 0) chips.push(`${reward.gold}G`);
+                  if ((reward.stat_points ?? 0) > 0) chips.push(`Stat +${reward.stat_points}`);
+                  for (const [k, v] of Object.entries(reward.items ?? {}))
+                    if (v > 0) chips.push(`${itemLabel(k)} x${v}`);
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {chips.map((c) => (
+                        <span
+                          key={c}
+                          className="rounded-full border border-emerald-300/40 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-bold text-emerald-200"
+                        >
+                          🎁 {c}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </motion.div>
+
 
               <div className="flex flex-col gap-2">
                 {node.options.map((opt, i) => (
