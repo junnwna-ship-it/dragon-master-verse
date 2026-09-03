@@ -1,5 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { CmsDashboard } from "@/components/admin/CmsDashboard";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/admin/dashboard")({
