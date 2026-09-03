@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle, Wand2 } from "lucide-react";
+import { CHAPTER_TEMPLATES, type ChapterTemplate } from "@/lib/chapterTemplates";
 import { supabase } from "@/integrations/supabase/client";
 import { useCmsList, useCmsMutations, type StoryNode } from "@/hooks/useCms";
 
@@ -173,6 +174,81 @@ export function StoryMapEditor() {
       ),
     );
 
+  // ---- Build a whole chapter from a blueprint template ----
+  // Every node is written through the normal CMS mutations, so the result is an
+  // ordinary chapter that stays fully editable in the forms below.
+  const [templateId, setTemplateId] = useState(CHAPTER_TEMPLATES[0]?.id ?? "");
+  const [templateChapter, setTemplateChapter] = useState(
+    CHAPTER_TEMPLATES[0]?.suggestedChapterId ?? "dragon_master",
+  );
+  const [templatePublish, setTemplatePublish] = useState(false);
+  const [building, setBuilding] = useState(false);
+
+  const buildTemplate = async () => {
+    const tpl: ChapterTemplate | undefined = CHAPTER_TEMPLATES.find((t) => t.id === templateId);
+    const target = templateChapter.trim();
+    if (!tpl || !target) {
+      toast.error("템플릿과 대상 챕터 ID를 확인해 주세요.");
+      return;
+    }
+    const existing = new Map(
+      nodes
+        .filter((n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === target)
+        .map((n) => [String((n as StoryNode & { node_key?: string }).node_key ?? ""), n.id] as const),
+    );
+    if (existing.size && !window.confirm(`"${target}" 챕터의 같은 노드 키 ${existing.size}개를 템플릿 내용으로 덮어씁니다. 계속할까요?`)) {
+      return;
+    }
+    setBuilding(true);
+    let created = 0;
+    let updated = 0;
+    try {
+      for (const n of tpl.nodes) {
+        const payload: Record<string, unknown> = {
+          chapter_id: target,
+          node_key: n.node_key,
+          stage_number: n.stage_number,
+          node_type: n.node_type || "story",
+          title: n.title || n.node_key,
+          speaker: n.speaker,
+          body_text: n.body_text || null,
+          background_image_url: n.background_image_url,
+          is_start: n.is_start,
+          is_published: templatePublish,
+          state_changes: n.state_changes ?? {},
+          rewards: n.rewards ?? {},
+          quiz_ids: [],
+          options: n.options.map((o) => ({
+            label: o.label,
+            next_node: o.next_node,
+            state_changes: o.state_changes && Object.keys(o.state_changes).length ? o.state_changes : null,
+            ...(o.quiz_ids?.length
+              ? {
+                  quiz_ids: o.quiz_ids,
+                  quiz_required: !!o.quiz_required,
+                  quiz_fail_node: o.quiz_fail_node ?? null,
+                }
+              : {}),
+          })),
+        };
+        const id = existing.get(n.node_key);
+        if (id) {
+          await update.mutateAsync({ id, patch: payload });
+          updated++;
+        } else {
+          await create.mutateAsync(payload);
+          created++;
+        }
+      }
+      toast.success(`템플릿 빌드 완료: 새 장면 ${created}개, 갱신 ${updated}개`);
+      setChapterId(target);
+    } catch (e) {
+      toast.error(`템플릿 빌드 실패: ${(e as Error).message}`);
+    } finally {
+      setBuilding(false);
+    }
+  };
+
   const save = async () => {
     if (!draft) return;
     if (!draft.chapter_id.trim() || !draft.node_key.trim()) {
@@ -265,6 +341,71 @@ export function StoryMapEditor() {
             className="flex items-center gap-1.5 rounded-xl bg-violet-500 px-3 py-2.5 text-xs font-bold text-slate-950 hover:bg-violet-400"
           >
             <Plus className="h-4 w-4" /> 새 장면
+          </button>
+        </div>
+      </section>
+
+      {/* Chapter template builder */}
+      <section className="rounded-2xl border border-amber-400/40 bg-amber-400/5 p-4">
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-amber-100">
+          <Wand2 className="h-4 w-4 text-amber-300" /> 템플릿으로 챕터 빌드
+        </h3>
+        <p className="mt-0.5 text-[11px] text-amber-200/70">
+          완성된 챕터 템플릿을 story_nodes에 생성합니다. 빌드 후에는 아래 편집기에서 장면·선택지·퀴즈를
+          그대로 수정할 수 있습니다.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <label>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">템플릿</span>
+            <select
+              value={templateId}
+              onChange={(e) => {
+                setTemplateId(e.target.value);
+                const t = CHAPTER_TEMPLATES.find((x) => x.id === e.target.value);
+                if (t) setTemplateChapter(t.suggestedChapterId);
+              }}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+            >
+              {CHAPTER_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              대상 챕터 ID
+            </span>
+            <input
+              value={templateChapter}
+              onChange={(e) => setTemplateChapter(e.target.value)}
+              placeholder="dragon_master_v2"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-[11px] text-slate-400">
+          {CHAPTER_TEMPLATES.find((t) => t.id === templateId)?.description}
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-slate-300">
+            <input
+              type="checkbox"
+              checked={templatePublish}
+              onChange={(e) => setTemplatePublish(e.target.checked)}
+              className="h-4 w-4 accent-amber-400"
+            />
+            바로 공개(is_published)
+          </label>
+          <button
+            type="button"
+            onClick={() => void buildTemplate()}
+            disabled={building}
+            className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50"
+          >
+            {building ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+            {building ? "빌드 중…" : `${CHAPTER_TEMPLATES.find((t) => t.id === templateId)?.nodes.length ?? 0}개 장면 빌드`}
           </button>
         </div>
       </section>
