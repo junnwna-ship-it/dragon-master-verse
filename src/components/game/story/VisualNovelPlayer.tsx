@@ -26,12 +26,24 @@ function useChapterNodes(chapterId: string) {
   return useQuery({
     queryKey: ["vn", "chapter", chapterId],
     queryFn: async (): Promise<VnNode[]> => {
-      const { data, error } = await supabase
-        .from("story_nodes")
+      // `chapter_id` / `node_key` / `options` are new CMS columns not yet in the
+      // generated types, so query through a loosely typed view of the table.
+      const table = supabase.from("story_nodes") as unknown as {
+        select: (cols: string) => {
+          eq: (col: string, val: string) => {
+            order: (
+              col: string,
+              opts: { ascending: boolean },
+            ) => Promise<{ data: unknown; error: { message: string } | null }>;
+          };
+        };
+      };
+      const { data, error } = await table
         .select("*")
         .eq("chapter_id", chapterId)
         .order("stage_number", { ascending: true });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
+
       return ((data ?? []) as unknown as Record<string, unknown>[]).map((row) => ({
         id: String(row.id),
         chapter_id: String(row.chapter_id ?? chapterId),
