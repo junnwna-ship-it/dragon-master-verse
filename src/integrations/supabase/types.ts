@@ -476,6 +476,7 @@ export type Database = {
           node_type: string
           options: Json
           quiz_ids: string[]
+          rewards: Json
           speaker: string | null
           stage_number: number
           state_changes: Json
@@ -496,6 +497,7 @@ export type Database = {
           node_type?: string
           options?: Json
           quiz_ids?: string[]
+          rewards?: Json
           speaker?: string | null
           stage_number?: number
           state_changes?: Json
@@ -516,11 +518,45 @@ export type Database = {
           node_type?: string
           options?: Json
           quiz_ids?: string[]
+          rewards?: Json
           speaker?: string | null
           stage_number?: number
           state_changes?: Json
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      story_reward_claims: {
+        Row: {
+          chapter_id: string
+          created_at: string
+          gold_awarded: number
+          id: string
+          items_awarded: Json
+          node_key: string
+          stat_points_awarded: number
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          created_at?: string
+          gold_awarded?: number
+          id?: string
+          items_awarded?: Json
+          node_key: string
+          stat_points_awarded?: number
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          created_at?: string
+          gold_awarded?: number
+          id?: string
+          items_awarded?: Json
+          node_key?: string
+          stat_points_awarded?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -712,6 +748,10 @@ export type Database = {
       }
       bond_with_dragon: { Args: { _dragon_uuid: string }; Returns: Json }
       claim_quiz_reward: { Args: { _correct: number }; Returns: Json }
+      claim_story_reward: {
+        Args: { _chapter_id: string; _dragon_uuid?: string; _node_key: string }
+        Returns: Json
+      }
       credit_gold_from_purchase: {
         Args: { _env: string; _gold: number; _txn_id: string; _user_id: string }
         Returns: Json
