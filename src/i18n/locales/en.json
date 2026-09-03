@@ -57,7 +57,9 @@
     "inventoryItems": "{{count}} items",
     "inventoryEmpty": "Clear Story stages to collect items",
     "cardLabel": "{{name}}, element {{element}}. ATK {{atk}}, DEF {{def}}, HP {{hp}} of {{maxHp}}, MP {{mp}}.{{selectedSuffix}} Tap to open details.",
-    "currentlySelected": " Currently selected."
+    "currentlySelected": " Currently selected.",
+    "storyCta": "Story Mode",
+    "storyCtaSub": "Continue the saga"
   },
   "auth": {
     "signin": "Sign in",
