@@ -170,7 +170,7 @@ async function writeAudit(entry: AuditEntry) {
       actor_email: entry.actorEmail ?? null,
       target_user_id: entry.targetUserId ?? null,
       target_email: entry.targetEmail ?? null,
-      detail: entry.detail ?? {},
+      detail: (entry.detail ?? {}) as unknown as never,
       success: entry.success ?? true,
     });
   } catch (err) {
@@ -192,16 +192,6 @@ async function assertAdmin(userId: string, action: string, email?: string | null
     success: false,
   });
   throw new Error("관리자 권한이 필요합니다.");
-}
-
-async function emailOf(userId: string) {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
-    return data.user?.email ?? null;
-  } catch {
-    return null;
-  }
 }
 
 /** Called by the admin sign-in screen once a session exists. */
