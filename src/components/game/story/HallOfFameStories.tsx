@@ -28,6 +28,7 @@ export function HallOfFameStories() {
       const { data } = await db()
         .select("id,title,summary,cover_image_url,body,is_hall_of_fame")
         .eq("is_published", true)
+        .eq("is_lobby_visible", true)
         .order("is_hall_of_fame", { ascending: false })
         .order("updated_at", { ascending: false })
         .limit(30);
