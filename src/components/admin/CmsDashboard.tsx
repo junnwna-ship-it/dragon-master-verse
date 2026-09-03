@@ -261,6 +261,15 @@ const HALL_OF_FAME_TAB = {
   icon: Crown,
 } as const;
 
+/** Custom tab: structured story-map (scene / choice / quiz) editor. */
+const STORY_MAP_TAB = {
+  key: "story_map_editor",
+  label: "10. 스토리 맵 편집기",
+  icon: PenSquare,
+} as const;
+
+
+
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 
 export function CmsDashboard() {
