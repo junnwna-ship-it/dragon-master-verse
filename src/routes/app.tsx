@@ -14,7 +14,7 @@ import { ShopView } from "@/components/game/views/ShopView";
 import { TrainingView } from "@/components/game/views/TrainingView";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfileStats } from "@/hooks/useProfileStats";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LanguageToggle } from "@/components/LanguageToggle";
 
@@ -40,7 +40,7 @@ function Index() {
   const fetchDragons = useGameStore((s) => s.fetchDragons);
   const loadingDragons = useGameStore((s) => s.loadingDragons);
   const { user, loading: authLoading } = useAuth();
-  const { gold } = useProfile();
+  const { stats: profileStats } = useProfileStats();
   const search = useSearch({ from: "/app" });
   const navigate = useNavigate();
 
@@ -88,7 +88,13 @@ function Index() {
           <div className="flex items-center gap-2">
             <LanguageToggle />
             <div className="flex items-center gap-1.5 rounded-full bg-slate-800/70 px-3 py-1 text-xs font-semibold text-amber-300">
-              <Coins className="h-3.5 w-3.5" /> {gold.toLocaleString()}
+              <Coins className="h-3.5 w-3.5" /> {profileStats.gold.toLocaleString()}
+            </div>
+            <div className="flex items-center gap-1 rounded-full bg-slate-800/70 px-2.5 py-1 text-xs font-semibold text-emerald-300" title="Worm Affinity">
+              🪱 {profileStats.worm_affinity}
+            </div>
+            <div className="flex items-center gap-1 rounded-full bg-slate-800/70 px-2.5 py-1 text-xs font-semibold text-rose-300" title="Courage">
+              🔥 {profileStats.courage}
             </div>
           </div>
         </header>
