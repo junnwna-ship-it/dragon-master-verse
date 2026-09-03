@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine";
 import { useGameStore } from "@/store/dragons";
 import { useVnSave } from "@/hooks/useVnSave";
+import { useStoryRewards, parseReward, itemLabel, type StoryReward } from "@/hooks/useStoryRewards";
 
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
@@ -92,6 +93,7 @@ function useChapterNodes(chapterId: string) {
           state_changes: (row.state_changes as Record<string, number> | null) ?? null,
           is_start: Boolean(row.is_start),
           stage_number: Number(row.stage_number ?? 0),
+          rewards: parseReward(row.rewards),
         }))
         .sort((a, b) => a.stage_number - b.stage_number);
 
@@ -168,6 +170,23 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   useEffect(() => {
     if (node) enter(node);
   }, [node, enter]);
+
+  // Story progress feeds back into the wider game: each scene's authored
+  // rewards (gold / stat points / items) are granted once per player.
+  const { claim } = useStoryRewards();
+  const dragonUuid = useGameStore((state) => {
+    const picked = state.selectedDeck[0];
+    const target =
+      (picked != null ? state.dragons.find((d) => d.id === picked) : undefined) ??
+      state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-"));
+    return target?.uuid ?? null;
+  });
+  useEffect(() => {
+    if (!signedIn || !node?.node_key) return;
+    const reward = (node as VnNode & { rewards?: StoryReward | null }).rewards;
+    if (!reward) return;
+    void claim(chapterId, node.node_key, dragonUuid);
+  }, [signedIn, node, chapterId, claim, dragonUuid]);
 
   // Persist every progress change so a logout / reconnect resumes exactly here.
   useEffect(() => {
