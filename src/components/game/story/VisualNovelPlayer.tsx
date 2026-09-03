@@ -109,13 +109,13 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
-    for (const n of nodes ?? []) if (n.node_key) map.set(n.node_key, n);
+    for (const n of nodes) if (n.node_key) map.set(n.node_key, n);
     return map;
   }, [nodes]);
 
   const startKey = useMemo(() => {
-    const explicit = (nodes ?? []).find((n) => n.is_start && n.node_key)?.node_key;
-    return explicit ?? (nodes ?? []).find((n) => n.node_key)?.node_key ?? null;
+    const explicit = nodes.find((n) => n.is_start && n.node_key)?.node_key;
+    return explicit ?? nodes.find((n) => n.node_key)?.node_key ?? null;
   }, [nodes]);
 
   // Resume from the cloud save first; otherwise begin at the chapter's start node.
