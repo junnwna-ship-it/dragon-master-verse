@@ -214,13 +214,19 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                 누적 스탯이 저장되었습니다. 다시 플레이하면 다른 선택으로 다른 결과를 볼 수 있어요.
               </p>
               <div className="mt-4 flex gap-2">
-                <Button onClick={() => startKey && start(chapterId, startKey, { reset: true })}>
-                  다시 플레이
-                </Button>
-                <Button variant="secondary" onClick={reset} asChild={false}>
+                <Button onClick={restart}>다시 플레이</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    void clear();
+                    reset();
+                  }}
+                  asChild={false}
+                >
                   기록 초기화
                 </Button>
               </div>
+
             </div>
           ) : (
             <>
