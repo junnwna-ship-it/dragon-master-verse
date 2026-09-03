@@ -385,6 +385,7 @@ export function CreatorStudio() {
             <UgcStoryPlayer
               title={playing.title || "제목 없는 스토리"}
               body={stories.find((x) => x.id === playing.id)?.body ?? playing.body}
+              storyId={playing.id}
               showErrors
               onExit={() => setPlaying(null)}
             />
