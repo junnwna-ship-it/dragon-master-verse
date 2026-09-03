@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2 } from "lucide-react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2, Save, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 import { MerlinStageView } from "./MerlinStageView";
 import { useOwnedDragons } from "@/hooks/useOwnedDragons";
+import { useStorySave } from "@/hooks/useStorySave";
 import { CmsStoryNodes } from "../cms/CmsSections";
 
 type NodeKind = "battle" | "event" | "boss";
@@ -201,6 +202,7 @@ export function StoryView() {
   const dragons = useGameStore((s) => s.dragons);
   const { isTrainee, loading: ownedLoading, refetch: refetchOwned } = useOwnedDragons();
   const [stage1Done, setStage1Done] = useState(false);
+  const { save, loading: saveLoading, saving, persist, clear: clearSave } = useStorySave();
 
   const [run, setRun] = useState<RunState | null>(null);
   const [picker, setPicker] = useState(false);
@@ -249,6 +251,42 @@ export function StoryView() {
 
   // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
   const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
+
+  // ----- Save / resume -----
+  // Auto-save the run (debounced inside the hook) whenever it changes.
+  useEffect(() => {
+    if (!run || !selectedDragon) return;
+    persist({
+      dragonUuid: selectedDragon.uuid ?? null,
+      dragonName: selectedDragon.name,
+      currentNodeId: run.currentNodeId,
+      playerHp: run.playerHp,
+      playerMp: run.playerMp,
+      visited: run.visited,
+    });
+  }, [run, selectedDragon, persist]);
+
+  /** Restores the cloud save into an active run (matched by dragon uuid, then name). */
+  const resumeSave = () => {
+    if (!save) return;
+    const dragon =
+      dragons.find((d) => save.dragonUuid && d.uuid === save.dragonUuid) ??
+      dragons.find((d) => d.name === save.dragonName);
+    if (!dragon) return;
+    setSelectedDragon(dragon);
+    setRun({
+      currentNodeId: save.currentNodeId,
+      playerHp: save.playerHp,
+      playerMp: save.playerMp,
+      visited: save.visited,
+    });
+  };
+
+  const resumableDragon =
+    save && !run
+      ? (dragons.find((d) => save.dragonUuid && d.uuid === save.dragonUuid) ??
+        dragons.find((d) => d.name === save.dragonName))
+      : undefined;
 
   // Helper: which node id is the player currently allowed to enter?
   const activeNodeId = run?.currentNodeId ?? FIRST_NODE_ID;
@@ -474,15 +512,29 @@ export function StoryView() {
             })}
           </button>
           {run && selectedDragon && (
-            <button
-              onClick={() => {
-                setRun(null);
-                setSelectedDragon(null);
-              }}
-              className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
-            >
-              {t("story.abandon")}
-            </button>
+            <>
+              <span className="flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400">
+                {saving ? (
+                  <>
+                    <Save className="h-3 w-3 animate-pulse text-sky-300" /> {t("story.saving")}
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3 w-3 text-emerald-400" /> {t("story.saved")}
+                  </>
+                )}
+              </span>
+              <button
+                onClick={() => {
+                  setRun(null);
+                  setSelectedDragon(null);
+                  void clearSave();
+                }}
+                className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+              >
+                {t("story.abandon")}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -597,15 +649,51 @@ export function StoryView() {
         </div>
       )}
 
+      {/* Resume from cloud save */}
+      {!run && !saveLoading && save && (
+        <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-sky-200">
+            <Save className="h-4 w-4" /> {t("story.saveFound")}
+          </div>
+          <p className="mt-1 text-[11px] text-slate-300">
+            {t("story.saveSummary", {
+              name: save.dragonName ?? "-",
+              cur: Math.min(save.visited.length, TOTAL_NODES),
+              total: TOTAL_NODES,
+              hp: save.playerHp,
+            })}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={resumeSave}
+              disabled={!resumableDragon}
+              className="flex-1 rounded-lg bg-sky-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-sky-400 disabled:opacity-50"
+            >
+              {t("story.continueRun")}
+            </button>
+            <button
+              onClick={() => void clearSave()}
+              className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
+            >
+              {t("story.deleteSave")}
+            </button>
+          </div>
+          {!resumableDragon && (
+            <p className="mt-1 text-[10px] text-rose-300">{t("story.saveDragonMissing")}</p>
+          )}
+        </div>
+      )}
+
       {/* Start CTA when no run is active */}
       {!run && (
         <button
           onClick={() => setPicker(true)}
           className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
         >
-          {t("story.startJourney")}
+          {save ? t("story.startNewJourney") : t("story.startJourney")}
         </button>
       )}
+
 
       {/* Vertical scroll node map */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-gradient-to-b from-slate-900 via-slate-900/80 to-slate-950 p-2">
