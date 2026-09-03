@@ -490,10 +490,26 @@ export function VisualNovelPlayer({
                 <Sparkles className="h-5 w-5" /> Chapter complete
               </p>
               <p className="mt-2 text-sm text-slate-200">
-                Your stats have been saved. Replay and choose differently to see another outcome.
+                {finalizeState === "saving"
+                  ? "보상과 능력치를 저장하는 중입니다…"
+                  : finalizeState === "error"
+                    ? "보상 저장에 실패했습니다. 진행 상황은 안전하게 보관되어 있습니다."
+                    : "Your stats have been saved. Replay and choose differently to see another outcome."}
               </p>
-              <div className="mt-4 flex gap-2">
-                <Button onClick={restart}>Play again</Button>
+              {finalizeState === "error" && (
+                <p className="mt-1 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                  {finalizeError}
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {finalizeState === "error" && (
+                  <Button onClick={() => void finalizeRun({ manual: true })}>
+                    <RotateCcw className="mr-1 h-3.5 w-3.5" /> 저장 재시도
+                  </Button>
+                )}
+                <Button onClick={restart} disabled={finalizeState === "saving"}>
+                  Play again
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => {
