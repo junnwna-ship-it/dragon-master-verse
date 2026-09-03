@@ -351,6 +351,21 @@ export function LobbyView() {
               }`}
             >
               <DragonCard dragon={d} />
+              {/* Take THIS dragon into the story: the chapter player receives
+                  the dragon id and attributes scenes/rewards to it. */}
+              <Link
+                to="/story/play/$chapterId"
+                params={{ chapterId: "dragon_master" }}
+                search={{ dragon: d.id }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPvpSelectedDragonId(d.id);
+                }}
+                className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-violet-400/40 bg-violet-500/15 px-3 py-2 text-[11px] font-bold text-violet-100 hover:bg-violet-500/25"
+              >
+                <ScrollText className="h-3.5 w-3.5" />
+                {t("lobby.dragonStoryCta", { name: d.name })}
+              </Link>
             </li>
           );
         })}
