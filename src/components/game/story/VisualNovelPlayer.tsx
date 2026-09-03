@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine";
+import { useGameStore } from "@/store/dragons";
 import { useVnSave } from "@/hooks/useVnSave";
 
 import { Button } from "@/components/ui/button";
