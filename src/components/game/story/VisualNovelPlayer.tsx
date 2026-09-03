@@ -10,7 +10,7 @@ import { useVnSave } from "@/hooks/useVnSave";
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ChevronLeft, Sparkles, Play } from "lucide-react";
+import { RotateCcw, ChevronLeft, Sparkles, Play, Home } from "lucide-react";
 import {
   sceneArt,
   introArtFor,
@@ -355,6 +355,11 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                   asChild={false}
                 >
                   Clear save
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/">
+                    <Home className="mr-1 h-4 w-4" /> Home
+                  </Link>
                 </Button>
               </div>
 
