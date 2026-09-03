@@ -32,6 +32,135 @@ export type Database = {
         }
         Relationships: []
       }
+      battle_skills: {
+        Row: {
+          created_at: string
+          description: string | null
+          element: string
+          icon_url: string | null
+          id: string
+          is_published: boolean
+          log_text: string | null
+          mp_cost: number
+          name: string
+          power: number
+          skill_code: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          element?: string
+          icon_url?: string | null
+          id?: string
+          is_published?: boolean
+          log_text?: string | null
+          mp_cost?: number
+          name: string
+          power?: number
+          skill_code: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          element?: string
+          icon_url?: string | null
+          id?: string
+          is_published?: boolean
+          log_text?: string | null
+          mp_cost?: number
+          name?: string
+          power?: number
+          skill_code?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bgm_tracks: {
+        Row: {
+          audio_url: string | null
+          cover_image_url: string | null
+          created_at: string
+          credit: string | null
+          id: string
+          is_published: boolean
+          loop_enabled: boolean
+          scene_code: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          credit?: string | null
+          id?: string
+          is_published?: boolean
+          loop_enabled?: boolean
+          scene_code?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          credit?: string | null
+          id?: string
+          is_published?: boolean
+          loop_enabled?: boolean
+          scene_code?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      characters: {
+        Row: {
+          created_at: string
+          description: string | null
+          dialogue_sample: string | null
+          id: string
+          is_published: boolean
+          name: string
+          portrait_url: string | null
+          role: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          dialogue_sample?: string | null
+          id?: string
+          is_published?: boolean
+          name: string
+          portrait_url?: string | null
+          role?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          dialogue_sample?: string | null
+          id?: string
+          is_published?: boolean
+          name?: string
+          portrait_url?: string | null
+          role?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dragons: {
         Row: {
           atk: number
