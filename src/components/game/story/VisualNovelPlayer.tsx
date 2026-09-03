@@ -32,42 +32,45 @@ function parseOptions(raw: unknown): VnOption[] {
 function useChapterNodes(chapterId: string) {
   return useQuery({
     queryKey: ["vn", "chapter", chapterId],
-    queryFn: async (): Promise<VnNode[]> => {
-      // `chapter_id` / `node_key` / `options` are new CMS columns not yet in the
-      // generated types, so query through a loosely typed view of the table.
+    queryFn: async (): Promise<{ nodes: VnNode[]; schemaReady: boolean }> => {
+      // `chapter_id` / `node_key` / `options` are newer CMS columns that may not
+      // exist yet, so select everything and filter in JS instead of in SQL —
+      // a missing-column filter would make the whole request fail.
       const table = supabase.from("story_nodes") as unknown as {
-        select: (cols: string) => {
-          eq: (col: string, val: string) => {
-            order: (
-              col: string,
-              opts: { ascending: boolean },
-            ) => Promise<{ data: unknown; error: { message: string } | null }>;
-          };
-        };
+        select: (cols: string) => Promise<{
+          data: unknown;
+          error: { message: string } | null;
+        }>;
       };
-      const { data, error } = await table
-        .select("*")
-        .eq("chapter_id", chapterId)
-        .order("stage_number", { ascending: true });
+      const { data, error } = await table.select("*");
       if (error) throw new Error(error.message);
 
-      return ((data ?? []) as unknown as Record<string, unknown>[]).map((row) => ({
-        id: String(row.id),
-        chapter_id: String(row.chapter_id ?? chapterId),
-        node_key: (row.node_key as string | null) ?? null,
-        title: String(row.title ?? ""),
-        speaker: (row.speaker as string | null) ?? null,
-        body_text: (row.body_text as string | null) ?? null,
-        description: (row.description as string | null) ?? null,
-        background_image_url: (row.background_image_url as string | null) ?? null,
-        options: parseOptions(row.options),
-        state_changes: (row.state_changes as Record<string, number> | null) ?? null,
-        is_start: Boolean(row.is_start),
-        stage_number: Number(row.stage_number ?? 0),
-      }));
+      const raw = (data ?? []) as unknown as Record<string, unknown>[];
+      const schemaReady = raw.length === 0 || Object.hasOwn(raw[0]!, "chapter_id");
+
+      const nodes = raw
+        .filter((row) => String(row.chapter_id ?? "") === chapterId)
+        .map((row) => ({
+          id: String(row.id),
+          chapter_id: String(row.chapter_id ?? chapterId),
+          node_key: (row.node_key as string | null) ?? null,
+          title: String(row.title ?? ""),
+          speaker: (row.speaker as string | null) ?? null,
+          body_text: (row.body_text as string | null) ?? null,
+          description: (row.description as string | null) ?? null,
+          background_image_url: (row.background_image_url as string | null) ?? null,
+          options: parseOptions(row.options),
+          state_changes: (row.state_changes as Record<string, number> | null) ?? null,
+          is_start: Boolean(row.is_start),
+          stage_number: Number(row.stage_number ?? 0),
+        }))
+        .sort((a, b) => a.stage_number - b.stage_number);
+
+      return { nodes, schemaReady };
     },
   });
 }
+
 
 /** Typewriter output with click-to-skip. */
 function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
@@ -96,7 +99,9 @@ function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
 }
 
 export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
-  const { data: nodes, isLoading, error } = useChapterNodes(chapterId);
+  const { data, isLoading, error } = useChapterNodes(chapterId);
+  const nodes = useMemo(() => data?.nodes ?? [], [data]);
+  const schemaReady = data?.schemaReady ?? true;
   const { nodeKey, stats, visited, applied, finished, start, choose, enter, reset, hydrate } =
     useStoryEngine();
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
@@ -104,13 +109,13 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
-    for (const n of nodes ?? []) if (n.node_key) map.set(n.node_key, n);
+    for (const n of nodes) if (n.node_key) map.set(n.node_key, n);
     return map;
   }, [nodes]);
 
   const startKey = useMemo(() => {
-    const explicit = (nodes ?? []).find((n) => n.is_start && n.node_key)?.node_key;
-    return explicit ?? (nodes ?? []).find((n) => n.node_key)?.node_key ?? null;
+    const explicit = nodes.find((n) => n.is_start && n.node_key)?.node_key;
+    return explicit ?? nodes.find((n) => n.node_key)?.node_key ?? null;
   }, [nodes]);
 
   // Resume from the cloud save first; otherwise begin at the chapter's start node.
@@ -151,7 +156,27 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   if (isLoading) {
     return <Shell><p className="text-slate-300">불러오는 중…</p></Shell>;
   }
-  if (error || !nodes?.length) {
+  if (!schemaReady) {
+    return (
+      <Shell>
+        <p className="text-slate-100">스토리 모드 업데이트가 아직 반영되지 않았습니다.</p>
+        <p className="mt-2 text-sm text-slate-400">
+          이 초안(Draft)을 수락하면 스토리 데이터가 적용되고, 바로 플레이할 수 있습니다.
+        </p>
+        <BackLink />
+      </Shell>
+    );
+  }
+  if (error) {
+    return (
+      <Shell>
+        <p className="text-slate-100">스토리를 불러오지 못했습니다.</p>
+        <p className="mt-2 text-sm text-slate-400">{(error as Error).message}</p>
+        <BackLink />
+      </Shell>
+    );
+  }
+  if (!nodes.length) {
     return (
       <Shell>
         <p className="text-slate-300">이 챕터에는 공개된 스토리 노드가 없습니다.</p>
