@@ -316,6 +316,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bonus_story_slots: number
           created_at: string
           current_stage: number
           gold: number
@@ -324,6 +325,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bonus_story_slots?: number
           created_at?: string
           current_stage?: number
           gold?: number
@@ -332,6 +334,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bonus_story_slots?: number
           created_at?: string
           current_stage?: number
           gold?: number
@@ -466,6 +469,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_hall_of_fame: boolean
           is_published: boolean
           is_start: boolean
           node_key: string | null
@@ -485,6 +489,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_hall_of_fame?: boolean
           is_published?: boolean
           is_start?: boolean
           node_key?: string | null
@@ -504,6 +509,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_hall_of_fame?: boolean
           is_published?: boolean
           is_start?: boolean
           node_key?: string | null
@@ -662,6 +668,7 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           id: string
+          is_hall_of_fame: boolean
           is_published: boolean
           summary: string | null
           title: string
@@ -673,6 +680,7 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           id?: string
+          is_hall_of_fame?: boolean
           is_published?: boolean
           summary?: string | null
           title: string
@@ -684,6 +692,7 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           id?: string
+          is_hall_of_fame?: boolean
           is_published?: boolean
           summary?: string | null
           title?: string
@@ -707,12 +716,20 @@ export type Database = {
         Args: { _env: string; _gold: number; _txn_id: string; _user_id: string }
         Returns: Json
       }
+      demote_story_from_hall_of_fame: {
+        Args: { _story_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      promote_story_to_hall_of_fame: {
+        Args: { _story_id: string }
+        Returns: Json
       }
       purchase_shop_item: {
         Args: { _dragon_uuid: string; _item_key: string }
