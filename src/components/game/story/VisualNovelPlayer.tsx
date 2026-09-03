@@ -363,7 +363,7 @@ export function VisualNovelPlayer({
 
 
 
-  if (isLoading) {
+  if (isLoading || saveLoading) {
     return <Shell><p className="text-slate-300">Loading…</p></Shell>;
   }
   if (!schemaReady) {
@@ -394,6 +394,23 @@ export function VisualNovelPlayer({
       </Shell>
     );
   }
+  if (staleSave) {
+    return (
+      <Shell>
+        <p className="text-slate-100">이어할 장면이 현재 비공개 상태입니다.</p>
+        <p className="mt-2 max-w-md text-sm text-slate-400">
+          저장된 진행 지점({remote?.nodeKey})이 관리자에 의해 비공개로 전환되어 이어하기를 할 수 없습니다. 저장
+          데이터는 그대로 보관되니, 다시 공개되면 이어서 진행할 수 있습니다.
+        </p>
+        <Button variant="secondary" onClick={restart}>
+          <RotateCcw className="mr-2 h-4 w-4" />
+          처음부터 새로 시작
+        </Button>
+        <BackLink />
+      </Shell>
+    );
+  }
+
 
   const body = node?.body_text ?? node?.description ?? "";
   const background = node?.background_image_url ?? sceneArt(chapterId, node?.node_key) ?? null;
