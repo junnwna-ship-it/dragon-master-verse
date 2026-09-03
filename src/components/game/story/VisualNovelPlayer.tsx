@@ -10,34 +10,45 @@ import { useVnSave } from "@/hooks/useVnSave";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles } from "lucide-react";
 
+function asStringList(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x.trim());
+  if (typeof v === "string" && v.trim()) return v.split(",").map((s) => s.trim()).filter(Boolean);
+  return [];
+}
+
+function pickString(o: Record<string, unknown>, keys: string[]): string | null {
+  for (const k of keys) if (typeof o[k] === "string" && o[k]) return o[k] as string;
+  return null;
+}
+
 /** Coerce raw jsonb into a safe options array — never trust the shape. */
 function parseOptions(raw: unknown): VnOption[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((o): o is Record<string, unknown> => !!o && typeof o === "object")
-    .map((o) => ({
-      label:
-        typeof o.label === "string"
-          ? o.label
-          : typeof o.choice_text === "string"
-            ? o.choice_text
-            : typeof o.Choice_Text === "string"
-              ? o.Choice_Text
-            : "…",
-      next_node:
-        typeof o.next_node === "string"
-          ? o.next_node
-          : typeof o.Next_Node === "string"
-            ? o.Next_Node
-            : null,
-      state_changes:
-        o.state_changes && typeof o.state_changes === "object"
-          ? (o.state_changes as Record<string, number>)
-          : o.State_Changes && typeof o.State_Changes === "object"
-            ? (o.State_Changes as Record<string, number>)
-          : null,
-    }));
+    .map((o) => {
+      const quizIds = [
+        ...asStringList(o.quiz_ids ?? o.Quiz_Ids),
+        ...asStringList(o.quiz_id ?? o.Quiz_Id),
+      ];
+      const rawCount = o.quiz_count ?? o.Quiz_Count;
+      return {
+        label: pickString(o, ["label", "choice_text", "Choice_Text"]) ?? "…",
+        next_node: pickString(o, ["next_node", "Next_Node"]),
+        state_changes:
+          o.state_changes && typeof o.state_changes === "object"
+            ? (o.state_changes as Record<string, number>)
+            : o.State_Changes && typeof o.State_Changes === "object"
+              ? (o.State_Changes as Record<string, number>)
+              : null,
+        quiz_ids: quizIds,
+        quiz_count: Number.isFinite(Number(rawCount)) ? Number(rawCount) : 0,
+        quiz_required: Boolean(o.quiz_required ?? o.Quiz_Required),
+        quiz_fail_node: pickString(o, ["quiz_fail_node", "Quiz_Fail_Node"]),
+      } satisfies VnOption;
+    });
 }
+
 
 function useChapterNodes(chapterId: string) {
   return useQuery({
