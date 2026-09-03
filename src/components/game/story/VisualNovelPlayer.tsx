@@ -181,8 +181,13 @@ export function VisualNovelPlayer({
   // Story progress feeds back into the wider game: each scene's authored
   // rewards (gold / stat points / items) are granted once per player.
   const { claim } = useStoryRewards();
+  // The lobby can hand a specific dragon to the story ("?dragon=<id>"); that
+  // companion owns the scene rewards, otherwise fall back to the deck pick.
+  const companion = useGameStore((state) =>
+    companionId != null ? state.dragons.find((d) => d.id === companionId) ?? null : null,
+  );
   const dragonUuid = useGameStore((state) => {
-    const picked = state.selectedDeck[0];
+    const picked = companionId ?? state.selectedDeck[0];
     const target =
       (picked != null ? state.dragons.find((d) => d.id === picked) : undefined) ??
       state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-"));
