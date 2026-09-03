@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Crown, Loader2, RefreshCw, ShieldOff } from "lucide-react";
+import { Crown, Eye, EyeOff, Loader2, RefreshCw, ShieldOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type UgcStory = {
@@ -12,6 +12,7 @@ export type UgcStory = {
   body: string | null;
   is_published: boolean;
   is_hall_of_fame: boolean;
+  is_lobby_visible: boolean;
   created_at: string;
 };
 
@@ -28,7 +29,7 @@ export function UgcReviewPanel() {
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await db()
-      .select("id,user_id,title,summary,cover_image_url,body,is_published,is_hall_of_fame,created_at")
+      .select("id,user_id,title,summary,cover_image_url,body,is_published,is_hall_of_fame,is_lobby_visible,created_at")
       .order("is_hall_of_fame", { ascending: false })
       .order("created_at", { ascending: false });
     if (error) toast.error(`불러오기 실패: ${error.message}`);
@@ -39,6 +40,24 @@ export function UgcReviewPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const toggleVisibility = async (story: UgcStory) => {
+    setBusyId(story.id);
+    const next = !story.is_lobby_visible;
+    const { error } = await rpc("set_story_lobby_visibility", {
+      _story_id: story.id,
+      _visible: next,
+    });
+    setBusyId(null);
+    if (error) {
+      toast.error(`변경 실패: ${error.message}`);
+      return;
+    }
+    toast.success(next ? "로비에 노출됩니다." : "로비에서 숨겼습니다.");
+    setRows((prev) =>
+      prev.map((r) => (r.id === story.id ? { ...r, is_lobby_visible: next } : r)),
+    );
+  };
 
   const promote = async (story: UgcStory) => {
     setBusyId(story.id);
@@ -125,8 +144,12 @@ export function UgcReviewPanel() {
                 {s.summary || "소개가 없습니다."}
               </p>
               <p className="mt-1 text-[10px] text-slate-500">
-                작가 ID: {s.user_id.slice(0, 8)}… · {s.is_published ? "공개" : "비공개"} ·{" "}
-                {new Date(s.created_at).toLocaleDateString()}
+                작가 ID: {s.user_id.slice(0, 8)}… · 작가 설정:{" "}
+                {s.is_published ? "공개" : "비공개"} · 로비 노출:{" "}
+                <span className={s.is_lobby_visible ? "text-emerald-300" : "text-slate-400"}>
+                  {s.is_lobby_visible ? "ON" : "OFF"}
+                </span>{" "}
+                · {new Date(s.created_at).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -141,6 +164,26 @@ export function UgcReviewPanel() {
               </p>
             </details>
           )}
+
+          <button
+            type="button"
+            onClick={() => void toggleVisibility(s)}
+            disabled={busyId === s.id}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-bold transition disabled:opacity-50 ${
+              s.is_lobby_visible
+                ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                : "border-slate-600 bg-slate-900/60 text-slate-300 hover:border-emerald-400/50"
+            }`}
+          >
+            {busyId === s.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : s.is_lobby_visible ? (
+              <Eye className="h-4 w-4" />
+            ) : (
+              <EyeOff className="h-4 w-4" />
+            )}
+            {s.is_lobby_visible ? "로비 노출 중 · 숨기기" : "로비에 노출하기"}
+          </button>
 
           {s.is_hall_of_fame ? (
             <button

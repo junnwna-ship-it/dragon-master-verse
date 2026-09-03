@@ -705,6 +705,7 @@ export type Database = {
           created_at: string
           id: string
           is_hall_of_fame: boolean
+          is_lobby_visible: boolean
           is_published: boolean
           summary: string | null
           title: string
@@ -717,6 +718,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_hall_of_fame?: boolean
+          is_lobby_visible?: boolean
           is_published?: boolean
           summary?: string | null
           title: string
@@ -729,6 +731,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_hall_of_fame?: boolean
+          is_lobby_visible?: boolean
           is_published?: boolean
           summary?: string | null
           title?: string
@@ -776,6 +779,10 @@ export type Database = {
         Returns: Json
       }
       recruit_dragon: { Args: { _dragon_uuid: string }; Returns: Json }
+      set_story_lobby_visibility: {
+        Args: { _story_id: string; _visible: boolean }
+        Returns: Json
+      }
       spend_stat_point: {
         Args: { _dragon_uuid: string; _stat: string }
         Returns: Json
