@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2 } from "lucide-react";
+import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2, Save, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { useGameStore, type Dragon } from "@/store/dragons";
