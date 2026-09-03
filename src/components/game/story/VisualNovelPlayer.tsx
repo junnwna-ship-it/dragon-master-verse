@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles, Play, Home } from "lucide-react";
+import { resolveResume } from "@/lib/storyResume";
 import {
   sceneArt,
   introArtFor,
