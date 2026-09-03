@@ -1,6 +1,11 @@
 // Text templates that teach the node → choice → quiz flow used by the
 // story player. Users fill in the blanks instead of inventing a format.
 
+import {
+  DRAGON_MASTER_CHAPTER,
+  chapterTemplateToStudioText,
+} from "@/lib/chapterTemplates";
+
 export type StoryTemplate = {
   id: string;
   label: string;
@@ -94,5 +99,13 @@ ${QUIZ_BLOCK}
 보상: 골드 100
 엔딩: true
 `,
+  },
+  {
+    id: "dragon_master",
+    label: "드래곤 마스터 공식 챕터",
+    hint: "20장면 + 퀴즈 관문 2곳으로 구성된 공식 챕터를 그대로 불러와 고쳐 씁니다",
+    title: DRAGON_MASTER_CHAPTER.label,
+    summary: DRAGON_MASTER_CHAPTER.description,
+    body: chapterTemplateToStudioText(DRAGON_MASTER_CHAPTER),
   },
 ];
