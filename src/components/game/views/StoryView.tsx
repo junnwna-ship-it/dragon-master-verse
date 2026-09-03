@@ -201,6 +201,7 @@ export function StoryView() {
   const dragons = useGameStore((s) => s.dragons);
   const { isTrainee, loading: ownedLoading, refetch: refetchOwned } = useOwnedDragons();
   const [stage1Done, setStage1Done] = useState(false);
+  const { save, loading: saveLoading, saving, persist, clear: clearSave } = useStorySave();
 
   const [run, setRun] = useState<RunState | null>(null);
   const [picker, setPicker] = useState(false);
