@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
-import { Crown } from "lucide-react";
+import { Crown, PenSquare } from "lucide-react";
 import { UgcReviewPanel } from "./UgcReviewPanel";
+import { StoryMapEditor } from "./StoryMapEditor";
+
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
