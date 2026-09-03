@@ -32,42 +32,45 @@ function parseOptions(raw: unknown): VnOption[] {
 function useChapterNodes(chapterId: string) {
   return useQuery({
     queryKey: ["vn", "chapter", chapterId],
-    queryFn: async (): Promise<VnNode[]> => {
-      // `chapter_id` / `node_key` / `options` are new CMS columns not yet in the
-      // generated types, so query through a loosely typed view of the table.
+    queryFn: async (): Promise<{ nodes: VnNode[]; schemaReady: boolean }> => {
+      // `chapter_id` / `node_key` / `options` are newer CMS columns that may not
+      // exist yet, so select everything and filter in JS instead of in SQL —
+      // a missing-column filter would make the whole request fail.
       const table = supabase.from("story_nodes") as unknown as {
-        select: (cols: string) => {
-          eq: (col: string, val: string) => {
-            order: (
-              col: string,
-              opts: { ascending: boolean },
-            ) => Promise<{ data: unknown; error: { message: string } | null }>;
-          };
-        };
+        select: (cols: string) => Promise<{
+          data: unknown;
+          error: { message: string } | null;
+        }>;
       };
-      const { data, error } = await table
-        .select("*")
-        .eq("chapter_id", chapterId)
-        .order("stage_number", { ascending: true });
+      const { data, error } = await table.select("*");
       if (error) throw new Error(error.message);
 
-      return ((data ?? []) as unknown as Record<string, unknown>[]).map((row) => ({
-        id: String(row.id),
-        chapter_id: String(row.chapter_id ?? chapterId),
-        node_key: (row.node_key as string | null) ?? null,
-        title: String(row.title ?? ""),
-        speaker: (row.speaker as string | null) ?? null,
-        body_text: (row.body_text as string | null) ?? null,
-        description: (row.description as string | null) ?? null,
-        background_image_url: (row.background_image_url as string | null) ?? null,
-        options: parseOptions(row.options),
-        state_changes: (row.state_changes as Record<string, number> | null) ?? null,
-        is_start: Boolean(row.is_start),
-        stage_number: Number(row.stage_number ?? 0),
-      }));
+      const raw = (data ?? []) as unknown as Record<string, unknown>[];
+      const schemaReady = raw.length === 0 || Object.hasOwn(raw[0]!, "chapter_id");
+
+      const nodes = raw
+        .filter((row) => String(row.chapter_id ?? "") === chapterId)
+        .map((row) => ({
+          id: String(row.id),
+          chapter_id: String(row.chapter_id ?? chapterId),
+          node_key: (row.node_key as string | null) ?? null,
+          title: String(row.title ?? ""),
+          speaker: (row.speaker as string | null) ?? null,
+          body_text: (row.body_text as string | null) ?? null,
+          description: (row.description as string | null) ?? null,
+          background_image_url: (row.background_image_url as string | null) ?? null,
+          options: parseOptions(row.options),
+          state_changes: (row.state_changes as Record<string, number> | null) ?? null,
+          is_start: Boolean(row.is_start),
+          stage_number: Number(row.stage_number ?? 0),
+        }))
+        .sort((a, b) => a.stage_number - b.stage_number);
+
+      return { nodes, schemaReady };
     },
   });
 }
+
 
 /** Typewriter output with click-to-skip. */
 function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
