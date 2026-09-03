@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -294,7 +294,9 @@ export function VisualNovelPlayer({
 
   const restart = () => {
     if (!startKey) return;
-    finalizedRef.current = false;
+    finalizeInFlight.current = false;
+    setFinalizeState("idle");
+    setFinalizeError(null);
     void clear();
     setQuizOption(null);
     setIntroDone(false);
