@@ -359,7 +359,8 @@ export function VisualNovelPlayer({
               </div>
             )}
             <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
-              <Play className="mr-2 h-4 w-4" /> Begin the story
+              <Play className="mr-2 h-4 w-4" />
+              {remote?.nodeKey && !remote.finished ? "Continue your story" : "Begin the story"}
             </Button>
           </motion.div>
         </div>
