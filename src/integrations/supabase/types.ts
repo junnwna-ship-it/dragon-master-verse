@@ -527,6 +527,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stories: {
+        Row: {
+          body: string | null
+          cover_image_url: string | null
+          created_at: string
+          id: string
+          is_published: boolean
+          summary: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          summary?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

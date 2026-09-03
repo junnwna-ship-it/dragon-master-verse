@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -16,6 +17,11 @@ import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as StoryPlayChapterIdRouteImport } from './routes/story.play.$chapterId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/studio': typeof StudioRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/story/play/$chapterId': typeof StoryPlayChapterIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/studio': typeof StudioRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/story/play/$chapterId': typeof StoryPlayChapterIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/studio': typeof StudioRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/story/play/$chapterId': typeof StoryPlayChapterIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/sitemap.xml'
+    | '/studio'
     | '/admin/dashboard'
     | '/story/play/$chapterId'
     | '/api/public/payments/webhook'
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/sitemap.xml'
+    | '/studio'
     | '/admin/dashboard'
     | '/story/play/$chapterId'
     | '/api/public/payments/webhook'
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/sitemap.xml'
+    | '/studio'
     | '/admin/dashboard'
     | '/story/play/$chapterId'
     | '/api/public/payments/webhook'
@@ -104,6 +116,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StudioRoute: typeof StudioRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   StoryPlayChapterIdRoute: typeof StoryPlayChapterIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -111,6 +124,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -160,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StudioRoute: StudioRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   StoryPlayChapterIdRoute: StoryPlayChapterIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

@@ -245,6 +245,20 @@ export function LobbyView() {
           <ChevronRight className="h-3 w-3" />
         </span>
       </Link>
+      <Link
+        to="/studio"
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-600/60 bg-slate-900/60 px-4 py-3 hover:bg-slate-800/60"
+      >
+        <span className="flex items-center gap-2 text-sm font-bold text-slate-200">
+          <ScrollText className="h-4 w-4 text-slate-400" />
+          Creator Studio
+        </span>
+        <span className="flex items-center gap-1 text-[11px] text-slate-400">
+          내 스토리 만들기
+          <ChevronRight className="h-3 w-3" />
+        </span>
+      </Link>
+
       <button
         onClick={handleScanClick}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-rose-500/10 px-4 py-3 text-sm font-bold text-amber-200 hover:from-amber-500/25 hover:to-rose-500/20"
