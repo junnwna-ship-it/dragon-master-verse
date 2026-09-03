@@ -332,37 +332,58 @@ export type Database = {
       story_nodes: {
         Row: {
           background_image_url: string | null
+          body_text: string | null
+          chapter_id: string
           created_at: string
           description: string | null
           id: string
           is_published: boolean
+          is_start: boolean
+          node_key: string | null
           node_type: string
+          options: Json
           quiz_ids: string[]
+          speaker: string | null
           stage_number: number
+          state_changes: Json
           title: string
           updated_at: string
         }
         Insert: {
           background_image_url?: string | null
+          body_text?: string | null
+          chapter_id?: string
           created_at?: string
           description?: string | null
           id?: string
           is_published?: boolean
+          is_start?: boolean
+          node_key?: string | null
           node_type?: string
+          options?: Json
           quiz_ids?: string[]
+          speaker?: string | null
           stage_number?: number
+          state_changes?: Json
           title: string
           updated_at?: string
         }
         Update: {
           background_image_url?: string | null
+          body_text?: string | null
+          chapter_id?: string
           created_at?: string
           description?: string | null
           id?: string
           is_published?: boolean
+          is_start?: boolean
+          node_key?: string | null
           node_type?: string
+          options?: Json
           quiz_ids?: string[]
+          speaker?: string | null
           stage_number?: number
+          state_changes?: Json
           title?: string
           updated_at?: string
         }
@@ -379,6 +400,12 @@ export type Database = {
           updated_at: string
           user_id: string
           visited: number[]
+          vn_applied: string[]
+          vn_chapter_id: string | null
+          vn_finished: boolean
+          vn_node_key: string | null
+          vn_stats: Json
+          vn_visited: string[]
         }
         Insert: {
           created_at?: string
@@ -390,6 +417,12 @@ export type Database = {
           updated_at?: string
           user_id: string
           visited?: number[]
+          vn_applied?: string[]
+          vn_chapter_id?: string | null
+          vn_finished?: boolean
+          vn_node_key?: string | null
+          vn_stats?: Json
+          vn_visited?: string[]
         }
         Update: {
           created_at?: string
@@ -401,6 +434,12 @@ export type Database = {
           updated_at?: string
           user_id?: string
           visited?: number[]
+          vn_applied?: string[]
+          vn_chapter_id?: string | null
+          vn_finished?: boolean
+          vn_node_key?: string | null
+          vn_stats?: Json
+          vn_visited?: string[]
         }
         Relationships: []
       }
