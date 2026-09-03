@@ -84,3 +84,91 @@ export const grantAdminByEmail = createServerFn({ method: "POST" })
     if (insertError) throw new Error(insertError.message);
     return { ok: true, email: target };
   });
+
+/* ------------------------------------------------------------------ *
+ * Audit log + admin-only gate for admin server endpoints.
+ * ------------------------------------------------------------------ */
+
+type AuditEntry = {
+  action: string;
+  actorId?: string | null;
+  actorEmail?: string | null;
+  targetUserId?: string | null;
+  targetEmail?: string | null;
+  detail?: Record<string, unknown>;
+  success?: boolean;
+};
+
+/** Best-effort audit write; never blocks the caller's operation. */
+async function writeAudit(entry: AuditEntry) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("admin_audit_logs").insert({
+      action: entry.action,
+      actor_id: entry.actorId ?? null,
+      actor_email: entry.actorEmail ?? null,
+      target_user_id: entry.targetUserId ?? null,
+      target_email: entry.targetEmail ?? null,
+      detail: entry.detail ?? {},
+      success: entry.success ?? true,
+    });
+  } catch (err) {
+    console.error("[audit] failed to record admin action:", err);
+  }
+}
+
+/**
+ * Gate for admin-only server endpoints: throws unless the verified caller
+ * holds the `admin` role. Route guards protect UI only — every admin RPC
+ * must call this itself.
+ */
+async function assertAdmin(userId: string, action: string, email?: string | null) {
+  if (await isAdmin(userId)) return;
+  await writeAudit({
+    action: `denied:${action}`,
+    actorId: userId,
+    actorEmail: email ?? null,
+    success: false,
+  });
+  throw new Error("관리자 권한이 필요합니다.");
+}
+
+async function emailOf(userId: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+    return data.user?.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Called by the admin sign-in screen once a session exists. */
+export const recordAdminLogin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const mine = await isAdmin(context.userId);
+    await writeAudit({
+      action: mine ? "admin_login" : "login_non_admin",
+      actorId: context.userId,
+      actorEmail: (context.claims as { email?: string }).email ?? null,
+      detail: { isAdmin: mine },
+    });
+    return { ok: true };
+  });
+
+/** Admin-only: recent admin activity, newest first. */
+export const listAuditLogs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const email = (context.claims as { email?: string }).email ?? null;
+    await assertAdmin(context.userId, "list_audit_logs", email);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("admin_audit_logs")
+      .select("id, action, actor_email, target_email, detail, success, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
