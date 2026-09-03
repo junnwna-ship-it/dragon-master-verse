@@ -10,7 +10,13 @@ import { useVnSave } from "@/hooks/useVnSave";
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ChevronLeft, Sparkles } from "lucide-react";
+import { RotateCcw, ChevronLeft, Sparkles, Play } from "lucide-react";
+import {
+  sceneArt,
+  introArtFor,
+  CHAPTER_TITLES,
+  CHAPTER_TAGLINES,
+} from "@/data/storyArt";
 
 function asStringList(v: unknown): string[] {
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x.trim());
@@ -130,6 +136,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
   const hydratedRef = useRef(false);
   const [quizOption, setQuizOption] = useState<VnOption | null>(null);
+  const [introDone, setIntroDone] = useState(false);
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
@@ -172,6 +179,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     if (!startKey) return;
     void clear();
     setQuizOption(null);
+    setIntroDone(false);
     start(chapterId, startKey, { reset: true });
   };
 
@@ -198,7 +206,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     if (opt.quiz_fail_node) {
       choose({ ...opt, next_node: opt.quiz_fail_node, state_changes: null });
     } else {
-      toast.error("정답을 모두 맞혀야 다음으로 넘어갈 수 있어요!");
+      toast.error("Answer every question correctly to move on!");
     }
   };
 
@@ -208,14 +216,14 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
 
 
   if (isLoading) {
-    return <Shell><p className="text-slate-300">불러오는 중…</p></Shell>;
+    return <Shell><p className="text-slate-300">Loading…</p></Shell>;
   }
   if (!schemaReady) {
     return (
       <Shell>
-        <p className="text-slate-100">스토리 모드 업데이트가 아직 반영되지 않았습니다.</p>
+        <p className="text-slate-100">The story mode update has not been applied yet.</p>
         <p className="mt-2 text-sm text-slate-400">
-          이 초안(Draft)을 수락하면 스토리 데이터가 적용되고, 바로 플레이할 수 있습니다.
+          Accept this draft to load the story data and start playing.
         </p>
         <BackLink />
       </Shell>
@@ -224,7 +232,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   if (error) {
     return (
       <Shell>
-        <p className="text-slate-100">스토리를 불러오지 못했습니다.</p>
+        <p className="text-slate-100">Failed to load the story.</p>
         <p className="mt-2 text-sm text-slate-400">{(error as Error).message}</p>
         <BackLink />
       </Shell>
@@ -233,28 +241,67 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   if (!nodes.length) {
     return (
       <Shell>
-        <p className="text-slate-300">이 챕터에는 공개된 스토리 노드가 없습니다.</p>
+        <p className="text-slate-300">This chapter has no published scenes yet.</p>
         <BackLink />
       </Shell>
     );
   }
 
   const body = node?.body_text ?? node?.description ?? "";
+  const background = node?.background_image_url ?? sceneArt(chapterId, node?.node_key) ?? null;
+  const introImage = introArtFor(chapterId);
+  const chapterTitle = CHAPTER_TITLES[chapterId] ?? chapterId.replace(/_/g, " ");
+  const tagline = CHAPTER_TAGLINES[chapterId] ?? "Your choices shape the legend.";
+
+  if (!introDone) {
+    return (
+      <div className="relative min-h-screen w-full overflow-hidden bg-slate-950">
+        <motion.img
+          src={introImage}
+          alt={`${chapterTitle} chapter cover art`}
+          width={1536}
+          height={1024}
+          initial={{ opacity: 0, scale: 1.08 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2 }}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/30 to-slate-950/95" />
+        <div className="relative z-10 flex min-h-screen flex-col justify-between p-4">
+          <BackLink />
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, type: "spring", stiffness: 220, damping: 24 }}
+            className="mx-auto w-full max-w-2xl rounded-2xl border border-white/15 bg-black/60 p-6 text-center backdrop-blur-md"
+          >
+            <p className="text-xs uppercase tracking-[0.3em] text-amber-300/90">Story Mode</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-50 md:text-4xl">{chapterTitle}</h1>
+            <p className="mt-3 text-sm text-slate-200 md:text-base">{tagline}</p>
+            <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
+              <Play className="mr-2 h-4 w-4" /> Begin the story
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-slate-950">
       {/* Background from DB (plain URL string) */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={node?.background_image_url ?? "bg"}
+          key={background ?? "bg"}
           initial={{ opacity: 0, scale: 1.04 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6 }}
           className="absolute inset-0 bg-cover bg-center"
           style={
-            node?.background_image_url
-              ? { backgroundImage: `url(${node.background_image_url})` }
+            background
+              ? { backgroundImage: `url(${background})` }
               : {
                   backgroundImage:
                     "radial-gradient(circle at 30% 20%, hsl(262 60% 30%), transparent 60%), radial-gradient(circle at 70% 80%, hsl(200 70% 25%), transparent 60%)",
@@ -277,10 +324,10 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
             </span>
           ))}
           <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
-            {signedIn ? (saving ? "저장 중…" : "클라우드 저장됨") : "로그인하면 진행도가 저장됩니다"}
+            {signedIn ? (saving ? "Saving…" : "Saved to cloud") : "Sign in to save your progress"}
           </span>
           <Button size="sm" variant="secondary" onClick={restart}>
-            <RotateCcw className="mr-1 h-3.5 w-3.5" /> 처음부터
+            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Restart
           </Button>
 
         </div>
@@ -292,13 +339,13 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
           {finished || !node ? (
             <div className="rounded-2xl border border-white/15 bg-black/70 p-5 backdrop-blur-md">
               <p className="flex items-center gap-2 text-lg font-semibold text-amber-300">
-                <Sparkles className="h-5 w-5" /> 챕터 완료
+                <Sparkles className="h-5 w-5" /> Chapter complete
               </p>
               <p className="mt-2 text-sm text-slate-200">
-                누적 스탯이 저장되었습니다. 다시 플레이하면 다른 선택으로 다른 결과를 볼 수 있어요.
+                Your stats have been saved. Replay and choose differently to see another outcome.
               </p>
               <div className="mt-4 flex gap-2">
-                <Button onClick={restart}>다시 플레이</Button>
+                <Button onClick={restart}>Play again</Button>
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -307,7 +354,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                   }}
                   asChild={false}
                 >
-                  기록 초기화
+                  Clear save
                 </Button>
               </div>
 
@@ -342,17 +389,17 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                     {opt.label}
                     {((opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0) && (
                       <span className="ml-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-200">
-                        퀴즈
+                        Quiz
                       </span>
                     )}
                   </motion.button>
                 ))}
                 {node.options.length === 0 && (
                   <Button
-                    onClick={() => choose({ label: "계속", next_node: null })}
+                    onClick={() => choose({ label: "Continue", next_node: null })}
                     className="w-full"
                   >
-                    계속
+                    Continue
                   </Button>
                 )}
               </div>
@@ -363,7 +410,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
 
       {quizOption && (
         <QuizModal
-          title="지혜의 시련"
+          title="Trial of Wisdom"
           count={quizOption.quiz_count && quizOption.quiz_count > 0 ? quizOption.quiz_count : 1}
           quizIds={quizOption.quiz_ids}
           onClose={handleQuizClose}
@@ -390,7 +437,7 @@ function BackLink() {
       onClick={() => setView("lobby")}
       className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-slate-100 backdrop-blur hover:bg-black/60"
     >
-      <ChevronLeft className="h-3.5 w-3.5" /> 돌아가기
+      <ChevronLeft className="h-3.5 w-3.5" /> Back
     </Link>
   );
 }
