@@ -2,6 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { VisualNovelPlayer } from "@/components/game/story/VisualNovelPlayer";
 
 export const Route = createFileRoute("/story/play/$chapterId")({
+  validateSearch: (search: Record<string, unknown>): { dragon?: number } => {
+    const raw = Number(search.dragon);
+    return Number.isFinite(raw) && raw > 0 ? { dragon: raw } : {};
+  },
   ssr: false,
   head: () => ({
     meta: [
@@ -24,5 +28,6 @@ export const Route = createFileRoute("/story/play/$chapterId")({
 
 function StoryPlayRoute() {
   const { chapterId } = Route.useParams();
-  return <VisualNovelPlayer chapterId={chapterId} />;
+  const { dragon } = Route.useSearch();
+  return <VisualNovelPlayer chapterId={chapterId} companionId={dragon ?? null} />;
 }

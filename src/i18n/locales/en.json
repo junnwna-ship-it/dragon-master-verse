@@ -59,6 +59,7 @@
     "cardLabel": "{{name}}, element {{element}}. ATK {{atk}}, DEF {{def}}, HP {{hp}} of {{maxHp}}, MP {{mp}}.{{selectedSuffix}} Tap to open details.",
     "currentlySelected": " Currently selected.",
     "storyCta": "Story Mode",
+    "dragonStoryCta": "Play {{name}}'s story",
     "storyCtaSub": "Continue the saga"
   },
   "auth": {

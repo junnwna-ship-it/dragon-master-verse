@@ -129,7 +129,14 @@ function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
   );
 }
 
-export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
+export function VisualNovelPlayer({
+  chapterId,
+  companionId = null,
+}: {
+  chapterId: string;
+  /** Dragon the player brought into the story (from the lobby deck). */
+  companionId?: number | null;
+}) {
   const { data, isLoading, error } = useChapterNodes(chapterId);
   const nodes = useMemo(() => data?.nodes ?? [], [data]);
   const schemaReady = data?.schemaReady ?? true;
@@ -174,8 +181,13 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   // Story progress feeds back into the wider game: each scene's authored
   // rewards (gold / stat points / items) are granted once per player.
   const { claim } = useStoryRewards();
+  // The lobby can hand a specific dragon to the story ("?dragon=<id>"); that
+  // companion owns the scene rewards, otherwise fall back to the deck pick.
+  const companion = useGameStore((state) =>
+    companionId != null ? state.dragons.find((d) => d.id === companionId) ?? null : null,
+  );
   const dragonUuid = useGameStore((state) => {
-    const picked = state.selectedDeck[0];
+    const picked = companionId ?? state.selectedDeck[0];
     const target =
       (picked != null ? state.dragons.find((d) => d.id === picked) : undefined) ??
       state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-"));
@@ -297,6 +309,21 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
             <p className="text-xs uppercase tracking-[0.3em] text-amber-300/90">Story Mode</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-50 md:text-4xl">{chapterTitle}</h1>
             <p className="mt-3 text-sm text-slate-200 md:text-base">{tagline}</p>
+            {companion && (
+              <div className="mt-5 flex items-center justify-center gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2">
+                {companion.imageUrl && (
+                  <img
+                    src={companion.imageUrl}
+                    alt={companion.name}
+                    className="h-10 w-10 rounded-lg object-cover"
+                  />
+                )}
+                <span className="text-sm text-amber-100">
+                  Your companion: <b>{companion.name}</b>
+                  <span className="ml-1 text-amber-300/80">({companion.element})</span>
+                </span>
+              </div>
+            )}
             <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
               <Play className="mr-2 h-4 w-4" /> Begin the story
             </Button>
@@ -334,6 +361,18 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
       <div className="relative z-10 flex items-center justify-between gap-2 p-4">
         <BackLink />
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {companion && (
+            <span className="flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-black/50 px-2 py-1 text-xs text-amber-100 backdrop-blur">
+              {companion.imageUrl && (
+                <img
+                  src={companion.imageUrl}
+                  alt={companion.name}
+                  className="h-5 w-5 rounded-full object-cover"
+                />
+              )}
+              {companion.name}
+            </span>
+          )}
           {statEntries.map(([key, value]) => (
             <span
               key={key}
