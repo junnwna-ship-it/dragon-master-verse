@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2, Sparkles, HelpCircle, GitBranch, LayoutTemplate } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  STORY_TEMPLATES,
+  SCENE_BLOCK,
+  CHOICE_BLOCK,
+  QUIZ_BLOCK,
+  type StoryTemplate,
+} from "./storyTemplates";
 
 const BASE_STORIES = 5;
 
