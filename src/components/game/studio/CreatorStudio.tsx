@@ -225,6 +225,49 @@ export function CreatorStudio() {
         )}
       </section>
 
+      <section className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-violet-100">
+          <LayoutTemplate className="h-4 w-4 text-violet-300" />
+          템플릿으로 시작하기
+        </h2>
+        <p className="mt-1 text-[11px] text-slate-400">
+          장면(Node) → 선택지 → 퀴즈 흐름이 미리 채워집니다. 빈칸만 바꿔 쓰면 됩니다.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {STORY_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              disabled={atLimit || creating || !user}
+              onClick={() => {
+                if (atLimit) {
+                  toast.error(limitMessage);
+                  return;
+                }
+                void handleCreate(t);
+              }}
+              className={`rounded-xl border p-3 text-left transition ${
+                atLimit || !user
+                  ? "cursor-not-allowed border-slate-700 bg-slate-800/60 text-slate-500"
+                  : "border-violet-400/30 bg-slate-900/60 text-slate-200 hover:border-violet-300/60 hover:bg-slate-900"
+              }`}
+            >
+              <span className="flex items-center gap-1 text-xs font-bold">
+                {t.id === "quiz" ? (
+                  <HelpCircle className="h-3 w-3 text-amber-300" />
+                ) : t.id === "branch" ? (
+                  <GitBranch className="h-3 w-3 text-sky-300" />
+                ) : (
+                  <Sparkles className="h-3 w-3 text-violet-300" />
+                )}
+                {t.label}
+              </span>
+              <span className="mt-1 block text-[11px] leading-snug text-slate-400">{t.hint}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {loading ? (
         <p className="text-sm text-slate-400">불러오는 중…</p>
       ) : !user ? (
