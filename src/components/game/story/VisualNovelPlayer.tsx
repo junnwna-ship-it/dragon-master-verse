@@ -4,6 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine";
+import { useVnSave } from "@/hooks/useVnSave";
+
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles } from "lucide-react";
 
@@ -90,7 +92,10 @@ function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
 
 export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   const { data: nodes, isLoading, error } = useChapterNodes(chapterId);
-  const { nodeKey, stats, finished, start, choose, enter, reset } = useStoryEngine();
+  const { nodeKey, stats, visited, applied, finished, start, choose, enter, reset, hydrate } =
+    useStoryEngine();
+  const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
+  const hydratedRef = useRef(false);
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
@@ -103,9 +108,19 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     return explicit ?? (nodes ?? []).find((n) => n.node_key)?.node_key ?? null;
   }, [nodes]);
 
+  // Resume from the cloud save first; otherwise begin at the chapter's start node.
   useEffect(() => {
-    if (startKey) start(chapterId, startKey);
-  }, [startKey, chapterId, start]);
+    if (saveLoading || hydratedRef.current) return;
+    if (remote && remote.nodeKey && byKey.has(remote.nodeKey)) {
+      hydratedRef.current = true;
+      hydrate(remote);
+      return;
+    }
+    if (startKey) {
+      hydratedRef.current = true;
+      start(chapterId, startKey);
+    }
+  }, [saveLoading, remote, byKey, startKey, chapterId, start, hydrate]);
 
   const node = nodeKey ? byKey.get(nodeKey) ?? null : null;
 
@@ -113,7 +128,20 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     if (node) enter(node);
   }, [node, enter]);
 
+  // Persist every progress change so a logout / reconnect resumes exactly here.
+  useEffect(() => {
+    if (!hydratedRef.current || !nodeKey) return;
+    persist({ chapterId, nodeKey, stats, visited, applied, finished });
+  }, [chapterId, nodeKey, stats, visited, applied, finished, persist]);
+
+  const restart = () => {
+    if (!startKey) return;
+    void clear();
+    start(chapterId, startKey, { reset: true });
+  };
+
   const statEntries = Object.entries(stats).filter(([, v]) => v !== 0);
+
 
   if (isLoading) {
     return <Shell><p className="text-slate-300">불러오는 중…</p></Shell>;
@@ -164,13 +192,13 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
               {key.replace(/_/g, " ")} <b className="text-amber-300">{value}</b>
             </span>
           ))}
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => startKey && start(chapterId, startKey, { reset: true })}
-          >
+          <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
+            {signedIn ? (saving ? "저장 중…" : "클라우드 저장됨") : "로그인하면 진행도가 저장됩니다"}
+          </span>
+          <Button size="sm" variant="secondary" onClick={restart}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> 처음부터
           </Button>
+
         </div>
       </div>
 
@@ -186,13 +214,19 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                 누적 스탯이 저장되었습니다. 다시 플레이하면 다른 선택으로 다른 결과를 볼 수 있어요.
               </p>
               <div className="mt-4 flex gap-2">
-                <Button onClick={() => startKey && start(chapterId, startKey, { reset: true })}>
-                  다시 플레이
-                </Button>
-                <Button variant="secondary" onClick={reset} asChild={false}>
+                <Button onClick={restart}>다시 플레이</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    void clear();
+                    reset();
+                  }}
+                  asChild={false}
+                >
                   기록 초기화
                 </Button>
               </div>
+
             </div>
           ) : (
             <>

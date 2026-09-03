@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, Eye, EyeOff, X } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -22,7 +22,7 @@ import {
  * go straight to the CMS tables and are authorized by RLS (admin-only).
  */
 
-type FieldKind = "text" | "textarea" | "number" | "url" | "uuidlist";
+type FieldKind = "text" | "textarea" | "number" | "url" | "uuidlist" | "json" | "boolean";
 
 interface FieldDef {
   key: string;
@@ -32,6 +32,8 @@ interface FieldDef {
 }
 
 interface TabDef {
+  /** Unique tab identity (two tabs may target the same table). */
+  key: string;
   id: CmsTable;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -42,6 +44,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   {
+    key: "store_items",
     id: "store_items",
     label: "1. 상점 관리",
     icon: Store,
@@ -57,6 +60,7 @@ const TABS: TabDef[] = [
     blank: { name: "", price_usd: 0, gold_reward: 0, item_type: "gold", image_url: "", sort_order: 0, is_published: false },
   },
   {
+    key: "training_stats",
     id: "training_stats",
     label: "2. 훈련 능력 관리",
     icon: Dumbbell,
@@ -72,6 +76,7 @@ const TABS: TabDef[] = [
     blank: { stat_name: "", stat_code: "", base_cost: 100, stat_increase: 10, icon_url: "", sort_order: 0, is_published: false },
   },
   {
+    key: "story_nodes",
     id: "story_nodes",
     label: "3. 스토리 맵 관리",
     icon: Map,
@@ -87,6 +92,7 @@ const TABS: TabDef[] = [
     blank: { title: "", stage_number: 1, node_type: "battle", description: "", quiz_ids: [], background_image_url: "", is_published: false },
   },
   {
+    key: "game_settings",
     id: "game_settings",
     label: "4. 전역 설정",
     icon: Settings2,
@@ -98,14 +104,57 @@ const TABS: TabDef[] = [
     ],
     blank: { key: "", value: "", description: "", is_published: false },
   },
+  {
+    key: "story_chapters",
+    id: "story_nodes",
+    label: "5. 스토리 챕터 관리",
+    icon: BookOpen,
+    titleField: "title",
+    fields: [
+      { key: "chapter_id", label: "챕터 ID", kind: "text", placeholder: "prologue" },
+      { key: "node_key", label: "노드 키 (챕터 내 고유)", kind: "text", placeholder: "start" },
+      { key: "is_start", label: "챕터 시작 노드", kind: "boolean" },
+      { key: "title", label: "노드 제목", kind: "text", placeholder: "알에서 깨어난 소리" },
+      { key: "stage_number", label: "정렬 번호", kind: "number", placeholder: "1" },
+      { key: "speaker", label: "화자", kind: "text", placeholder: "내레이터" },
+      { key: "body_text", label: "본문 텍스트", kind: "textarea", placeholder: "동굴 깊은 곳에서 울음소리가…" },
+      {
+        key: "options",
+        label: '선택지 JSON [{ "label", "next_node", "state_changes" }]',
+        kind: "json",
+        placeholder: '[{"label":"다가간다","next_node":"approach","state_changes":{"Worm_Affinity":2}}]',
+      },
+      {
+        key: "state_changes",
+        label: "노드 진입 시 스탯 변화 JSON",
+        kind: "json",
+        placeholder: '{"Courage":1}',
+      },
+      { key: "background_image_url", label: "배경 이미지 URL (텍스트)", kind: "url", placeholder: "https://.../bg.jpg" },
+    ],
+    blank: {
+      chapter_id: "prologue",
+      node_key: "",
+      is_start: false,
+      title: "",
+      stage_number: 1,
+      node_type: "story",
+      speaker: "내레이터",
+      body_text: "",
+      options: [],
+      state_changes: {},
+      background_image_url: "",
+      is_published: false,
+    },
+  },
 ];
 
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 
 export function CmsDashboard() {
   const { isAdmin, loading } = useIsAdmin();
-  const [tabId, setTabId] = useState<CmsTable>("store_items");
-  const tab = TABS.find((x) => x.id === tabId)!;
+  const [tabKey, setTabKey] = useState<string>("store_items");
+  const tab = TABS.find((x) => x.key === tabKey)!;
 
   if (loading) {
     return (
@@ -141,12 +190,12 @@ export function CmsDashboard() {
         <div className="flex gap-2">
           {TABS.map((x) => {
             const Icon = x.icon;
-            const active = x.id === tabId;
+            const active = x.key === tabKey;
             return (
               <button
-                key={x.id}
+                key={x.key}
                 type="button"
-                onClick={() => setTabId(x.id)}
+                onClick={() => setTabKey(x.key)}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition ${
                   active
                     ? "border-amber-400 bg-amber-500/15 text-amber-200"
@@ -161,7 +210,7 @@ export function CmsDashboard() {
         </div>
       </nav>
 
-      <CmsTableEditor key={tab.id} tab={tab} />
+      <CmsTableEditor key={tab.key} tab={tab} />
     </div>
   );
 }
@@ -321,6 +370,7 @@ function CmsPreviewSurface({ tab, rows }: { tab: TabDef; rows: Record<string, un
     return <p className="py-2 text-center text-[11px] text-slate-500">미리볼 항목이 없습니다.</p>;
   }
 
+  if (tab.key === "story_chapters") return <VnNodePreview rows={rows} />;
   if (tab.id === "store_items") return <CmsStoreItems rows={rows as unknown as StoreItem[]} />;
   if (tab.id === "training_stats") return <CmsTrainingStats rows={rows as unknown as TrainingStat[]} />;
   if (tab.id === "story_nodes") return <CmsStoryNodes rows={rows as unknown as StoryNode[]} />;
@@ -338,6 +388,46 @@ function CmsPreviewSurface({ tab, rows }: { tab: TabDef; rows: Record<string, un
           {s.description && <p className="mt-1 text-[11px] text-slate-500">{s.description}</p>}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Text-only visual-novel node preview: dialog box + option buttons. */
+function VnNodePreview({ rows }: { rows: Record<string, unknown>[] }) {
+  return (
+    <div className="space-y-3">
+      {rows.map((r, i) => {
+        const options = Array.isArray(r.options) ? (r.options as Record<string, unknown>[]) : [];
+        return (
+          <div key={String(r.id ?? i)} className="rounded-xl border border-slate-700/60 bg-slate-950/70 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300/90">
+              {String(r.chapter_id ?? "?")} / {String(r.node_key ?? "?")}
+              {r.is_start ? " · START" : ""}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">{String(r.speaker ?? r.title ?? "")}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-100">
+              {String(r.body_text ?? r.description ?? "(본문 없음)")}
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {options.map((o, oi) => (
+                <div
+                  key={oi}
+                  className="rounded-lg border border-amber-300/30 bg-black/40 px-3 py-2 text-xs text-slate-100"
+                >
+                  {String(o.label ?? "…")}
+                  <span className="ml-2 text-[10px] text-slate-400">
+                    → {String(o.next_node ?? "(챕터 종료)")}
+                    {o.state_changes ? ` · ${JSON.stringify(o.state_changes)}` : ""}
+                  </span>
+                </div>
+              ))}
+              {options.length === 0 && (
+                <p className="text-[11px] text-slate-500">선택지 없음 — “계속” 버튼으로 진행됩니다.</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -528,7 +618,11 @@ function FieldInput({
     "w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-amber-400 focus:outline-none";
 
   const display =
-    field.kind === "uuidlist"
+    field.kind === "json"
+      ? typeof value === "string"
+        ? value
+        : JSON.stringify(value ?? null, null, 0)
+      : field.kind === "uuidlist"
       ? Array.isArray(value)
         ? (value as string[]).join(", ")
         : String(value ?? "")
@@ -541,7 +635,11 @@ function FieldInput({
       <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {field.label}
       </label>
-      {field.kind === "textarea" ? (
+      {field.kind === "boolean" ? (
+        <Switch checked={Boolean(value)} onCheckedChange={(v) => onChange(v)} />
+      ) : field.kind === "json" ? (
+        <JsonField value={display} placeholder={field.placeholder} onChange={onChange} />
+      ) : field.kind === "textarea" ? (
         <textarea
           className={`${base} min-h-[72px]`}
           value={display}
@@ -571,6 +669,49 @@ function FieldInput({
             }
           }}
         />
+      )}
+    </div>
+  );
+}
+/** JSON textarea that keeps invalid text locally and surfaces a parse hint. */
+function JsonField({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder?: string;
+  onChange: (v: unknown) => void;
+}) {
+  const [text, setText] = useState(value);
+  const [invalid, setInvalid] = useState(false);
+
+  return (
+    <div>
+      <textarea
+        className={`w-full rounded-lg border bg-slate-900/70 px-3 py-2 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none ${
+          invalid ? "border-rose-500" : "border-slate-700 focus:border-amber-400"
+        } min-h-[88px]`}
+        value={text}
+        placeholder={placeholder}
+        onChange={(e) => {
+          const raw = e.target.value;
+          setText(raw);
+          if (raw.trim() === "") {
+            setInvalid(false);
+            onChange(null);
+            return;
+          }
+          try {
+            onChange(JSON.parse(raw));
+            setInvalid(false);
+          } catch {
+            setInvalid(true);
+          }
+        }}
+      />
+      {invalid && (
+        <p className="mt-1 text-[10px] text-rose-300">JSON 형식이 올바르지 않습니다 — 저장되지 않습니다.</p>
       )}
     </div>
   );
