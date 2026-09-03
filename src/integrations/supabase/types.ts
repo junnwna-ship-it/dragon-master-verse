@@ -400,6 +400,12 @@ export type Database = {
           updated_at: string
           user_id: string
           visited: number[]
+          vn_applied: string[]
+          vn_chapter_id: string | null
+          vn_finished: boolean
+          vn_node_key: string | null
+          vn_stats: Json
+          vn_visited: string[]
         }
         Insert: {
           created_at?: string
@@ -411,6 +417,12 @@ export type Database = {
           updated_at?: string
           user_id: string
           visited?: number[]
+          vn_applied?: string[]
+          vn_chapter_id?: string | null
+          vn_finished?: boolean
+          vn_node_key?: string | null
+          vn_stats?: Json
+          vn_visited?: string[]
         }
         Update: {
           created_at?: string
@@ -422,6 +434,12 @@ export type Database = {
           updated_at?: string
           user_id?: string
           visited?: number[]
+          vn_applied?: string[]
+          vn_chapter_id?: string | null
+          vn_finished?: boolean
+          vn_node_key?: string | null
+          vn_stats?: Json
+          vn_visited?: string[]
         }
         Relationships: []
       }
