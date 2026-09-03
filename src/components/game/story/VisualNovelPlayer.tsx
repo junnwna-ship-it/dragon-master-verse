@@ -160,11 +160,23 @@ export function VisualNovelPlayer({
     return explicit ?? nodes.find((n) => n.node_key)?.node_key ?? null;
   }, [nodes]);
 
+  // A saved scene can disappear when an admin unpublishes it. In that case we
+  // must NOT silently restart the chapter (that would overwrite the save and
+  // make "Continue" a data-losing button) — block and let the player decide.
+  const [staleSave, setStaleSave] = useState(false);
+
   // Resume from the cloud save first; otherwise begin at the chapter's start node.
   useEffect(() => {
     if (saveLoading || hydratedRef.current) return;
+    if (remote && remote.nodeKey && !remote.finished && !byKey.has(remote.nodeKey)) {
+      // Only block once the chapter itself has loaded scenes; an empty chapter
+      // is handled by the "no published scenes" screen below.
+      if (byKey.size > 0) setStaleSave(true);
+      return;
+    }
     if (remote && remote.nodeKey && byKey.has(remote.nodeKey)) {
       hydratedRef.current = true;
+      setStaleSave(false);
       hydrate(remote);
       return;
     }
@@ -173,6 +185,7 @@ export function VisualNovelPlayer({
       start(chapterId, startKey);
     }
   }, [saveLoading, remote, byKey, startKey, chapterId, start, hydrate]);
+
 
   const node = nodeKey ? byKey.get(nodeKey) ?? null : null;
 
