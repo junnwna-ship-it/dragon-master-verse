@@ -361,6 +361,18 @@ export function VisualNovelPlayer({
       <div className="relative z-10 flex items-center justify-between gap-2 p-4">
         <BackLink />
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {companion && (
+            <span className="flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-black/50 px-2 py-1 text-xs text-amber-100 backdrop-blur">
+              {companion.imageUrl && (
+                <img
+                  src={companion.imageUrl}
+                  alt={companion.name}
+                  className="h-5 w-5 rounded-full object-cover"
+                />
+              )}
+              {companion.name}
+            </span>
+          )}
           {statEntries.map(([key, value]) => (
             <span
               key={key}
