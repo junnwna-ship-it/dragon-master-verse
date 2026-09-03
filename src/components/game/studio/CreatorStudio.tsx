@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2, Sparkles, HelpCircle, GitBranch, LayoutTemplate } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2, Sparkles, HelpCircle, GitBranch, LayoutTemplate, Play } from "lucide-react";
+import { UgcStoryPlayer } from "@/components/game/story/UgcStoryPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -37,6 +38,8 @@ export function CreatorStudio() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Story currently being test-played (inline quizzes included).
+  const [playing, setPlaying] = useState<UserStory | null>(null);
 
   // Bonus slots are earned when an admin promotes one of the user's stories
   // to the Hall of Fame, so the cap is dynamic: 5 + bonus_story_slots.
@@ -349,6 +352,14 @@ export function CreatorStudio() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setPlaying(s)}
+                    className="flex items-center gap-1 rounded-lg border border-sky-400/40 bg-sky-500/15 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-500/25"
+                  >
+                    <Play className="h-3 w-3" />
+                    퀴즈 포함 플레이
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDelete(s)}
                     className="flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-500/15 px-3 py-1.5 text-xs font-bold text-rose-200 hover:bg-rose-500/25"
                   >
@@ -360,6 +371,25 @@ export function CreatorStudio() {
             </li>
           ))}
         </ul>
+      )}
+
+      {playing && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/85 p-4 backdrop-blur-sm sm:items-center"
+          onClick={() => setPlaying(null)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-sky-400/40 bg-slate-900 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <UgcStoryPlayer
+              title={playing.title || "제목 없는 스토리"}
+              body={stories.find((x) => x.id === playing.id)?.body ?? playing.body}
+              showErrors
+              onExit={() => setPlaying(null)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Crown, Loader2, ScrollText, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { UgcStoryPlayer } from "@/components/game/story/UgcStoryPlayer";
 
 type PublicStory = {
   id: string;
@@ -127,9 +128,9 @@ export function HallOfFameStories() {
               </button>
             </div>
             {open.summary && <p className="mt-1 text-xs text-slate-400">{open.summary}</p>}
-            <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-200">
-              {open.body || "본문이 아직 작성되지 않았습니다."}
-            </p>
+            <div className="mt-4">
+              <UgcStoryPlayer title={open.title} body={open.body} onExit={() => setOpen(null)} />
+            </div>
           </div>
         </div>
       )}
