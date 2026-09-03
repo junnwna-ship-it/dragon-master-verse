@@ -156,7 +156,27 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   if (isLoading) {
     return <Shell><p className="text-slate-300">불러오는 중…</p></Shell>;
   }
-  if (error || !nodes?.length) {
+  if (!schemaReady) {
+    return (
+      <Shell>
+        <p className="text-slate-100">스토리 모드 업데이트가 아직 반영되지 않았습니다.</p>
+        <p className="mt-2 text-sm text-slate-400">
+          이 초안(Draft)을 수락하면 스토리 데이터가 적용되고, 바로 플레이할 수 있습니다.
+        </p>
+        <BackLink />
+      </Shell>
+    );
+  }
+  if (error) {
+    return (
+      <Shell>
+        <p className="text-slate-100">스토리를 불러오지 못했습니다.</p>
+        <p className="mt-2 text-sm text-slate-400">{(error as Error).message}</p>
+        <BackLink />
+      </Shell>
+    );
+  }
+  if (!nodes.length) {
     return (
       <Shell>
         <p className="text-slate-300">이 챕터에는 공개된 스토리 노드가 없습니다.</p>
