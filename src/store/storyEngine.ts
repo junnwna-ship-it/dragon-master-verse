@@ -42,6 +42,8 @@ export interface VnNode {
   state_changes: Record<string, number> | null;
   is_start: boolean;
   stage_number: number;
+  /** Authored rewards granted on first visit (gold / stat points / items). */
+  rewards?: { gold?: number; stat_points?: number; items?: Record<string, number> } | null;
 }
 
 export type VnStats = Record<string, number>;

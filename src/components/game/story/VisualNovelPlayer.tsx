@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine";
 import { useGameStore } from "@/store/dragons";
 import { useVnSave } from "@/hooks/useVnSave";
+import { useStoryRewards, parseReward, itemLabel, type StoryReward } from "@/hooks/useStoryRewards";
 
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
@@ -92,6 +93,7 @@ function useChapterNodes(chapterId: string) {
           state_changes: (row.state_changes as Record<string, number> | null) ?? null,
           is_start: Boolean(row.is_start),
           stage_number: Number(row.stage_number ?? 0),
+          rewards: parseReward(row.rewards),
         }))
         .sort((a, b) => a.stage_number - b.stage_number);
 
@@ -168,6 +170,23 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   useEffect(() => {
     if (node) enter(node);
   }, [node, enter]);
+
+  // Story progress feeds back into the wider game: each scene's authored
+  // rewards (gold / stat points / items) are granted once per player.
+  const { claim } = useStoryRewards();
+  const dragonUuid = useGameStore((state) => {
+    const picked = state.selectedDeck[0];
+    const target =
+      (picked != null ? state.dragons.find((d) => d.id === picked) : undefined) ??
+      state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-"));
+    return target?.uuid ?? null;
+  });
+  useEffect(() => {
+    if (!signedIn || !node?.node_key) return;
+    const reward = (node as VnNode & { rewards?: StoryReward | null }).rewards;
+    if (!reward) return;
+    void claim(chapterId, node.node_key, dragonUuid);
+  }, [signedIn, node, chapterId, claim, dragonUuid]);
 
   // Persist every progress change so a logout / reconnect resumes exactly here.
   useEffect(() => {
@@ -379,7 +398,29 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                 <div className="mt-2">
                   <Typewriter text={body} />
                 </div>
+                {(() => {
+                  const reward = (node as VnNode & { rewards?: StoryReward | null }).rewards;
+                  if (!reward) return null;
+                  const chips: string[] = [];
+                  if ((reward.gold ?? 0) > 0) chips.push(`${reward.gold}G`);
+                  if ((reward.stat_points ?? 0) > 0) chips.push(`Stat +${reward.stat_points}`);
+                  for (const [k, v] of Object.entries(reward.items ?? {}))
+                    if (v > 0) chips.push(`${itemLabel(k)} x${v}`);
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {chips.map((c) => (
+                        <span
+                          key={c}
+                          className="rounded-full border border-emerald-300/40 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-bold text-emerald-200"
+                        >
+                          🎁 {c}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </motion.div>
+
 
               <div className="flex flex-col gap-2">
                 {node.options.map((opt, i) => (
