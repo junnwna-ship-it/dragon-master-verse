@@ -309,6 +309,21 @@ export function VisualNovelPlayer({
             <p className="text-xs uppercase tracking-[0.3em] text-amber-300/90">Story Mode</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-50 md:text-4xl">{chapterTitle}</h1>
             <p className="mt-3 text-sm text-slate-200 md:text-base">{tagline}</p>
+            {companion && (
+              <div className="mt-5 flex items-center justify-center gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2">
+                {companion.imageUrl && (
+                  <img
+                    src={companion.imageUrl}
+                    alt={companion.name}
+                    className="h-10 w-10 rounded-lg object-cover"
+                  />
+                )}
+                <span className="text-sm text-amber-100">
+                  Your companion: <b>{companion.name}</b>
+                  <span className="ml-1 text-amber-300/80">({companion.element})</span>
+                </span>
+              </div>
+            )}
             <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
               <Play className="mr-2 h-4 w-4" /> Begin the story
             </Button>
