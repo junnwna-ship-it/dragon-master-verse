@@ -90,7 +90,10 @@ function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
 
 export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   const { data: nodes, isLoading, error } = useChapterNodes(chapterId);
-  const { nodeKey, stats, finished, start, choose, enter, reset } = useStoryEngine();
+  const { nodeKey, stats, visited, applied, finished, start, choose, enter, reset, hydrate } =
+    useStoryEngine();
+  const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
+  const hydratedRef = useRef(false);
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
@@ -103,9 +106,19 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     return explicit ?? (nodes ?? []).find((n) => n.node_key)?.node_key ?? null;
   }, [nodes]);
 
+  // Resume from the cloud save first; otherwise begin at the chapter's start node.
   useEffect(() => {
-    if (startKey) start(chapterId, startKey);
-  }, [startKey, chapterId, start]);
+    if (saveLoading || hydratedRef.current) return;
+    if (remote && remote.nodeKey && byKey.has(remote.nodeKey)) {
+      hydratedRef.current = true;
+      hydrate(remote);
+      return;
+    }
+    if (startKey) {
+      hydratedRef.current = true;
+      start(chapterId, startKey);
+    }
+  }, [saveLoading, remote, byKey, startKey, chapterId, start, hydrate]);
 
   const node = nodeKey ? byKey.get(nodeKey) ?? null : null;
 
@@ -113,7 +126,20 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     if (node) enter(node);
   }, [node, enter]);
 
+  // Persist every progress change so a logout / reconnect resumes exactly here.
+  useEffect(() => {
+    if (!hydratedRef.current || !nodeKey) return;
+    persist({ chapterId, nodeKey, stats, visited, applied, finished });
+  }, [chapterId, nodeKey, stats, visited, applied, finished, persist]);
+
+  const restart = () => {
+    if (!startKey) return;
+    void clear();
+    start(chapterId, startKey, { reset: true });
+  };
+
   const statEntries = Object.entries(stats).filter(([, v]) => v !== 0);
+
 
   if (isLoading) {
     return <Shell><p className="text-slate-300">불러오는 중…</p></Shell>;
