@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine";
 import { useGameStore } from "@/store/dragons";
 import { useVnSave } from "@/hooks/useVnSave";
 import { useStoryRewards, parseReward, itemLabel, type StoryReward } from "@/hooks/useStoryRewards";
+import { profileStatsKey } from "@/hooks/useProfileStats";
+import { useAuth } from "@/hooks/useAuth";
 
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
@@ -206,8 +208,40 @@ export function VisualNovelPlayer({
     persist({ chapterId, nodeKey, stats, visited, applied, finished });
   }, [chapterId, nodeKey, stats, visited, applied, finished, persist]);
 
+  // ---- Chapter ending: flush the temporary run state into `profiles` ----
+  // The zustand run only holds transient stats; the last choice (next_node ===
+  // 'END'/empty) commits them permanently through `finalize_story_run`.
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user: authedUser } = useAuth();
+  const finalizedRef = useRef(false);
+  useEffect(() => {
+    if (!finished || !signedIn || finalizedRef.current) return;
+    finalizedRef.current = true;
+    const goldReward = Math.max(
+      Number(stats.Gold ?? stats.gold ?? 0) || 0,
+      0,
+    );
+    (async () => {
+      const { error } = await supabase.rpc("finalize_story_run", {
+        _stats: stats,
+        _gold: goldReward,
+      });
+      if (error) {
+        console.error("[story] finalize failed:", error);
+        toast.error(`보상 저장에 실패했습니다: ${error.message}`);
+        finalizedRef.current = false;
+        return;
+      }
+      toast.success("스토리 완료! 능력치와 보상이 저장되었습니다.");
+      void queryClient.invalidateQueries({ queryKey: profileStatsKey(authedUser?.id ?? null) });
+      void navigate({ to: "/app" });
+    })();
+  }, [finished, signedIn, stats, queryClient, navigate, authedUser?.id]);
+
   const restart = () => {
     if (!startKey) return;
+    finalizedRef.current = false;
     void clear();
     setQuizOption(null);
     setIntroDone(false);
