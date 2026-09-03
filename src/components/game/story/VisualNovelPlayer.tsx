@@ -226,7 +226,10 @@ export function VisualNovelPlayer({
 
   const finalizeRun = useCallback(
     async (opts?: { manual?: boolean }) => {
+      // Lock: only one commit may ever be in flight, and a confirmed commit is
+      // never repeated (guards double-clicks on END / the retry button).
       if (!signedIn || finalizeInFlight.current) return;
+      if (finalizeState === "done") return;
       finalizeInFlight.current = true;
       setFinalizeState("saving");
       setFinalizeError(null);
@@ -283,7 +286,7 @@ export function VisualNovelPlayer({
         duration: 10000,
       });
     },
-    [signedIn, stats, queryClient, authedUser?.id, navigate],
+    [signedIn, stats, queryClient, authedUser?.id, navigate, finalizeState],
   );
 
   useEffect(() => {
@@ -303,8 +306,19 @@ export function VisualNovelPlayer({
     start(chapterId, startKey, { reset: true });
   };
 
-  /** Choices may gate progression behind a quiz — ask first, then advance. */
-  const handleChoose = (opt: VnOption) => {
+  /**
+   * One choice at a time: the lock is taken on click and released when the node
+   * changes, so a rapid double-click on the ending choice cannot fire two
+   * transitions (and therefore two finalize commits).
+   */
+  const [pendingChoice, setPendingChoice] = useState<number | null>(null);
+  useEffect(() => {
+    setPendingChoice(null);
+  }, [node?.id, finished]);
+
+  const handleChoose = (opt: VnOption, index: number) => {
+    if (pendingChoice !== null) return;
+    setPendingChoice(index);
     const hasQuiz = (opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0;
     if (hasQuiz) {
       setQuizOption(opt);
@@ -316,6 +330,7 @@ export function VisualNovelPlayer({
   const handleQuizClose = (result: { correct: number; total: number }) => {
     const opt = quizOption;
     setQuizOption(null);
+    setPendingChoice(null);
     if (!opt) return;
     const passed = result.total > 0 ? result.correct === result.total : true;
     if (passed || !opt.quiz_required) {
@@ -503,7 +518,10 @@ export function VisualNovelPlayer({
               )}
               <div className="mt-4 flex flex-wrap gap-2">
                 {finalizeState === "error" && (
-                  <Button onClick={() => void finalizeRun({ manual: true })}>
+                  <Button
+                    onClick={() => void finalizeRun({ manual: true })}
+                    disabled={finalizeState !== "error"}
+                  >
                     <RotateCcw className="mr-1 h-3.5 w-3.5" /> 저장 재시도
                   </Button>
                 )}
@@ -574,8 +592,10 @@ export function VisualNovelPlayer({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 + i * 0.08 }}
-                    onClick={() => handleChoose(opt)}
-                    className="w-full rounded-xl border border-amber-300/30 bg-black/55 px-4 py-3 text-left text-sm text-slate-50 backdrop-blur transition hover:border-amber-300/70 hover:bg-amber-300/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                    onClick={() => handleChoose(opt, i)}
+                    disabled={pendingChoice !== null}
+                    aria-busy={pendingChoice === i}
+                    className="w-full rounded-xl border border-amber-300/30 bg-black/55 px-4 py-3 text-left text-sm text-slate-50 backdrop-blur transition hover:border-amber-300/70 hover:bg-amber-300/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {opt.label}
                     {((opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0) && (
