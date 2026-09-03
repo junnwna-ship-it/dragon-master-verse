@@ -168,10 +168,40 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   const restart = () => {
     if (!startKey) return;
     void clear();
+    setQuizOption(null);
     start(chapterId, startKey, { reset: true });
   };
 
+  /** Choices may gate progression behind a quiz — ask first, then advance. */
+  const handleChoose = (opt: VnOption) => {
+    const hasQuiz = (opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0;
+    if (hasQuiz) {
+      setQuizOption(opt);
+      return;
+    }
+    choose(opt);
+  };
+
+  const handleQuizClose = (result: { correct: number; total: number }) => {
+    const opt = quizOption;
+    setQuizOption(null);
+    if (!opt) return;
+    const passed = result.total > 0 ? result.correct === result.total : true;
+    if (passed || !opt.quiz_required) {
+      choose(opt);
+      return;
+    }
+    // Failed a required quiz: branch to the fail node, or stay on this node.
+    if (opt.quiz_fail_node) {
+      choose({ ...opt, next_node: opt.quiz_fail_node, state_changes: null });
+    } else {
+      toast.error("정답을 모두 맞혀야 다음으로 넘어갈 수 있어요!");
+    }
+  };
+
   const statEntries = Object.entries(stats).filter(([, v]) => v !== 0);
+
+
 
 
   if (isLoading) {
