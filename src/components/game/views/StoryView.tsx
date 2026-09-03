@@ -512,15 +512,29 @@ export function StoryView() {
             })}
           </button>
           {run && selectedDragon && (
-            <button
-              onClick={() => {
-                setRun(null);
-                setSelectedDragon(null);
-              }}
-              className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
-            >
-              {t("story.abandon")}
-            </button>
+            <>
+              <span className="flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400">
+                {saving ? (
+                  <>
+                    <Save className="h-3 w-3 animate-pulse text-sky-300" /> {t("story.saving")}
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3 w-3 text-emerald-400" /> {t("story.saved")}
+                  </>
+                )}
+              </span>
+              <button
+                onClick={() => {
+                  setRun(null);
+                  setSelectedDragon(null);
+                  void clearSave();
+                }}
+                className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+              >
+                {t("story.abandon")}
+              </button>
+            </>
           )}
         </div>
       </div>
