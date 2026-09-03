@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildUgcChapterPayloads, ugcChapterId } from "@/lib/ugcImport";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle, Wand2 } from "lucide-react";
