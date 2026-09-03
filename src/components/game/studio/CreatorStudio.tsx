@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2, Sparkles, HelpCircle, GitBranch, LayoutTemplate } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  STORY_TEMPLATES,
+  SCENE_BLOCK,
+  CHOICE_BLOCK,
+  QUIZ_BLOCK,
+  type StoryTemplate,
+} from "./storyTemplates";
 
 const BASE_STORIES = 5;
 
@@ -71,7 +78,7 @@ export function CreatorStudio() {
     if (!authLoading) void load();
   }, [authLoading, load]);
 
-  const handleCreate = async () => {
+  const handleCreate = async (template?: StoryTemplate) => {
     if (!user) {
       toast.error("로그인이 필요합니다.");
       return;
@@ -83,9 +90,9 @@ export function CreatorStudio() {
     setCreating(true);
     const { error } = await table().insert({
       user_id: user.id,
-      title: `새 스토리 ${count + 1}`,
-      summary: "",
-      body: "",
+      title: template ? `${template.title} ${count + 1}` : `새 스토리 ${count + 1}`,
+      summary: template?.summary ?? "",
+      body: template?.body ?? "",
     });
     setCreating(false);
     if (error) {
@@ -191,7 +198,7 @@ export function CreatorStudio() {
           type="button"
           aria-disabled={atLimit}
           disabled={atLimit || creating || !user}
-          onClick={handleCreate}
+          onClick={() => void handleCreate()}
           onClickCapture={(e) => {
             if (atLimit) {
               e.preventDefault();
@@ -216,6 +223,49 @@ export function CreatorStudio() {
             왜 만들 수 없나요?
           </button>
         )}
+      </section>
+
+      <section className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-violet-100">
+          <LayoutTemplate className="h-4 w-4 text-violet-300" />
+          템플릿으로 시작하기
+        </h2>
+        <p className="mt-1 text-[11px] text-slate-400">
+          장면(Node) → 선택지 → 퀴즈 흐름이 미리 채워집니다. 빈칸만 바꿔 쓰면 됩니다.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {STORY_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              disabled={atLimit || creating || !user}
+              onClick={() => {
+                if (atLimit) {
+                  toast.error(limitMessage);
+                  return;
+                }
+                void handleCreate(t);
+              }}
+              className={`rounded-xl border p-3 text-left transition ${
+                atLimit || !user
+                  ? "cursor-not-allowed border-slate-700 bg-slate-800/60 text-slate-500"
+                  : "border-violet-400/30 bg-slate-900/60 text-slate-200 hover:border-violet-300/60 hover:bg-slate-900"
+              }`}
+            >
+              <span className="flex items-center gap-1 text-xs font-bold">
+                {t.id === "quiz" ? (
+                  <HelpCircle className="h-3 w-3 text-amber-300" />
+                ) : t.id === "branch" ? (
+                  <GitBranch className="h-3 w-3 text-sky-300" />
+                ) : (
+                  <Sparkles className="h-3 w-3 text-violet-300" />
+                )}
+                {t.label}
+              </span>
+              <span className="mt-1 block text-[11px] leading-snug text-slate-400">{t.hint}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       {loading ? (
@@ -246,13 +296,38 @@ export function CreatorStudio() {
                 placeholder="커버 이미지 URL (텍스트)"
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200"
               />
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-slate-400">블록 추가:</span>
+                {([
+                  ["장면", SCENE_BLOCK],
+                  ["선택지", CHOICE_BLOCK],
+                  ["퀴즈", QUIZ_BLOCK],
+                ] as const).map(([label, block]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() =>
+                      patch(s.id, {
+                        body: `${(s.body ?? "").replace(/\s*$/, "")}\n\n${block}`.trim() + "\n",
+                      })
+                    }
+                    className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:border-violet-300/60 hover:text-violet-100"
+                  >
+                    + {label}
+                  </button>
+                ))}
+              </div>
               <textarea
                 value={s.body ?? ""}
                 onChange={(e) => patch(s.id, { body: e.target.value })}
-                rows={5}
-                placeholder="스토리 본문"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200"
+                rows={10}
+                placeholder={`스토리 본문 (템플릿 예시)\n\n${SCENE_BLOCK}${CHOICE_BLOCK}`}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-slate-200"
               />
+              <p className="text-[11px] text-slate-500">
+                형식: <code>[장면 Node_N]</code> · <code>선택지1: 텍스트 -&gt; Node_N</code> ·{" "}
+                <code>[퀴즈] 질문/보기/정답/성공-실패 분기</code>
+              </p>
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-xs text-slate-300">
                   <input
