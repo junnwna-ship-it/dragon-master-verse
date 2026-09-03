@@ -317,30 +317,36 @@ export type Database = {
       profiles: {
         Row: {
           bonus_story_slots: number
+          courage: number
           created_at: string
           current_stage: number
           gold: number
           nickname: string | null
           updated_at: string
           user_id: string
+          worm_affinity: number
         }
         Insert: {
           bonus_story_slots?: number
+          courage?: number
           created_at?: string
           current_stage?: number
           gold?: number
           nickname?: string | null
           updated_at?: string
           user_id: string
+          worm_affinity?: number
         }
         Update: {
           bonus_story_slots?: number
+          courage?: number
           created_at?: string
           current_stage?: number
           gold?: number
           nickname?: string | null
           updated_at?: string
           user_id?: string
+          worm_affinity?: number
         }
         Relationships: []
       }
@@ -763,6 +769,10 @@ export type Database = {
         Args: { _story_id: string }
         Returns: Json
       }
+      finalize_story_run: {
+        Args: { _gold?: number; _stats: Json }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -785,6 +795,10 @@ export type Database = {
       }
       spend_stat_point: {
         Args: { _dragon_uuid: string; _stat: string }
+        Returns: Json
+      }
+      train_stat_with_gold: {
+        Args: { _dragon_uuid: string; _stat_code: string }
         Returns: Json
       }
     }
