@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2, Save, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -490,12 +491,13 @@ export function StoryView() {
           <h2 className="text-xl font-bold text-slate-100">{t("story.title")}</h2>
         </div>
         <div className="flex items-center gap-1.5">
-          <a
-            href="/story/play/prologue"
+          <Link
+            to="/story/play/$chapterId"
+            params={{ chapterId: "prologue" }}
             className="rounded-md border border-violet-500/50 bg-violet-500/10 px-2 py-1 text-[10px] text-violet-200 transition hover:bg-violet-500/20"
           >
             비주얼 노벨
-          </a>
+          </Link>
 
           <button
             onClick={() => setShowBannerSettings((v) => !v)}
