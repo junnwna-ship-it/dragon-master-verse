@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
-import { Crown, PenSquare } from "lucide-react";
+import { Crown, PenSquare, ScrollText } from "lucide-react";
 import { UgcReviewPanel } from "./UgcReviewPanel";
 import { AuditLogPanel } from "@/components/admin/AuditLogPanel";
 import { StoryMapEditor } from "./StoryMapEditor";
