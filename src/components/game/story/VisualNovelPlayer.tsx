@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine";
+import { useGameStore } from "@/store/dragons";
 import { useVnSave } from "@/hooks/useVnSave";
 
 import { Button } from "@/components/ui/button";
@@ -20,11 +21,20 @@ function parseOptions(raw: unknown): VnOption[] {
           ? o.label
           : typeof o.choice_text === "string"
             ? o.choice_text
+            : typeof o.Choice_Text === "string"
+              ? o.Choice_Text
             : "…",
-      next_node: typeof o.next_node === "string" ? o.next_node : null,
+      next_node:
+        typeof o.next_node === "string"
+          ? o.next_node
+          : typeof o.Next_Node === "string"
+            ? o.Next_Node
+            : null,
       state_changes:
         o.state_changes && typeof o.state_changes === "object"
           ? (o.state_changes as Record<string, number>)
+          : o.State_Changes && typeof o.State_Changes === "object"
+            ? (o.State_Changes as Record<string, number>)
           : null,
     }));
 }
@@ -314,9 +324,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function BackLink() {
+  const setView = useGameStore((state) => state.setView);
   return (
     <Link
       to="/app"
+      search={{}}
+      onClick={() => setView("lobby")}
       className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-slate-100 backdrop-blur hover:bg-black/60"
     >
       <ChevronLeft className="h-3.5 w-3.5" /> 돌아가기
