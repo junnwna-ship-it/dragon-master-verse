@@ -369,6 +369,25 @@ export function CreatorStudio() {
           ))}
         </ul>
       )}
+
+      {playing && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/85 p-4 backdrop-blur-sm sm:items-center"
+          onClick={() => setPlaying(null)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-sky-400/40 bg-slate-900 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <UgcStoryPlayer
+              title={playing.title || "제목 없는 스토리"}
+              body={stories.find((x) => x.id === playing.id)?.body ?? playing.body}
+              showErrors
+              onExit={() => setPlaying(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
