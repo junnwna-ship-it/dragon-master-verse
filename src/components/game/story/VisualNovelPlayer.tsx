@@ -7,6 +7,8 @@ import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine"
 import { useGameStore } from "@/store/dragons";
 import { useVnSave } from "@/hooks/useVnSave";
 
+import { toast } from "sonner";
+import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles } from "lucide-react";
 
@@ -127,6 +129,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     useStoryEngine();
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
   const hydratedRef = useRef(false);
+  const [quizOption, setQuizOption] = useState<VnOption | null>(null);
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
@@ -333,10 +336,15 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 + i * 0.08 }}
-                    onClick={() => choose(opt)}
+                    onClick={() => handleChoose(opt)}
                     className="w-full rounded-xl border border-amber-300/30 bg-black/55 px-4 py-3 text-left text-sm text-slate-50 backdrop-blur transition hover:border-amber-300/70 hover:bg-amber-300/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                   >
                     {opt.label}
+                    {((opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0) && (
+                      <span className="ml-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-200">
+                        퀴즈
+                      </span>
+                    )}
                   </motion.button>
                 ))}
                 {node.options.length === 0 && (
@@ -352,6 +360,15 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
           )}
         </div>
       </div>
+
+      {quizOption && (
+        <QuizModal
+          title="지혜의 시련"
+          count={quizOption.quiz_count && quizOption.quiz_count > 0 ? quizOption.quiz_count : 1}
+          quizIds={quizOption.quiz_ids}
+          onClose={handleQuizClose}
+        />
+      )}
     </div>
   );
 }
