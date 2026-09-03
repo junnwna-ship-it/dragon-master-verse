@@ -635,15 +635,51 @@ export function StoryView() {
         </div>
       )}
 
+      {/* Resume from cloud save */}
+      {!run && !saveLoading && save && (
+        <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-sky-200">
+            <Save className="h-4 w-4" /> {t("story.saveFound")}
+          </div>
+          <p className="mt-1 text-[11px] text-slate-300">
+            {t("story.saveSummary", {
+              name: save.dragonName ?? "-",
+              cur: Math.min(save.visited.length, TOTAL_NODES),
+              total: TOTAL_NODES,
+              hp: save.playerHp,
+            })}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={resumeSave}
+              disabled={!resumableDragon}
+              className="flex-1 rounded-lg bg-sky-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-sky-400 disabled:opacity-50"
+            >
+              {t("story.continueRun")}
+            </button>
+            <button
+              onClick={() => void clearSave()}
+              className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800"
+            >
+              {t("story.deleteSave")}
+            </button>
+          </div>
+          {!resumableDragon && (
+            <p className="mt-1 text-[10px] text-rose-300">{t("story.saveDragonMissing")}</p>
+          )}
+        </div>
+      )}
+
       {/* Start CTA when no run is active */}
       {!run && (
         <button
           onClick={() => setPicker(true)}
           className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400"
         >
-          {t("story.startJourney")}
+          {save ? t("story.startNewJourney") : t("story.startJourney")}
         </button>
       )}
+
 
       {/* Vertical scroll node map */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-gradient-to-b from-slate-900 via-slate-900/80 to-slate-950 p-2">
