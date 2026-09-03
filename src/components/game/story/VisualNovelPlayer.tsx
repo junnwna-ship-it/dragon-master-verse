@@ -198,7 +198,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     if (opt.quiz_fail_node) {
       choose({ ...opt, next_node: opt.quiz_fail_node, state_changes: null });
     } else {
-      toast.error("정답을 모두 맞혀야 다음으로 넘어갈 수 있어요!");
+      toast.error("Answer every question correctly to move on!");
     }
   };
 
@@ -213,9 +213,9 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   if (!schemaReady) {
     return (
       <Shell>
-        <p className="text-slate-100">스토리 모드 업데이트가 아직 반영되지 않았습니다.</p>
+        <p className="text-slate-100">The story mode update has not been applied yet.</p>
         <p className="mt-2 text-sm text-slate-400">
-          이 초안(Draft)을 수락하면 스토리 데이터가 적용되고, 바로 플레이할 수 있습니다.
+          Accept this draft to load the story data and start playing.
         </p>
         <BackLink />
       </Shell>
@@ -224,7 +224,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   if (error) {
     return (
       <Shell>
-        <p className="text-slate-100">스토리를 불러오지 못했습니다.</p>
+        <p className="text-slate-100">Failed to load the story.</p>
         <p className="mt-2 text-sm text-slate-400">{(error as Error).message}</p>
         <BackLink />
       </Shell>
@@ -233,7 +233,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   if (!nodes.length) {
     return (
       <Shell>
-        <p className="text-slate-300">이 챕터에는 공개된 스토리 노드가 없습니다.</p>
+        <p className="text-slate-300">This chapter has no published scenes yet.</p>
         <BackLink />
       </Shell>
     );
@@ -277,10 +277,10 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
             </span>
           ))}
           <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
-            {signedIn ? (saving ? "저장 중…" : "클라우드 저장됨") : "로그인하면 진행도가 저장됩니다"}
+            {signedIn ? (saving ? "Saving…" : "Saved to cloud") : "Sign in to save your progress"}
           </span>
           <Button size="sm" variant="secondary" onClick={restart}>
-            <RotateCcw className="mr-1 h-3.5 w-3.5" /> 처음부터
+            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Restart
           </Button>
 
         </div>
@@ -292,13 +292,13 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
           {finished || !node ? (
             <div className="rounded-2xl border border-white/15 bg-black/70 p-5 backdrop-blur-md">
               <p className="flex items-center gap-2 text-lg font-semibold text-amber-300">
-                <Sparkles className="h-5 w-5" /> 챕터 완료
+                <Sparkles className="h-5 w-5" /> Chapter complete
               </p>
               <p className="mt-2 text-sm text-slate-200">
-                누적 스탯이 저장되었습니다. 다시 플레이하면 다른 선택으로 다른 결과를 볼 수 있어요.
+                Your stats have been saved. Replay and choose differently to see another outcome.
               </p>
               <div className="mt-4 flex gap-2">
-                <Button onClick={restart}>다시 플레이</Button>
+                <Button onClick={restart}>Play again</Button>
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -307,7 +307,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                   }}
                   asChild={false}
                 >
-                  기록 초기화
+                  Clear save
                 </Button>
               </div>
 
@@ -342,17 +342,17 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                     {opt.label}
                     {((opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0) && (
                       <span className="ml-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-200">
-                        퀴즈
+                        Quiz
                       </span>
                     )}
                   </motion.button>
                 ))}
                 {node.options.length === 0 && (
                   <Button
-                    onClick={() => choose({ label: "계속", next_node: null })}
+                    onClick={() => choose({ label: "Continue", next_node: null })}
                     className="w-full"
                   >
-                    계속
+                    Continue
                   </Button>
                 )}
               </div>
@@ -363,7 +363,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
 
       {quizOption && (
         <QuizModal
-          title="지혜의 시련"
+          title="Trial of Wisdom"
           count={quizOption.quiz_count && quizOption.quiz_count > 0 ? quizOption.quiz_count : 1}
           quizIds={quizOption.quiz_ids}
           onClose={handleQuizClose}
@@ -390,7 +390,7 @@ function BackLink() {
       onClick={() => setView("lobby")}
       className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-slate-100 backdrop-blur hover:bg-black/60"
     >
-      <ChevronLeft className="h-3.5 w-3.5" /> 돌아가기
+      <ChevronLeft className="h-3.5 w-3.5" /> Back
     </Link>
   );
 }
