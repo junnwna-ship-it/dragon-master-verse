@@ -6,6 +6,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { DragonImage } from "../DragonImage";
 import { TrainingSection } from "../DragonDetailModal";
 import { CmsTrainingStats } from "../cms/CmsSections";
+import { GoldTrainingSection } from "../training/GoldTrainingSection";
 
 /**
  * Training view — dedicated tab for distributing stat points.
@@ -141,6 +142,8 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
 
   return (
     <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+      <GoldTrainingSection dragon={dragon} />
+
       {/* Hero */}
       <div className="flex gap-3">
         <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-900 ring-1 ring-slate-700/60">
