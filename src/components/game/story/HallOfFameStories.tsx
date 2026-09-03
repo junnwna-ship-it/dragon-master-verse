@@ -129,7 +129,7 @@ export function HallOfFameStories() {
             </div>
             {open.summary && <p className="mt-1 text-xs text-slate-400">{open.summary}</p>}
             <div className="mt-4">
-              <UgcStoryPlayer title={open.title} body={open.body} onExit={() => setOpen(null)} />
+              <UgcStoryPlayer title={open.title} body={open.body} storyId={open.id} onExit={() => setOpen(null)} />
             </div>
           </div>
         </div>
