@@ -28,5 +28,6 @@ export const Route = createFileRoute("/story/play/$chapterId")({
 
 function StoryPlayRoute() {
   const { chapterId } = Route.useParams();
-  return <VisualNovelPlayer chapterId={chapterId} />;
+  const { dragon } = Route.useSearch();
+  return <VisualNovelPlayer chapterId={chapterId} companionId={dragon ?? null} />;
 }
