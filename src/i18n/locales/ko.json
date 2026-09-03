@@ -59,6 +59,7 @@
     "cardLabel": "{{name}}, {{element}} 속성. ATK {{atk}}, DEF {{def}}, HP {{hp}} of {{maxHp}}, MP {{mp}}.{{selectedSuffix}} 누르면 상세 모달이 열립니다.",
     "currentlySelected": " 현재 선택됨.",
     "storyCta": "스토리 모드",
+    "dragonStoryCta": "{{name}}의 스토리 시작",
     "storyCtaSub": "이야기를 이어가세요"
   },
   "auth": {
