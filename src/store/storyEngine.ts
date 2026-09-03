@@ -128,7 +128,10 @@ export const useStoryEngine = create<VnStore>()(
         });
       },
 
+      hydrate: (snapshot) => set({ ...snapshot }),
+
       reset: () => set({ ...EMPTY }),
+
     }),
     { name: "story.vn.run", version: 1 },
   ),
