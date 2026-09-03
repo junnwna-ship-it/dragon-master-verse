@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Crown, Loader2, ScrollText, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { UgcStoryPlayer } from "@/components/game/story/UgcStoryPlayer";
 
 type PublicStory = {
   id: string;
