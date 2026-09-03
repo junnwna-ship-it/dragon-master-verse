@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
-import { Crown } from "lucide-react";
+import { Crown, PenSquare } from "lucide-react";
 import { UgcReviewPanel } from "./UgcReviewPanel";
+import { StoryMapEditor } from "./StoryMapEditor";
+
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -259,6 +261,15 @@ const HALL_OF_FAME_TAB = {
   icon: Crown,
 } as const;
 
+/** Custom tab: structured story-map (scene / choice / quiz) editor. */
+const STORY_MAP_TAB = {
+  key: "story_map_editor",
+  label: "10. 스토리 맵 편집기",
+  icon: PenSquare,
+} as const;
+
+
+
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 
 export function CmsDashboard() {
@@ -298,7 +309,7 @@ export function CmsDashboard() {
 
       <nav className="-mx-4 mb-5 overflow-x-auto px-4">
         <div className="flex gap-2">
-          {[...TABS, HALL_OF_FAME_TAB].map((x) => {
+          {[...TABS, HALL_OF_FAME_TAB, STORY_MAP_TAB].map((x) => {
             const Icon = x.icon;
             const active = x.key === tabKey;
             return (
@@ -322,6 +333,8 @@ export function CmsDashboard() {
 
       {tabKey === "ugc_hall_of_fame" ? (
         <UgcReviewPanel />
+      ) : tabKey === "story_map_editor" ? (
+        <StoryMapEditor />
       ) : (
         <CmsTableEditor key={tab.key} tab={tab} />
       )}
