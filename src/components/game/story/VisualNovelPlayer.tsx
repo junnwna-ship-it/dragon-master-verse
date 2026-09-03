@@ -211,33 +211,86 @@ export function VisualNovelPlayer({
   // ---- Chapter ending: flush the temporary run state into `profiles` ----
   // The zustand run only holds transient stats; the last choice (next_node ===
   // 'END'/empty) commits them permanently through `finalize_story_run`.
+  //
+  // Failure handling: the RPC is a single Postgres transaction, so a mid-flight
+  // error rolls the whole grant back server-side — nothing is half-applied. On
+  // the client we keep the finished run (stats stay in zustand + the cloud
+  // save), retry with backoff, surface an error toast with a manual retry, and
+  // only route to the lobby after a confirmed commit.
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user: authedUser } = useAuth();
-  const finalizedRef = useRef(false);
-  useEffect(() => {
-    if (!finished || !signedIn || finalizedRef.current) return;
-    finalizedRef.current = true;
-    const goldReward = Math.max(
-      Number(stats.Gold ?? stats.gold ?? 0) || 0,
-      0,
-    );
-    (async () => {
-      const { error } = await supabase.rpc("finalize_story_run", {
-        _stats: stats,
-        _gold: goldReward,
-      });
-      if (error) {
-        console.error("[story] finalize failed:", error);
-        toast.error(`보상 저장에 실패했습니다: ${error.message}`);
-        finalizedRef.current = false;
-        return;
+  const finalizeInFlight = useRef(false);
+  const [finalizeState, setFinalizeState] = useState<"idle" | "saving" | "error" | "done">("idle");
+  const [finalizeError, setFinalizeError] = useState<string | null>(null);
+
+  const finalizeRun = useCallback(
+    async (opts?: { manual?: boolean }) => {
+      if (!signedIn || finalizeInFlight.current) return;
+      finalizeInFlight.current = true;
+      setFinalizeState("saving");
+      setFinalizeError(null);
+
+      const goldReward = Math.max(Number(stats.Gold ?? stats.gold ?? 0) || 0, 0);
+      const attempts = opts?.manual ? 2 : 3;
+      let lastMessage = "알 수 없는 오류";
+
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+          const { error } = await supabase.rpc("finalize_story_run", {
+            _stats: stats,
+            _gold: goldReward,
+          });
+          if (!error) {
+            finalizeInFlight.current = false;
+            setFinalizeState("done");
+            toast.success("스토리 완료! 능력치와 보상이 저장되었습니다.");
+            try {
+              await queryClient.invalidateQueries({
+                queryKey: profileStatsKey(authedUser?.id ?? null),
+              });
+            } catch (e) {
+              console.error("[story] stats refresh failed:", e);
+            }
+            try {
+              await navigate({ to: "/app" });
+            } catch (e) {
+              // Routing must never swallow a successful save — fall back to a
+              // hard navigation so the player still lands in the lobby.
+              console.error("[story] navigation failed, falling back:", e);
+              toast.error("로비로 이동하지 못했습니다. 다시 시도합니다.");
+              if (typeof window !== "undefined") window.location.assign("/app");
+            }
+            return;
+          }
+          lastMessage = error.message;
+          console.error(`[story] finalize failed (attempt ${attempt}/${attempts}):`, error);
+        } catch (e) {
+          lastMessage = e instanceof Error ? e.message : String(e);
+          console.error(`[story] finalize threw (attempt ${attempt}/${attempts}):`, e);
+        }
+        if (attempt < attempts) {
+          await new Promise((r) => setTimeout(r, 600 * attempt));
+        }
       }
-      toast.success("스토리 완료! 능력치와 보상이 저장되었습니다.");
-      void queryClient.invalidateQueries({ queryKey: profileStatsKey(authedUser?.id ?? null) });
-      void navigate({ to: "/app" });
-    })();
-  }, [finished, signedIn, stats, queryClient, navigate, authedUser?.id]);
+
+      finalizeInFlight.current = false;
+      setFinalizeState("error");
+      setFinalizeError(lastMessage);
+      toast.error(`보상 저장에 실패했습니다: ${lastMessage}`, {
+        description: "진행 상황은 그대로 보관됩니다. 다시 시도해 주세요.",
+        action: { label: "재시도", onClick: () => void finalizeRun({ manual: true }) },
+        duration: 10000,
+      });
+    },
+    [signedIn, stats, queryClient, authedUser?.id, navigate],
+  );
+
+  useEffect(() => {
+    if (!finished || !signedIn) return;
+    if (finalizeState !== "idle") return;
+    void finalizeRun();
+  }, [finished, signedIn, finalizeState, finalizeRun]);
 
   const restart = () => {
     if (!startKey) return;
