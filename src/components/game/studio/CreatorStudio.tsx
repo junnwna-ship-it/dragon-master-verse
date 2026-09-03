@@ -78,7 +78,7 @@ export function CreatorStudio() {
     if (!authLoading) void load();
   }, [authLoading, load]);
 
-  const handleCreate = async () => {
+  const handleCreate = async (template?: StoryTemplate) => {
     if (!user) {
       toast.error("로그인이 필요합니다.");
       return;
@@ -90,9 +90,9 @@ export function CreatorStudio() {
     setCreating(true);
     const { error } = await table().insert({
       user_id: user.id,
-      title: `새 스토리 ${count + 1}`,
-      summary: "",
-      body: "",
+      title: template ? `${template.title} ${count + 1}` : `새 스토리 ${count + 1}`,
+      summary: template?.summary ?? "",
+      body: template?.body ?? "",
     });
     setCreating(false);
     if (error) {
