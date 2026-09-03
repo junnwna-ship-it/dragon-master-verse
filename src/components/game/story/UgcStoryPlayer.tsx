@@ -1,11 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, CheckCircle2, HelpCircle, RotateCcw, XCircle } from "lucide-react";
 import { parseStudioStory, type UgcNode } from "@/lib/studioStory";
+import {
+  clearUgcProgress,
+  loadUgcProgress,
+  resolveUgcProgress,
+  saveUgcProgress,
+} from "@/lib/ugcProgress";
 
 type Props = {
   title: string;
   body: string | null | undefined;
+  /** Story id — enables progress persistence across refresh / back navigation. */
+  storyId?: string | null;
   /** Where the "나가기" button goes. */
   exitTo?: string;
   /** Author-only: surface parse warnings so the format can be fixed. */
@@ -13,7 +21,14 @@ type Props = {
   onExit?: () => void;
 };
 
-export function UgcStoryPlayer({ title, body, exitTo = "/app", showErrors = false, onExit }: Props) {
+export function UgcStoryPlayer({
+  title,
+  body,
+  storyId = null,
+  exitTo = "/app",
+  showErrors = false,
+  onExit,
+}: Props) {
   const { nodes, errors } = useMemo(() => parseStudioStory(body), [body]);
   const nodeMap = useMemo(() => {
     const map = new Map<string, UgcNode>();
@@ -27,6 +42,28 @@ export function UgcStoryPlayer({ title, body, exitTo = "/app", showErrors = fals
   const [stats, setStats] = useState<Record<string, number>>({});
   const [picked, setPicked] = useState<number | null>(null);
   const [quizResult, setQuizResult] = useState<"correct" | "wrong" | null>(null);
+  const [restored, setRestored] = useState(false);
+  const hydratedRef = useRef(false);
+
+  // Restore the last node + quiz result once the story text has parsed.
+  useEffect(() => {
+    if (hydratedRef.current || !storyId || !nodes.length) return;
+    hydratedRef.current = true;
+    const saved = resolveUgcProgress(loadUgcProgress(storyId), [...nodeMap.keys()]);
+    if (!saved) return;
+    setCurrentKey(saved.nodeKey);
+    setFinished(saved.finished);
+    setStats(saved.stats);
+    setPicked(saved.picked);
+    setQuizResult(saved.quizResult);
+    setRestored(true);
+  }, [storyId, nodes.length, nodeMap]);
+
+  // Persist after every state change (skip the pre-hydration render).
+  useEffect(() => {
+    if (!storyId || !nodes.length || !hydratedRef.current) return;
+    saveUgcProgress(storyId, { nodeKey: currentKey, finished, stats, picked, quizResult });
+  }, [storyId, nodes.length, currentKey, finished, stats, picked, quizResult]);
 
   const node = currentKey ? nodeMap.get(currentKey) ?? null : null;
 
@@ -36,11 +73,14 @@ export function UgcStoryPlayer({ title, body, exitTo = "/app", showErrors = fals
     setStats({});
     setPicked(null);
     setQuizResult(null);
+    setRestored(false);
+    clearUgcProgress(storyId);
   };
 
   const goTo = (key: string | null) => {
     setPicked(null);
     setQuizResult(null);
+    setRestored(false);
     if (!key || !nodeMap.has(key)) {
       setFinished(true);
       setCurrentKey(null);
@@ -48,6 +88,7 @@ export function UgcStoryPlayer({ title, body, exitTo = "/app", showErrors = fals
     }
     setCurrentKey(key);
   };
+
 
   const answerQuiz = (index: number) => {
     if (!node?.quiz || quizResult) return;
