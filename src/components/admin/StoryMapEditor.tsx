@@ -28,6 +28,9 @@ type NodeDraft = {
   is_start: boolean;
   is_published: boolean;
   stats: { key: string; value: number }[];
+  reward_gold: number;
+  reward_stat_points: number;
+  reward_items: { key: string; value: number }[];
   options: OptionDraft[];
 };
 
@@ -54,6 +57,9 @@ const blankNode = (chapterId: string, stage: number): NodeDraft => ({
   is_start: false,
   is_published: false,
   stats: [],
+  reward_gold: 0,
+  reward_stat_points: 0,
+  reward_items: [],
   options: [blankOption()],
 });
 
@@ -91,6 +97,9 @@ function nodeToDraft(node: StoryNode): NodeDraft {
     is_start: Boolean(n.is_start),
     is_published: Boolean(n.is_published),
     stats: statsToRows(n.state_changes),
+    reward_gold: Number((n.rewards as Record<string, unknown> | null)?.gold ?? 0) || 0,
+    reward_stat_points: Number((n.rewards as Record<string, unknown> | null)?.stat_points ?? 0) || 0,
+    reward_items: statsToRows((n.rewards as Record<string, unknown> | null)?.items),
     options: rawOptions.length
       ? rawOptions.map((o) => ({
           label: String(o.label ?? o.choice_text ?? ""),
@@ -183,6 +192,11 @@ export function StoryMapEditor() {
       is_start: draft.is_start,
       is_published: draft.is_published,
       state_changes: rowsToStats(draft.stats),
+      rewards: {
+        gold: Math.max(Number(draft.reward_gold) || 0, 0),
+        stat_points: Math.max(Number(draft.reward_stat_points) || 0, 0),
+        items: rowsToStats(draft.reward_items),
+      },
       quiz_ids: [],
       options: draft.options
         .filter((o) => o.label.trim())
@@ -398,6 +412,37 @@ export function StoryMapEditor() {
               className={inputCls}
             />
           </Field>
+
+          <div className="space-y-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+              🎁 클리어 보상 (플레이어당 1회 지급)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="골드">
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.reward_gold}
+                  onChange={(e) => patch({ reward_gold: Number(e.target.value) })}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="드래곤 능력 포인트">
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.reward_stat_points}
+                  onChange={(e) => patch({ reward_stat_points: Number(e.target.value) })}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+            <StatRows
+              title="아이템 (item_key / 수량 — 예: bonding_token)"
+              rows={draft.reward_items}
+              onChange={(reward_items) => patch({ reward_items })}
+            />
+          </div>
 
           <StatRows
             title="장면 진입 시 스탯 변화"
