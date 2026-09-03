@@ -165,26 +165,33 @@ export function VisualNovelPlayer({
   // make "Continue" a data-losing button) — block and let the player decide.
   const [staleSave, setStaleSave] = useState(false);
 
-  // Resume from the cloud save first; otherwise begin at the chapter's start node.
+  // Resume from the cloud save first; otherwise begin at the chapter's start
+  // node. The decision itself lives in `resolveResume` so it can be unit tested
+  // against publish / unpublish transitions.
   useEffect(() => {
-    if (saveLoading || hydratedRef.current) return;
-    if (remote && remote.nodeKey && !remote.finished && !byKey.has(remote.nodeKey)) {
-      // Only block once the chapter itself has loaded scenes; an empty chapter
-      // is handled by the "no published scenes" screen below.
-      if (byKey.size > 0) setStaleSave(true);
+    if (hydratedRef.current) return;
+    const decision = resolveResume({
+      saveLoading,
+      publishedKeys: [...byKey.keys()],
+      startKey,
+      save: remote ? { nodeKey: remote.nodeKey, finished: remote.finished } : null,
+    });
+    if (decision.kind === "blocked") {
+      setStaleSave(true);
       return;
     }
-    if (remote && remote.nodeKey && byKey.has(remote.nodeKey)) {
+    if (decision.kind === "resume" && remote) {
       hydratedRef.current = true;
       setStaleSave(false);
       hydrate(remote);
       return;
     }
-    if (startKey) {
+    if (decision.kind === "start") {
       hydratedRef.current = true;
-      start(chapterId, startKey);
+      start(chapterId, decision.nodeKey);
     }
   }, [saveLoading, remote, byKey, startKey, chapterId, start, hydrate]);
+
 
 
   const node = nodeKey ? byKey.get(nodeKey) ?? null : null;
