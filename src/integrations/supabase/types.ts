@@ -368,6 +368,42 @@ export type Database = {
         }
         Relationships: []
       }
+      story_saves: {
+        Row: {
+          created_at: string
+          current_node_id: number
+          dragon_name: string | null
+          dragon_uuid: string | null
+          player_hp: number
+          player_mp: number
+          updated_at: string
+          user_id: string
+          visited: number[]
+        }
+        Insert: {
+          created_at?: string
+          current_node_id?: number
+          dragon_name?: string | null
+          dragon_uuid?: string | null
+          player_hp?: number
+          player_mp?: number
+          updated_at?: string
+          user_id: string
+          visited?: number[]
+        }
+        Update: {
+          created_at?: string
+          current_node_id?: number
+          dragon_name?: string | null
+          dragon_uuid?: string | null
+          player_hp?: number
+          player_mp?: number
+          updated_at?: string
+          user_id?: string
+          visited?: number[]
+        }
+        Relationships: []
+      }
       training_stats: {
         Row: {
           base_cost: number
