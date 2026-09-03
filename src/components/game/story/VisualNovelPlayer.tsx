@@ -129,7 +129,14 @@ function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
   );
 }
 
-export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
+export function VisualNovelPlayer({
+  chapterId,
+  companionId = null,
+}: {
+  chapterId: string;
+  /** Dragon the player brought into the story (from the lobby deck). */
+  companionId?: number | null;
+}) {
   const { data, isLoading, error } = useChapterNodes(chapterId);
   const nodes = useMemo(() => data?.nodes ?? [], [data]);
   const schemaReady = data?.schemaReady ?? true;
