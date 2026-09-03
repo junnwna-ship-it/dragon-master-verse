@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildUgcChapterPayloads, ugcChapterId } from "@/lib/ugcImport";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle, Wand2 } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle, Wand2, ScrollText } from "lucide-react";
 import { CHAPTER_TEMPLATES, type ChapterTemplate } from "@/lib/chapterTemplates";
 import { supabase } from "@/integrations/supabase/client";
 import { useCmsList, useCmsMutations, type StoryNode } from "@/hooks/useCms";
@@ -300,6 +301,86 @@ export function StoryMapEditor() {
     }
   };
 
+  // ---- Studio (UGC) stories are auto-registered as editable chapters ----
+  const { data: studioStories } = useQuery({
+    queryKey: ["admin", "user_stories", "map"],
+    queryFn: async () => {
+      const { data: rows, error: sErr } = await (
+        supabase as unknown as { from: (t: string) => any }
+      )
+        .from("user_stories")
+        .select("id,title,body,is_published,updated_at,user_id")
+        .order("updated_at", { ascending: false })
+        .limit(50);
+      if (sErr) throw sErr;
+      return (rows ?? []) as {
+        id: string;
+        title: string;
+        body: string | null;
+        is_published: boolean;
+        updated_at: string;
+      }[];
+    },
+  });
+
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const autoSynced = useRef(false);
+
+  const syncStudioStory = useCallback(
+    async (story: { id: string; title: string; body: string | null }, silent = false) => {
+      setSyncingId(story.id);
+      try {
+        const { chapterId: target, payloads, errors } = await buildUgcChapterPayloads({
+          storyId: story.id,
+          title: story.title || "무제 스토리",
+          body: story.body,
+          publish: false,
+        });
+        if (!payloads.length) {
+          if (!silent) toast.error("가져올 장면이 없습니다. 스튜디오 본문 형식을 확인해 주세요.");
+          return;
+        }
+        const existing = new Map(
+          nodes
+            .filter((n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === target)
+            .map((n) => [String((n as StoryNode & { node_key?: string }).node_key ?? ""), n.id] as const),
+        );
+        for (const payload of payloads) {
+          const id = existing.get(String(payload.node_key));
+          if (id) await update.mutateAsync({ id, patch: payload });
+          else await create.mutateAsync(payload);
+        }
+        if (!silent) {
+          toast.success(
+            `"${story.title}" 챕터(${target}) 등록 완료: 장면 ${payloads.length}개` +
+              (errors.length ? ` · 형식 경고 ${errors.length}건` : ""),
+          );
+        }
+      } catch (e) {
+        if (!silent) toast.error(`가져오기 실패: ${(e as Error).message}`);
+      } finally {
+        setSyncingId(null);
+      }
+    },
+    [nodes, create, update],
+  );
+
+  // First load: register any studio story that has no chapter yet, so the map
+  // list always shows user-created stories without a manual step.
+  useEffect(() => {
+    if (autoSynced.current) return;
+    if (isLoading || !studioStories) return;
+    autoSynced.current = true;
+    const pending = studioStories.filter(
+      (s) => (s.body ?? "").trim() && !chapters.includes(ugcChapterId(s.id)),
+    );
+    if (!pending.length) return;
+    void (async () => {
+      for (const s of pending) await syncStudioStory(s, true);
+      toast.success(`스튜디오 스토리 ${pending.length}개를 스토리 맵에 등록했습니다.`);
+    })();
+  }, [isLoading, studioStories, chapters, syncStudioStory]);
+
   const del = async (node: StoryNode) => {
     if (!window.confirm(`"${node.title}" 장면을 삭제할까요?`)) return;
     try {
@@ -343,6 +424,60 @@ export function StoryMapEditor() {
             <Plus className="h-4 w-4" /> 새 장면
           </button>
         </div>
+      </section>
+
+      {/* Studio (UGC) stories, auto-registered as chapters */}
+      <section className="rounded-2xl border border-sky-400/40 bg-sky-400/5 p-4">
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-sky-100">
+          <ScrollText className="h-4 w-4 text-sky-300" /> 스튜디오 창작 스토리
+        </h3>
+        <p className="mt-0.5 text-[11px] text-sky-200/70">
+          유저가 스튜디오에서 만든 스토리는 <code>ugc_…</code> 챕터로 자동 등록되어 아래 편집기에서 장면·선택지·퀴즈를
+          바로 수정할 수 있습니다. 본문을 수정한 스토리는 "다시 등록"으로 갱신하세요.
+        </p>
+        {!studioStories?.length ? (
+          <p className="mt-3 text-[11px] text-slate-400">등록된 창작 스토리가 없습니다.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {studioStories.map((s) => {
+              const target = ugcChapterId(s.id);
+              const registered = chapters.includes(target);
+              return (
+                <li
+                  key={s.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-700/60 bg-slate-950/60 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-slate-100">{s.title || "무제 스토리"}</p>
+                    <p className="text-[10px] font-mono text-slate-500">
+                      {target} · {registered ? "등록됨" : "미등록"} · {s.is_published ? "공개" : "비공개"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {registered && (
+                      <button
+                        type="button"
+                        onClick={() => setChapterId(target)}
+                        className="rounded-lg border border-slate-600 bg-slate-800/70 px-2.5 py-1 text-[11px] font-semibold text-slate-200"
+                      >
+                        편집
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={syncingId === s.id}
+                      onClick={() => void syncStudioStory(s)}
+                      className="flex items-center gap-1 rounded-lg border border-sky-400/40 bg-sky-500/15 px-2.5 py-1 text-[11px] font-bold text-sky-100 disabled:opacity-50"
+                    >
+                      {syncingId === s.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                      {registered ? "다시 등록" : "등록"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       {/* Chapter template builder */}
