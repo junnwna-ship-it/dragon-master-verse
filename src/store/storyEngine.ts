@@ -54,8 +54,11 @@ interface VnStore extends VnRunState {
   choose: (option: VnOption) => void;
   /** Apply a node's on-enter state_changes (idempotent per node). */
   enter: (node: VnNode) => void;
+  /** Replace the run with a snapshot loaded from the cloud save. */
+  hydrate: (snapshot: VnRunState) => void;
   reset: () => void;
 }
+
 
 const EMPTY: VnRunState = {
   chapterId: null,
