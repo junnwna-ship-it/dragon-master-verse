@@ -99,7 +99,9 @@ function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
 }
 
 export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
-  const { data: nodes, isLoading, error } = useChapterNodes(chapterId);
+  const { data, isLoading, error } = useChapterNodes(chapterId);
+  const nodes = data?.nodes ?? [];
+  const schemaReady = data?.schemaReady ?? true;
   const { nodeKey, stats, visited, applied, finished, start, choose, enter, reset, hydrate } =
     useStoryEngine();
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
