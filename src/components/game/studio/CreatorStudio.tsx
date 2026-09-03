@@ -296,13 +296,38 @@ export function CreatorStudio() {
                 placeholder="커버 이미지 URL (텍스트)"
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200"
               />
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-slate-400">블록 추가:</span>
+                {([
+                  ["장면", SCENE_BLOCK],
+                  ["선택지", CHOICE_BLOCK],
+                  ["퀴즈", QUIZ_BLOCK],
+                ] as const).map(([label, block]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() =>
+                      patch(s.id, {
+                        body: `${(s.body ?? "").replace(/\s*$/, "")}\n\n${block}`.trim() + "\n",
+                      })
+                    }
+                    className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:border-violet-300/60 hover:text-violet-100"
+                  >
+                    + {label}
+                  </button>
+                ))}
+              </div>
               <textarea
                 value={s.body ?? ""}
                 onChange={(e) => patch(s.id, { body: e.target.value })}
-                rows={5}
-                placeholder="스토리 본문"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200"
+                rows={10}
+                placeholder={`스토리 본문 (템플릿 예시)\n\n${SCENE_BLOCK}${CHOICE_BLOCK}`}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-slate-200"
               />
+              <p className="text-[11px] text-slate-500">
+                형식: <code>[장면 Node_N]</code> · <code>선택지1: 텍스트 -&gt; Node_N</code> ·{" "}
+                <code>[퀴즈] 질문/보기/정답/성공-실패 분기</code>
+              </p>
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-xs text-slate-300">
                   <input
