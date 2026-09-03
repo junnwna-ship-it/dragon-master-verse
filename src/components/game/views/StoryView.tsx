@@ -252,6 +252,42 @@ export function StoryView() {
   // Sorted by id so node 1 is the bottom (start), node 3 is top (boss).
   const orderedNodes = useMemo(() => [...NODES].sort((a, b) => a.id - b.id), []);
 
+  // ----- Save / resume -----
+  // Auto-save the run (debounced inside the hook) whenever it changes.
+  useEffect(() => {
+    if (!run || !selectedDragon) return;
+    persist({
+      dragonUuid: selectedDragon.uuid ?? null,
+      dragonName: selectedDragon.name,
+      currentNodeId: run.currentNodeId,
+      playerHp: run.playerHp,
+      playerMp: run.playerMp,
+      visited: run.visited,
+    });
+  }, [run, selectedDragon, persist]);
+
+  /** Restores the cloud save into an active run (matched by dragon uuid, then name). */
+  const resumeSave = () => {
+    if (!save) return;
+    const dragon =
+      dragons.find((d) => save.dragonUuid && d.uuid === save.dragonUuid) ??
+      dragons.find((d) => d.name === save.dragonName);
+    if (!dragon) return;
+    setSelectedDragon(dragon);
+    setRun({
+      currentNodeId: save.currentNodeId,
+      playerHp: save.playerHp,
+      playerMp: save.playerMp,
+      visited: save.visited,
+    });
+  };
+
+  const resumableDragon =
+    save && !run
+      ? (dragons.find((d) => save.dragonUuid && d.uuid === save.dragonUuid) ??
+        dragons.find((d) => d.name === save.dragonName))
+      : undefined;
+
   // Helper: which node id is the player currently allowed to enter?
   const activeNodeId = run?.currentNodeId ?? FIRST_NODE_ID;
 
