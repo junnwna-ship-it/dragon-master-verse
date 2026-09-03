@@ -4,6 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine";
+import { useVnSave } from "@/hooks/useVnSave";
+
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles } from "lucide-react";
 
