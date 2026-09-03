@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildUgcChapterPayloads, ugcChapterId } from "@/lib/ugcImport";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle, Wand2 } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle, Wand2, ScrollText } from "lucide-react";
 import { CHAPTER_TEMPLATES, type ChapterTemplate } from "@/lib/chapterTemplates";
 import { supabase } from "@/integrations/supabase/client";
 import { useCmsList, useCmsMutations, type StoryNode } from "@/hooks/useCms";
