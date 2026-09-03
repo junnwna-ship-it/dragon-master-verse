@@ -426,6 +426,60 @@ export function StoryMapEditor() {
         </div>
       </section>
 
+      {/* Studio (UGC) stories, auto-registered as chapters */}
+      <section className="rounded-2xl border border-sky-400/40 bg-sky-400/5 p-4">
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-sky-100">
+          <ScrollText className="h-4 w-4 text-sky-300" /> 스튜디오 창작 스토리
+        </h3>
+        <p className="mt-0.5 text-[11px] text-sky-200/70">
+          유저가 스튜디오에서 만든 스토리는 <code>ugc_…</code> 챕터로 자동 등록되어 아래 편집기에서 장면·선택지·퀴즈를
+          바로 수정할 수 있습니다. 본문을 수정한 스토리는 "다시 등록"으로 갱신하세요.
+        </p>
+        {!studioStories?.length ? (
+          <p className="mt-3 text-[11px] text-slate-400">등록된 창작 스토리가 없습니다.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {studioStories.map((s) => {
+              const target = ugcChapterId(s.id);
+              const registered = chapters.includes(target);
+              return (
+                <li
+                  key={s.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-700/60 bg-slate-950/60 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-slate-100">{s.title || "무제 스토리"}</p>
+                    <p className="text-[10px] font-mono text-slate-500">
+                      {target} · {registered ? "등록됨" : "미등록"} · {s.is_published ? "공개" : "비공개"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {registered && (
+                      <button
+                        type="button"
+                        onClick={() => setChapterId(target)}
+                        className="rounded-lg border border-slate-600 bg-slate-800/70 px-2.5 py-1 text-[11px] font-semibold text-slate-200"
+                      >
+                        편집
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={syncingId === s.id}
+                      onClick={() => void syncStudioStory(s)}
+                      className="flex items-center gap-1 rounded-lg border border-sky-400/40 bg-sky-500/15 px-2.5 py-1 text-[11px] font-bold text-sky-100 disabled:opacity-50"
+                    >
+                      {syncingId === s.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                      {registered ? "다시 등록" : "등록"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
       {/* Chapter template builder */}
       <section className="rounded-2xl border border-amber-400/40 bg-amber-400/5 p-4">
         <h3 className="flex items-center gap-1.5 text-sm font-bold text-amber-100">
