@@ -38,6 +38,8 @@ export function CreatorStudio() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Story currently being test-played (inline quizzes included).
+  const [playing, setPlaying] = useState<UserStory | null>(null);
 
   // Bonus slots are earned when an admin promotes one of the user's stories
   // to the Hall of Fame, so the cap is dynamic: 5 + bonus_story_slots.
