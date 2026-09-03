@@ -9,6 +9,7 @@ import { AuthDialog } from "@/components/game/auth/AuthDialog";
 import { CardScanner } from "@/components/game/scan/CardScanner";
 import { supabase } from "@/integrations/supabase/client";
 import { DragonDetailModal } from "../DragonDetailModal";
+import { HallOfFameStories } from "../story/HallOfFameStories";
 
 export function LobbyView() {
   const { t } = useTranslation();
@@ -245,6 +246,8 @@ export function LobbyView() {
           <ChevronRight className="h-3 w-3" />
         </span>
       </Link>
+      <HallOfFameStories />
+
       <Link
         to="/studio"
         className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-600/60 bg-slate-900/60 px-4 py-3 hover:bg-slate-800/60"

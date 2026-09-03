@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
+import { Crown } from "lucide-react";
+import { UgcReviewPanel } from "./UgcReviewPanel";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -250,12 +252,19 @@ const TABS: TabDef[] = [
 ];
 
 
+/** Custom (non table-editor) tab: user story review + Hall of Fame promotion. */
+const HALL_OF_FAME_TAB = {
+  key: "ugc_hall_of_fame",
+  label: "9. 명예의 전당 심사",
+  icon: Crown,
+} as const;
+
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 
 export function CmsDashboard() {
   const { isAdmin, loading } = useIsAdmin();
   const [tabKey, setTabKey] = useState<string>("store_items");
-  const tab = TABS.find((x) => x.key === tabKey)!;
+  const tab = TABS.find((x) => x.key === tabKey) ?? TABS[0]!;
 
   if (loading) {
     return (
@@ -289,7 +298,7 @@ export function CmsDashboard() {
 
       <nav className="-mx-4 mb-5 overflow-x-auto px-4">
         <div className="flex gap-2">
-          {TABS.map((x) => {
+          {[...TABS, HALL_OF_FAME_TAB].map((x) => {
             const Icon = x.icon;
             const active = x.key === tabKey;
             return (
@@ -311,7 +320,11 @@ export function CmsDashboard() {
         </div>
       </nav>
 
-      <CmsTableEditor key={tab.key} tab={tab} />
+      {tabKey === "ugc_hall_of_fame" ? (
+        <UgcReviewPanel />
+      ) : (
+        <CmsTableEditor key={tab.key} tab={tab} />
+      )}
     </div>
   );
 }

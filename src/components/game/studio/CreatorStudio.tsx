@@ -5,9 +5,7 @@ import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2 } from "lucide-react
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-const MAX_STORIES = 5;
-const LIMIT_MESSAGE =
-  "최대 5개의 스토리만 만들 수 있습니다. 기존 스토리를 수정하거나 삭제 후 다시 시도해 주세요.";
+const BASE_STORIES = 5;
 
 type UserStory = {
   id: string;
@@ -33,9 +31,18 @@ export function CreatorStudio() {
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  // Bonus slots are earned when an admin promotes one of the user's stories
+  // to the Hall of Fame, so the cap is dynamic: 5 + bonus_story_slots.
+  const [bonusSlots, setBonusSlots] = useState(0);
+
   const count = stories.length;
-  const atLimit = count >= MAX_STORIES;
-  const progress = useMemo(() => Math.min(100, (count / MAX_STORIES) * 100), [count]);
+  const maxStories = BASE_STORIES + bonusSlots;
+  const atLimit = count >= maxStories;
+  const limitMessage = `최대 ${maxStories}개의 스토리만 만들 수 있습니다. 기존 스토리를 수정하거나 삭제 후 다시 시도해 주세요.`;
+  const progress = useMemo(
+    () => Math.min(100, (count / Math.max(1, maxStories)) * 100),
+    [count, maxStories],
+  );
 
   const load = useCallback(async () => {
     if (!user) {
@@ -44,6 +51,13 @@ export function CreatorStudio() {
       return;
     }
     setLoading(true);
+    const { data: profile } = await (supabase as unknown as { from: (t: string) => any })
+      .from("profiles")
+      .select("bonus_story_slots")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    setBonusSlots(Number(profile?.bonus_story_slots ?? 0));
+
     const { data, error } = await table()
       .select("*")
       .eq("user_id", user.id)
@@ -63,7 +77,7 @@ export function CreatorStudio() {
       return;
     }
     if (atLimit) {
-      toast.error(LIMIT_MESSAGE);
+      toast.error(limitMessage);
       return;
     }
     setCreating(true);
@@ -76,7 +90,7 @@ export function CreatorStudio() {
     setCreating(false);
     if (error) {
       toast.error(
-        error.message?.includes("STORY_LIMIT_REACHED") ? LIMIT_MESSAGE : `생성 실패: ${error.message}`,
+        error.message?.includes("STORY_LIMIT_REACHED") ? limitMessage : `생성 실패: ${error.message}`,
       );
       return;
     }
@@ -135,21 +149,26 @@ export function CreatorStudio() {
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
         <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-semibold text-slate-200">창작 현황</span>
+          <span className="font-semibold text-slate-200">
+            내 창작 슬롯{bonusSlots > 0 ? " 👑" : ""}
+          </span>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-bold ${
               atLimit ? "bg-rose-500/20 text-rose-300" : "bg-violet-500/20 text-violet-200"
             }`}
           >
-            {count} / {MAX_STORIES}
+            {count} / {maxStories}
+            {bonusSlots > 0 && (
+              <span className="ml-1 text-amber-300">(+{bonusSlots} 보너스)</span>
+            )}
           </span>
         </div>
         <div
           role="progressbar"
           aria-valuemin={0}
-          aria-valuemax={MAX_STORIES}
+          aria-valuemax={maxStories}
           aria-valuenow={count}
-          aria-label={`창작 현황: ${count} / ${MAX_STORIES}`}
+          aria-label={`창작 현황: ${count} / ${maxStories}`}
           className="h-2 w-full overflow-hidden rounded-full bg-slate-800"
         >
           <div
@@ -158,9 +177,14 @@ export function CreatorStudio() {
           />
         </div>
         <p className="mt-2 text-[11px] text-slate-400">
+          {bonusSlots > 0 && (
+            <span className="mr-1 font-bold text-amber-300">
+              명예의 전당 보상으로 +{bonusSlots} 슬롯 획득!
+            </span>
+          )}
           {atLimit
             ? "슬롯이 모두 찼습니다. 기존 스토리를 삭제하면 새로 만들 수 있습니다."
-            : `${MAX_STORIES - count}개의 슬롯이 남아 있습니다.`}
+            : `${maxStories - count}개의 슬롯이 남아 있습니다.`}
         </p>
 
         <button
@@ -171,7 +195,7 @@ export function CreatorStudio() {
           onClickCapture={(e) => {
             if (atLimit) {
               e.preventDefault();
-              toast.error(LIMIT_MESSAGE);
+              toast.error(limitMessage);
             }
           }}
           className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
@@ -186,7 +210,7 @@ export function CreatorStudio() {
         {atLimit && (
           <button
             type="button"
-            onClick={() => toast.error(LIMIT_MESSAGE)}
+            onClick={() => toast.error(limitMessage)}
             className="mt-2 w-full text-[11px] text-rose-300/80 underline-offset-2 hover:underline"
           >
             왜 만들 수 없나요?
