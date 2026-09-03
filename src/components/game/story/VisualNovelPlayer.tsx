@@ -192,13 +192,13 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
               {key.replace(/_/g, " ")} <b className="text-amber-300">{value}</b>
             </span>
           ))}
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => startKey && start(chapterId, startKey, { reset: true })}
-          >
+          <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
+            {signedIn ? (saving ? "저장 중…" : "클라우드 저장됨") : "로그인하면 진행도가 저장됩니다"}
+          </span>
+          <Button size="sm" variant="secondary" onClick={restart}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> 처음부터
           </Button>
+
         </div>
       </div>
 
