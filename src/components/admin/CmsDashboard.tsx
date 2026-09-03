@@ -4,6 +4,11 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { CmsStoreItems, CmsStoryNodes, CmsTrainingStats } from "@/components/game/cms/CmsSections";
+import {
+  parseStoryMarkdown,
+  serializeStoryMarkdown,
+  type StoryMdOption,
+} from "@/lib/storyMarkdown";
 import { StorySeedButton } from "@/components/admin/StorySeedButton";
 import {
   useCmsList,
@@ -55,6 +60,18 @@ interface TabDef {
   fields: FieldDef[];
   blank: Record<string, unknown>;
 }
+
+const STORY_MD_PLACEHOLDER = `# 본문
+동굴 깊은 곳에서 울음소리가 들린다.
+
+# 스탯
+Courage +1
+
+# 선택지
+- 다가간다 -> approach
+  스탯: Worm_Affinity +2
+  퀴즈: 퀴즈-UUID (필수, 실패: retry)
+- 도망친다 -> flee`;
 
 const TABS: TabDef[] = [
   {
@@ -749,6 +766,80 @@ function JsonField({
       {invalid && (
         <p className="mt-1 text-[10px] text-rose-300">JSON 형식이 올바르지 않습니다 — 저장되지 않습니다.</p>
       )}
+    </div>
+  );
+}
+
+/**
+ * One markdown text block that edits `body_text`, `state_changes` and
+ * `options` (including quiz links) at once — no JSON typing required.
+ */
+function StoryMarkdownField({
+  row,
+  placeholder,
+  onPatch,
+}: {
+  row: Record<string, unknown>;
+  placeholder?: string;
+  onPatch: (patch: Record<string, unknown>) => void;
+}) {
+  const [text, setText] = useState(() =>
+    serializeStoryMarkdown({
+      body_text: (row["body_text"] as string | null) ?? "",
+      state_changes: (row["state_changes"] as Record<string, number> | null) ?? null,
+      options: Array.isArray(row["options"]) ? (row["options"] as StoryMdOption[]) : [],
+    }),
+  );
+  const parsed = useMemo(() => parseStoryMarkdown(text), [text]);
+
+  const apply = (raw: string) => {
+    setText(raw);
+    const next = parseStoryMarkdown(raw);
+    onPatch({
+      body_text: next.body_text,
+      state_changes: next.state_changes,
+      options: next.options,
+    });
+  };
+
+  return (
+    <div>
+      <textarea
+        className="min-h-[220px] w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 font-mono text-xs leading-relaxed text-slate-100 placeholder:text-slate-600 focus:border-amber-400 focus:outline-none"
+        value={text}
+        placeholder={placeholder}
+        onChange={(e) => apply(e.target.value)}
+      />
+      <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+        <b className="text-slate-400"># 본문</b> 아래에 대사를,{" "}
+        <b className="text-slate-400"># 스탯</b> 아래에 <code>Courage +1</code> 형식으로,{" "}
+        <b className="text-slate-400"># 선택지</b> 아래에 <code>- 선택지 문구 -&gt; 다음노드키</code>{" "}
+        형식으로 적으세요. 선택지 아래 줄에 <code>스탯: Courage +1</code>,{" "}
+        <code>퀴즈: UUID (필수, 실패: 노드키)</code>를 덧붙일 수 있습니다.
+      </p>
+      <div className="mt-2 rounded-lg border border-slate-700/60 bg-slate-950/60 p-2 text-[11px] text-slate-300">
+        <p className="mb-1 font-bold uppercase tracking-widest text-slate-500">해석 결과</p>
+        <p>본문 {parsed.body_text.length}자 · 선택지 {parsed.options.length}개</p>
+        <ul className="mt-1 space-y-0.5">
+          {parsed.options.map((o, i) => (
+            <li key={i} className="text-slate-400">
+              {o.label} → <b className="text-slate-200">{o.next_node ?? "(챕터 종료)"}</b>
+              {o.state_changes && (
+                <span className="ml-1 text-amber-300">
+                  {Object.entries(o.state_changes)
+                    .map(([k, v]) => `${k} ${v >= 0 ? "+" : ""}${v}`)
+                    .join(", ")}
+                </span>
+              )}
+              {o.quiz_ids?.length ? (
+                <span className="ml-1 text-sky-300">
+                  퀴즈 {o.quiz_ids.length}개{o.quiz_required ? " (필수)" : ""}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
