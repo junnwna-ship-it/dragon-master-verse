@@ -300,6 +300,86 @@ export function StoryMapEditor() {
     }
   };
 
+  // ---- Studio (UGC) stories are auto-registered as editable chapters ----
+  const { data: studioStories } = useQuery({
+    queryKey: ["admin", "user_stories", "map"],
+    queryFn: async () => {
+      const { data: rows, error: sErr } = await (
+        supabase as unknown as { from: (t: string) => any }
+      )
+        .from("user_stories")
+        .select("id,title,body,is_published,updated_at,user_id")
+        .order("updated_at", { ascending: false })
+        .limit(50);
+      if (sErr) throw sErr;
+      return (rows ?? []) as {
+        id: string;
+        title: string;
+        body: string | null;
+        is_published: boolean;
+        updated_at: string;
+      }[];
+    },
+  });
+
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const autoSynced = useRef(false);
+
+  const syncStudioStory = useCallback(
+    async (story: { id: string; title: string; body: string | null }, silent = false) => {
+      setSyncingId(story.id);
+      try {
+        const { chapterId: target, payloads, errors } = await buildUgcChapterPayloads({
+          storyId: story.id,
+          title: story.title || "무제 스토리",
+          body: story.body,
+          publish: false,
+        });
+        if (!payloads.length) {
+          if (!silent) toast.error("가져올 장면이 없습니다. 스튜디오 본문 형식을 확인해 주세요.");
+          return;
+        }
+        const existing = new Map(
+          nodes
+            .filter((n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === target)
+            .map((n) => [String((n as StoryNode & { node_key?: string }).node_key ?? ""), n.id] as const),
+        );
+        for (const payload of payloads) {
+          const id = existing.get(String(payload.node_key));
+          if (id) await update.mutateAsync({ id, patch: payload });
+          else await create.mutateAsync(payload);
+        }
+        if (!silent) {
+          toast.success(
+            `"${story.title}" 챕터(${target}) 등록 완료: 장면 ${payloads.length}개` +
+              (errors.length ? ` · 형식 경고 ${errors.length}건` : ""),
+          );
+        }
+      } catch (e) {
+        if (!silent) toast.error(`가져오기 실패: ${(e as Error).message}`);
+      } finally {
+        setSyncingId(null);
+      }
+    },
+    [nodes, create, update],
+  );
+
+  // First load: register any studio story that has no chapter yet, so the map
+  // list always shows user-created stories without a manual step.
+  useEffect(() => {
+    if (autoSynced.current) return;
+    if (isLoading || !studioStories) return;
+    autoSynced.current = true;
+    const pending = studioStories.filter(
+      (s) => (s.body ?? "").trim() && !chapters.includes(ugcChapterId(s.id)),
+    );
+    if (!pending.length) return;
+    void (async () => {
+      for (const s of pending) await syncStudioStory(s, true);
+      toast.success(`스튜디오 스토리 ${pending.length}개를 스토리 맵에 등록했습니다.`);
+    })();
+  }, [isLoading, studioStories, chapters, syncStudioStory]);
+
   const del = async (node: StoryNode) => {
     if (!window.confirm(`"${node.title}" 장면을 삭제할까요?`)) return;
     try {
