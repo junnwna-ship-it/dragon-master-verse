@@ -121,10 +121,12 @@ const TABS: TabDef[] = [
       { key: "body_text", label: "본문 텍스트", kind: "textarea", placeholder: "동굴 깊은 곳에서 울음소리가…" },
       {
         key: "options",
-        label: '선택지 JSON [{ "label", "next_node", "state_changes" }]',
+        label: '선택지 JSON [{ "label", "next_node", "state_changes", "quiz_ids", "quiz_required", "quiz_fail_node" }]',
         kind: "json",
-        placeholder: '[{"label":"다가간다","next_node":"approach","state_changes":{"Worm_Affinity":2}}]',
+        placeholder:
+          '[{"label":"다가간다","next_node":"approach","state_changes":{"Worm_Affinity":2},"quiz_ids":["퀴즈-UUID"],"quiz_required":true,"quiz_fail_node":"retry"}]',
       },
+
       {
         key: "state_changes",
         label: "노드 진입 시 스탯 변화 JSON",

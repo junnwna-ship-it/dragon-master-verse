@@ -74,3 +74,33 @@ export const gradeAndReward = createServerFn({ method: "POST" })
     if (rewardErr) throw new Error(rewardErr.message);
     return { correct, total: data.picks.length, reward: rewardData };
   });
+/**
+ * Fetch specific quizzes by id (used by story choices that gate progression
+ * behind a quiz). Answers are returned as an `answerKey` for instant UI
+ * feedback only — grading/reward still happens server-side in `gradeAndReward`.
+ */
+export const fetchQuizzesByIds = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => {
+    const d = (data ?? {}) as { ids?: unknown };
+    const ids = Array.isArray(d.ids) ? d.ids.filter((v): v is string => typeof v === "string") : [];
+    return { ids: ids.slice(0, 10) };
+  })
+  .handler(async ({ data, context }) => {
+    void context;
+    if (data.ids.length === 0) return { quizzes: [], answerKey: {} as Record<string, number> };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("quizzes")
+      .select("id, question, choices, answer_index")
+      .in("id", data.ids);
+    if (error) throw new Error(error.message);
+    const byId = new Map((rows ?? []).map((r) => [r.id, r]));
+    const ordered = data.ids.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r);
+    const answerKey: Record<string, number> = {};
+    for (const q of ordered) answerKey[q.id] = q.answer_index;
+    return {
+      quizzes: ordered.map((q) => ({ id: q.id, question: q.question, choices: q.choices as string[] })),
+      answerKey,
+    };
+  });

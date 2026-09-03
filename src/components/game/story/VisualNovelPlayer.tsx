@@ -7,37 +7,50 @@ import { useStoryEngine, type VnNode, type VnOption } from "@/store/storyEngine"
 import { useGameStore } from "@/store/dragons";
 import { useVnSave } from "@/hooks/useVnSave";
 
+import { toast } from "sonner";
+import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles } from "lucide-react";
+
+function asStringList(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x.trim());
+  if (typeof v === "string" && v.trim()) return v.split(",").map((s) => s.trim()).filter(Boolean);
+  return [];
+}
+
+function pickString(o: Record<string, unknown>, keys: string[]): string | null {
+  for (const k of keys) if (typeof o[k] === "string" && o[k]) return o[k] as string;
+  return null;
+}
 
 /** Coerce raw jsonb into a safe options array — never trust the shape. */
 function parseOptions(raw: unknown): VnOption[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((o): o is Record<string, unknown> => !!o && typeof o === "object")
-    .map((o) => ({
-      label:
-        typeof o.label === "string"
-          ? o.label
-          : typeof o.choice_text === "string"
-            ? o.choice_text
-            : typeof o.Choice_Text === "string"
-              ? o.Choice_Text
-            : "…",
-      next_node:
-        typeof o.next_node === "string"
-          ? o.next_node
-          : typeof o.Next_Node === "string"
-            ? o.Next_Node
-            : null,
-      state_changes:
-        o.state_changes && typeof o.state_changes === "object"
-          ? (o.state_changes as Record<string, number>)
-          : o.State_Changes && typeof o.State_Changes === "object"
-            ? (o.State_Changes as Record<string, number>)
-          : null,
-    }));
+    .map((o) => {
+      const quizIds = [
+        ...asStringList(o.quiz_ids ?? o.Quiz_Ids),
+        ...asStringList(o.quiz_id ?? o.Quiz_Id),
+      ];
+      const rawCount = o.quiz_count ?? o.Quiz_Count;
+      return {
+        label: pickString(o, ["label", "choice_text", "Choice_Text"]) ?? "…",
+        next_node: pickString(o, ["next_node", "Next_Node"]),
+        state_changes:
+          o.state_changes && typeof o.state_changes === "object"
+            ? (o.state_changes as Record<string, number>)
+            : o.State_Changes && typeof o.State_Changes === "object"
+              ? (o.State_Changes as Record<string, number>)
+              : null,
+        quiz_ids: quizIds,
+        quiz_count: Number.isFinite(Number(rawCount)) ? Number(rawCount) : 0,
+        quiz_required: Boolean(o.quiz_required ?? o.Quiz_Required),
+        quiz_fail_node: pickString(o, ["quiz_fail_node", "Quiz_Fail_Node"]),
+      } satisfies VnOption;
+    });
 }
+
 
 function useChapterNodes(chapterId: string) {
   return useQuery({
@@ -116,6 +129,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     useStoryEngine();
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
   const hydratedRef = useRef(false);
+  const [quizOption, setQuizOption] = useState<VnOption | null>(null);
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
@@ -157,10 +171,40 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   const restart = () => {
     if (!startKey) return;
     void clear();
+    setQuizOption(null);
     start(chapterId, startKey, { reset: true });
   };
 
+  /** Choices may gate progression behind a quiz — ask first, then advance. */
+  const handleChoose = (opt: VnOption) => {
+    const hasQuiz = (opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0;
+    if (hasQuiz) {
+      setQuizOption(opt);
+      return;
+    }
+    choose(opt);
+  };
+
+  const handleQuizClose = (result: { correct: number; total: number }) => {
+    const opt = quizOption;
+    setQuizOption(null);
+    if (!opt) return;
+    const passed = result.total > 0 ? result.correct === result.total : true;
+    if (passed || !opt.quiz_required) {
+      choose(opt);
+      return;
+    }
+    // Failed a required quiz: branch to the fail node, or stay on this node.
+    if (opt.quiz_fail_node) {
+      choose({ ...opt, next_node: opt.quiz_fail_node, state_changes: null });
+    } else {
+      toast.error("정답을 모두 맞혀야 다음으로 넘어갈 수 있어요!");
+    }
+  };
+
   const statEntries = Object.entries(stats).filter(([, v]) => v !== 0);
+
+
 
 
   if (isLoading) {
@@ -292,10 +336,15 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 + i * 0.08 }}
-                    onClick={() => choose(opt)}
+                    onClick={() => handleChoose(opt)}
                     className="w-full rounded-xl border border-amber-300/30 bg-black/55 px-4 py-3 text-left text-sm text-slate-50 backdrop-blur transition hover:border-amber-300/70 hover:bg-amber-300/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                   >
                     {opt.label}
+                    {((opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0) && (
+                      <span className="ml-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-200">
+                        퀴즈
+                      </span>
+                    )}
                   </motion.button>
                 ))}
                 {node.options.length === 0 && (
@@ -311,6 +360,15 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
           )}
         </div>
       </div>
+
+      {quizOption && (
+        <QuizModal
+          title="지혜의 시련"
+          count={quizOption.quiz_count && quizOption.quiz_count > 0 ? quizOption.quiz_count : 1}
+          quizIds={quizOption.quiz_ids}
+          onClose={handleQuizClose}
+        />
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, CheckCircle2, XCircle, Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { fetchQuizSet, gradeAndReward } from "@/lib/quiz.functions";
+import { fetchQuizSet, gradeAndReward, fetchQuizzesByIds } from "@/lib/quiz.functions";
 import { emitInventoryChanged } from "@/hooks/useInventory";
 
 interface QuizItem {
@@ -16,6 +16,8 @@ interface Props {
   /** Heading shown above the question (e.g. "지혜의 시련"). */
   title?: string;
   count?: number;
+  /** When set, ask exactly these quizzes (story choices link specific ones). */
+  quizIds?: string[];
   onClose: (result: { correct: number; total: number; rewarded: boolean }) => void;
 }
 
@@ -24,7 +26,7 @@ interface Props {
  * 정답 채점 + 보상 지급은 모두 서버에서 처리 (변조 방지).
  * 모두 맞히면 화려한 불꽃놀이 VFX, 틀리면 슬럼프 연출.
  */
-export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Props) {
+export function QuizModal({ title = "지혜의 시련", count = 3, quizIds, onClose }: Props) {
   const { t } = useTranslation();
   const resolvedTitle = title === "지혜의 시련" ? t("quiz.defaultTitle") : title;
   const [loading, setLoading] = useState(true);
@@ -36,9 +38,14 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
   const [result, setResult] = useState<{ correct: number; total: number; rewarded: boolean } | null>(null);
   const [answerKey, setAnswerKey] = useState<Record<string, number>>({});
 
+  const idsKey = (quizIds ?? []).join(",");
   useEffect(() => {
     let cancelled = false;
-    fetchQuizSet({ data: { count } })
+    const ids = idsKey ? idsKey.split(",") : [];
+    const req = ids.length > 0
+      ? fetchQuizzesByIds({ data: { ids } })
+      : fetchQuizSet({ data: { count } });
+    req
       .then((r) => {
         if (cancelled) return;
         setQuizzes(r.quizzes);
@@ -50,7 +57,8 @@ export function QuizModal({ title = "지혜의 시련", count = 3, onClose }: Pr
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [count, t]);
+  }, [count, idsKey, t]);
+
 
   const cur = quizzes[step];
 
