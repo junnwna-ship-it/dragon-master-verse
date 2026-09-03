@@ -43,6 +43,8 @@ interface VnRunState {
   nodeKey: string | null;
   stats: VnStats;
   visited: string[];
+  /** node_keys whose on-enter state_changes were already applied. */
+  applied: string[];
   finished: boolean;
 }
 
@@ -60,6 +62,7 @@ const EMPTY: VnRunState = {
   nodeKey: null,
   stats: {},
   visited: [],
+  applied: [],
   finished: false,
 };
 
@@ -83,20 +86,27 @@ export const useStoryEngine = create<VnStore>()(
         const resume =
           !opts?.reset && state.chapterId === chapterId && state.nodeKey && !state.finished;
         if (resume) return;
-        set({ chapterId, nodeKey: startKey, stats: {}, visited: [startKey], finished: false });
+        set({
+          chapterId,
+          nodeKey: startKey,
+          stats: {},
+          visited: [startKey],
+          applied: [],
+          finished: false,
+        });
       },
 
       enter: (node) => {
         const key = node.node_key;
         if (!key) return;
-        const state = get();
-        if (state.visited.includes(key) && state.nodeKey === key && state.visited.length > 0) {
-          // already applied on first entry
-        }
         set((s) =>
-          s.visited.includes(key) && s.nodeKey === key && s.stats && s.visited.length > 1
+          s.applied.includes(key)
             ? s
-            : { ...s, stats: addStats(s.stats, node.state_changes) },
+            : {
+                ...s,
+                applied: [...s.applied, key],
+                stats: addStats(s.stats, node.state_changes),
+              },
         );
       },
 
