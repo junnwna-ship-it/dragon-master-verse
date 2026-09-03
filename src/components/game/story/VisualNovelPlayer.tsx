@@ -10,7 +10,13 @@ import { useVnSave } from "@/hooks/useVnSave";
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ChevronLeft, Sparkles } from "lucide-react";
+import { RotateCcw, ChevronLeft, Sparkles, Play } from "lucide-react";
+import {
+  sceneArt,
+  introArtFor,
+  CHAPTER_TITLES,
+  CHAPTER_TAGLINES,
+} from "@/data/storyArt";
 
 function asStringList(v: unknown): string[] {
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x.trim());
@@ -130,6 +136,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
   const hydratedRef = useRef(false);
   const [quizOption, setQuizOption] = useState<VnOption | null>(null);
+  const [introDone, setIntroDone] = useState(false);
 
   const byKey = useMemo(() => {
     const map = new Map<string, VnNode>();
@@ -172,6 +179,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
     if (!startKey) return;
     void clear();
     setQuizOption(null);
+    setIntroDone(false);
     start(chapterId, startKey, { reset: true });
   };
 
@@ -208,7 +216,7 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
 
 
   if (isLoading) {
-    return <Shell><p className="text-slate-300">불러오는 중…</p></Shell>;
+    return <Shell><p className="text-slate-300">Loading…</p></Shell>;
   }
   if (!schemaReady) {
     return (
@@ -240,21 +248,60 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
   }
 
   const body = node?.body_text ?? node?.description ?? "";
+  const background = node?.background_image_url ?? sceneArt(chapterId, node?.node_key) ?? null;
+  const introImage = introArtFor(chapterId);
+  const chapterTitle = CHAPTER_TITLES[chapterId] ?? chapterId.replace(/_/g, " ");
+  const tagline = CHAPTER_TAGLINES[chapterId] ?? "Your choices shape the legend.";
+
+  if (!introDone) {
+    return (
+      <div className="relative min-h-screen w-full overflow-hidden bg-slate-950">
+        <motion.img
+          src={introImage}
+          alt={`${chapterTitle} chapter cover art`}
+          width={1536}
+          height={1024}
+          initial={{ opacity: 0, scale: 1.08 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2 }}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/30 to-slate-950/95" />
+        <div className="relative z-10 flex min-h-screen flex-col justify-between p-4">
+          <BackLink />
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, type: "spring", stiffness: 220, damping: 24 }}
+            className="mx-auto w-full max-w-2xl rounded-2xl border border-white/15 bg-black/60 p-6 text-center backdrop-blur-md"
+          >
+            <p className="text-xs uppercase tracking-[0.3em] text-amber-300/90">Story Mode</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-50 md:text-4xl">{chapterTitle}</h1>
+            <p className="mt-3 text-sm text-slate-200 md:text-base">{tagline}</p>
+            <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
+              <Play className="mr-2 h-4 w-4" /> Begin the story
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-slate-950">
       {/* Background from DB (plain URL string) */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={node?.background_image_url ?? "bg"}
+          key={background ?? "bg"}
           initial={{ opacity: 0, scale: 1.04 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6 }}
           className="absolute inset-0 bg-cover bg-center"
           style={
-            node?.background_image_url
-              ? { backgroundImage: `url(${node.background_image_url})` }
+            background
+              ? { backgroundImage: `url(${background})` }
               : {
                   backgroundImage:
                     "radial-gradient(circle at 30% 20%, hsl(262 60% 30%), transparent 60%), radial-gradient(circle at 70% 80%, hsl(200 70% 25%), transparent 60%)",
