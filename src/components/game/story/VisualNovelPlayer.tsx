@@ -10,7 +10,7 @@ import { useVnSave } from "@/hooks/useVnSave";
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ChevronLeft, Sparkles, Play } from "lucide-react";
+import { RotateCcw, ChevronLeft, Sparkles, Play, Home } from "lucide-react";
 import {
   sceneArt,
   introArtFor,
@@ -356,6 +356,11 @@ export function VisualNovelPlayer({ chapterId }: { chapterId: string }) {
                 >
                   Clear save
                 </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/">
+                    <Home className="mr-1 h-4 w-4" /> Home
+                  </Link>
+                </Button>
               </div>
 
             </div>
@@ -428,16 +433,23 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Exit controls: "Back" returns to the game lobby, "Home" leaves story mode
+ * entirely and lands on the landing page.
+ */
 function BackLink() {
   const setView = useGameStore((state) => state.setView);
+  const cls =
+    "inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-slate-100 backdrop-blur hover:bg-black/60";
   return (
-    <Link
-      to="/app"
-      search={{}}
-      onClick={() => setView("lobby")}
-      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-slate-100 backdrop-blur hover:bg-black/60"
-    >
-      <ChevronLeft className="h-3.5 w-3.5" /> Back
-    </Link>
+    <div className="flex items-center gap-2">
+      <Link to="/app" search={{}} onClick={() => setView("lobby")} className={cls}>
+        <ChevronLeft className="h-3.5 w-3.5" /> Back
+      </Link>
+      <Link to="/" onClick={() => setView("lobby")} className={cls} aria-label="Exit story mode and go home">
+        <Home className="h-3.5 w-3.5" /> Home
+      </Link>
+    </div>
   );
 }
+
