@@ -94,7 +94,10 @@ export function parseStudioStory(text: string | null | undefined): ParsedUgcStor
   const bodyParts: string[] = [];
 
   const flushBody = () => {
-    if (node) node.body = bodyParts.join("\n").trim();
+    if (node && bodyParts.length) {
+      const text = bodyParts.join("\n").trim();
+      node.body = node.body ? `${node.body}\n${text}` : text;
+    }
     bodyParts.length = 0;
   };
   const closeNode = () => {
