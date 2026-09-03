@@ -223,7 +223,15 @@
     "playerName": "{{name}}",
     "lockedAria": "{{title}} — 잠김. {{reason}}",
     "clearedAria": "{{title}} — 클리어됨",
-    "cancelPick": "취소"
+    "cancelPick": "취소",
+    "saveFound": "저장된 진행이 있습니다",
+    "saveSummary": "{{name}} · 진행 {{cur}}/{{total}} · HP {{hp}}",
+    "continueRun": "이어하기",
+    "deleteSave": "삭제",
+    "saveDragonMissing": "저장된 드래곤을 찾을 수 없어 이어하기가 불가합니다.",
+    "startNewJourney": "새로 시작하기",
+    "saving": "저장 중",
+    "saved": "저장됨"
   },
   "merlin": {
     "stage": "Stage 1 · 입문",

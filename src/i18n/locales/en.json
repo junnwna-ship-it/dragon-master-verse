@@ -223,7 +223,15 @@
     "playerName": "{{name}}",
     "lockedAria": "{{title}} — locked. {{reason}}",
     "clearedAria": "{{title}} — cleared",
-    "cancelPick": "Cancel"
+    "cancelPick": "Cancel",
+    "saveFound": "Saved progress found",
+    "saveSummary": "{{name}} · Progress {{cur}}/{{total}} · HP {{hp}}",
+    "continueRun": "Continue",
+    "deleteSave": "Delete",
+    "saveDragonMissing": "The saved dragon is unavailable, so this run can't be resumed.",
+    "startNewJourney": "Start a new journey",
+    "saving": "Saving",
+    "saved": "Saved"
   },
   "merlin": {
     "stage": "Stage 1 · Initiation",
