@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { CmsStoreItems, CmsStoryNodes, CmsTrainingStats } from "@/components/game/cms/CmsSections";
+import { StorySeedButton } from "@/components/admin/StorySeedButton";
 import {
   useCmsList,
   useCmsMutations,
@@ -236,6 +237,8 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
 
   return (
     <div className="space-y-5">
+      {tab.key === "story_chapters" && <StorySeedButton />}
+
       {/* Preview mode — see unpublished / unsaved content exactly as players will */}
       <section className="rounded-2xl border border-sky-500/40 bg-sky-500/5 p-4">
         <div className="flex items-center justify-between gap-3">
