@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2, Sparkles, HelpCircle, GitBranch, LayoutTemplate } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2, Sparkles, HelpCircle, GitBranch, LayoutTemplate, Play } from "lucide-react";
+import { UgcStoryPlayer } from "@/components/game/story/UgcStoryPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
