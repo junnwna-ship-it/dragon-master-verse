@@ -198,7 +198,7 @@ export function CreatorStudio() {
           type="button"
           aria-disabled={atLimit}
           disabled={atLimit || creating || !user}
-          onClick={handleCreate}
+          onClick={() => void handleCreate()}
           onClickCapture={(e) => {
             if (atLimit) {
               e.preventDefault();
