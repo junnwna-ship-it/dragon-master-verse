@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -175,7 +175,80 @@ const TABS: TabDef[] = [
       is_published: false,
     },
   },
+  {
+    key: "characters",
+    id: "characters",
+    label: "6. 캐릭터 관리",
+    icon: Users,
+    titleField: "name",
+    fields: [
+      { key: "name", label: "캐릭터 이름", kind: "text", placeholder: "마법사 멀린" },
+      { key: "role", label: "역할", kind: "text", placeholder: "npc / boss / ally / narrator" },
+      { key: "description", label: "소개", kind: "textarea", placeholder: "고대의 지식을 지키는 현자" },
+      { key: "dialogue_sample", label: "대표 대사", kind: "textarea", placeholder: "\"준비되었는가, 어린 드래곤 마스터?\"" },
+      { key: "portrait_url", label: "초상화 URL (텍스트)", kind: "url", placeholder: "https://.../merlin.png" },
+      { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
+    ],
+    blank: { name: "", role: "npc", description: "", dialogue_sample: "", portrait_url: "", sort_order: 0, is_published: false },
+  },
+  {
+    key: "bgm_tracks",
+    id: "bgm_tracks",
+    label: "7. 배경 음악 관리",
+    icon: Music,
+    titleField: "title",
+    fields: [
+      { key: "title", label: "트랙 제목", kind: "text", placeholder: "Dragon's Lullaby" },
+      { key: "scene_code", label: "적용 장면 코드", kind: "text", placeholder: "lobby / story / battle / shop" },
+      { key: "audio_url", label: "오디오 URL (텍스트)", kind: "url", placeholder: "https://.../bgm.mp3" },
+      { key: "cover_image_url", label: "커버 이미지 URL (텍스트)", kind: "url", placeholder: "https://.../cover.jpg" },
+      { key: "credit", label: "저작자 표기", kind: "text", placeholder: "Music by ..." },
+      { key: "loop_enabled", label: "반복 재생", kind: "boolean" },
+      { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
+    ],
+    blank: {
+      title: "",
+      scene_code: "lobby",
+      audio_url: "",
+      cover_image_url: "",
+      credit: "",
+      loop_enabled: true,
+      sort_order: 0,
+      is_published: false,
+    },
+  },
+  {
+    key: "battle_skills",
+    id: "battle_skills",
+    label: "8. 전투 스킬 텍스트",
+    icon: Swords,
+    titleField: "name",
+    fields: [
+      { key: "name", label: "스킬 이름", kind: "text", placeholder: "화염 브레스" },
+      { key: "skill_code", label: "스킬 코드", kind: "text", placeholder: "fire_breath" },
+      { key: "element", label: "속성", kind: "text", placeholder: "fire / water / wind / earth / neutral" },
+      { key: "mp_cost", label: "MP 소모", kind: "number", placeholder: "30" },
+      { key: "power", label: "위력", kind: "number", placeholder: "120" },
+      { key: "description", label: "스킬 설명", kind: "textarea", placeholder: "적 전체에게 화염 피해를 입힌다." },
+      { key: "log_text", label: "전투 로그 텍스트", kind: "textarea", placeholder: "{attacker}의 화염 브레스! {target}에게 {damage} 피해!" },
+      { key: "icon_url", label: "아이콘 URL (텍스트)", kind: "url", placeholder: "https://.../skill.png" },
+      { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
+    ],
+    blank: {
+      name: "",
+      skill_code: "",
+      element: "neutral",
+      mp_cost: 0,
+      power: 0,
+      description: "",
+      log_text: "",
+      icon_url: "",
+      sort_order: 0,
+      is_published: false,
+    },
+  },
 ];
+
 
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 

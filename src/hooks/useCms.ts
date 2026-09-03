@@ -14,18 +14,31 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase
  * security. We still pass `publishedOnly` for admin previews / player screens
  * to make the intent explicit.
  */
-export type CmsTable = "store_items" | "story_nodes" | "training_stats" | "game_settings";
+export type CmsTable =
+  | "store_items"
+  | "story_nodes"
+  | "training_stats"
+  | "game_settings"
+  | "characters"
+  | "bgm_tracks"
+  | "battle_skills";
 
 export type StoreItem = Tables<"store_items">;
 export type StoryNode = Tables<"story_nodes">;
 export type TrainingStat = Tables<"training_stats">;
 export type GameSetting = Tables<"game_settings">;
+export type CharacterRow = Tables<"characters">;
+export type BgmTrack = Tables<"bgm_tracks">;
+export type BattleSkill = Tables<"battle_skills">;
 
 const ORDER_BY: Record<CmsTable, { column: string; ascending: boolean }> = {
   store_items: { column: "sort_order", ascending: true },
   story_nodes: { column: "stage_number", ascending: true },
   training_stats: { column: "sort_order", ascending: true },
   game_settings: { column: "key", ascending: true },
+  characters: { column: "sort_order", ascending: true },
+  bgm_tracks: { column: "sort_order", ascending: true },
+  battle_skills: { column: "sort_order", ascending: true },
 };
 
 export function cmsKey(table: CmsTable, publishedOnly: boolean) {
@@ -58,6 +71,12 @@ export const usePublishedTrainingStats = () =>
   useCmsList<TrainingStat>("training_stats", { publishedOnly: true });
 export const usePublishedGameSettings = () =>
   useCmsList<GameSetting>("game_settings", { publishedOnly: true });
+export const usePublishedCharacters = () =>
+  useCmsList<CharacterRow>("characters", { publishedOnly: true });
+export const usePublishedBgmTracks = () =>
+  useCmsList<BgmTrack>("bgm_tracks", { publishedOnly: true });
+export const usePublishedBattleSkills = () =>
+  useCmsList<BattleSkill>("battle_skills", { publishedOnly: true });
 
 /** Admin write helpers — insert / update / delete on any CMS table. */
 export function useCmsMutations(table: CmsTable) {
