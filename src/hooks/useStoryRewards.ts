@@ -68,7 +68,7 @@ export function useStoryRewards() {
         const { data, error } = await supabase.rpc("claim_story_reward", {
           _chapter_id: chapterId,
           _node_key: nodeKey,
-          _dragon_uuid: dragonUuid ?? null,
+          ...(dragonUuid ? { _dragon_uuid: dragonUuid } : {}),
         });
         if (error) {
           console.error("[useStoryRewards]", error.message);
