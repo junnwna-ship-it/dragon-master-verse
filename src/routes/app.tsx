@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { z } from "zod";
 import { Coins, Flame } from "lucide-react";
@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { useGameStore } from "@/store/dragons";
 import { BottomNav } from "@/components/game/BottomNav";
 import { LobbyView } from "@/components/game/views/LobbyView";
-import { StoryView } from "@/components/game/views/StoryView";
 import { PvpView } from "@/components/game/views/PvpView";
 import { VaultView } from "@/components/game/views/VaultView";
 import { AdminView } from "@/components/game/views/AdminView";
@@ -101,7 +100,13 @@ function Index() {
           )}
           {view === "lobby" && <LobbyView />}
           {view === "vault" && <VaultView />}
-          {view === "story" && <StoryView />}
+          {view === "story" && (
+            <Navigate
+              to="/story/play/$chapterId"
+              params={{ chapterId: "dragon_master" }}
+              replace
+            />
+          )}
           {view === "pvp" && <PvpView />}
           {view === "shop" && (
             <ErrorBoundary label={t("app.shopLabel")}>
