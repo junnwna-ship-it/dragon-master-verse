@@ -6,6 +6,7 @@ import { useGameStore, type Dragon } from "@/store/dragons";
 import { BattleEngine } from "../battle/BattleEngine";
 import { MerlinStageView } from "./MerlinStageView";
 import { useOwnedDragons } from "@/hooks/useOwnedDragons";
+import { useStorySave } from "@/hooks/useStorySave";
 import { CmsStoryNodes } from "../cms/CmsSections";
 
 type NodeKind = "battle" | "event" | "boss";
