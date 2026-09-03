@@ -349,6 +349,14 @@ export function CreatorStudio() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setPlaying(s)}
+                    className="flex items-center gap-1 rounded-lg border border-sky-400/40 bg-sky-500/15 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-500/25"
+                  >
+                    <Play className="h-3 w-3" />
+                    퀴즈 포함 플레이
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDelete(s)}
                     className="flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-500/15 px-3 py-1.5 text-xs font-bold text-rose-200 hover:bg-rose-500/25"
                   >
