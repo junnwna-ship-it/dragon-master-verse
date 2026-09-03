@@ -18,7 +18,16 @@ export interface VnOption {
   next_node?: string | null;
   /** Arbitrary stat deltas, e.g. { Worm_Affinity: 2, Courage: 1 }. */
   state_changes?: Record<string, number> | null;
+  /** Quiz ids linked to this choice — solved before moving on. */
+  quiz_ids?: string[];
+  /** How many random quizzes to ask when no ids are given (0 = none). */
+  quiz_count?: number;
+  /** When true, a wrong answer does NOT advance to `next_node`. */
+  quiz_required?: boolean;
+  /** Node to go to when the quiz is failed (falls back to staying put). */
+  quiz_fail_node?: string | null;
 }
+
 
 export interface VnNode {
   id: string;
