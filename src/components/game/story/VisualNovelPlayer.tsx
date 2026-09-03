@@ -316,6 +316,8 @@ export function VisualNovelPlayer({
     void clear();
     setQuizOption(null);
     setIntroDone(false);
+    setStaleSave(false);
+    hydratedRef.current = true;
     start(chapterId, startKey, { reset: true });
   };
 
