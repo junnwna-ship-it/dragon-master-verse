@@ -309,7 +309,7 @@ export function CmsDashboard() {
 
       <nav className="-mx-4 mb-5 overflow-x-auto px-4">
         <div className="flex gap-2">
-          {[...TABS, HALL_OF_FAME_TAB].map((x) => {
+          {[...TABS, HALL_OF_FAME_TAB, STORY_MAP_TAB].map((x) => {
             const Icon = x.icon;
             const active = x.key === tabKey;
             return (
@@ -333,6 +333,8 @@ export function CmsDashboard() {
 
       {tabKey === "ugc_hall_of_fame" ? (
         <UgcReviewPanel />
+      ) : tabKey === "story_map_editor" ? (
+        <StoryMapEditor />
       ) : (
         <CmsTableEditor key={tab.key} tab={tab} />
       )}
