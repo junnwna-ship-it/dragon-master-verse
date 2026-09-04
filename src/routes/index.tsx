@@ -17,7 +17,13 @@ export const Route = createFileRoute("/")({
       { name: "description", content: i18n.t("landing.metaDesc") },
       { property: "og:title", content: i18n.t("landing.ogTitle") },
       { property: "og:description", content: i18n.t("landing.ogDesc") },
+      { property: "og:image", content: "https://dragon-master-verse.lovable.app/og/story-default.jpg" },
+      { name: "twitter:image", content: "https://dragon-master-verse.lovable.app/og/story-default.jpg" },
+      { property: "og:url", content: "https://dragon-master-verse.lovable.app/" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://dragon-master-verse.lovable.app/" }],
   }),
   component: LandingPage,
 });
