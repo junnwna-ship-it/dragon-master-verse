@@ -26,6 +26,11 @@ export interface VnOption {
   quiz_required?: boolean;
   /** Node to go to when the quiz is failed (falls back to staying put). */
   quiz_fail_node?: string | null;
+  /**
+   * Stat gates, e.g. { Worm_Affinity: 60 }. The choice is only offered when
+   * every listed stat is at or above its threshold. Used for branching endings.
+   */
+  requires?: Record<string, number> | null;
 }
 
 

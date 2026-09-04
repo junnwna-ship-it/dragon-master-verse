@@ -159,7 +159,11 @@
     "emptySlotCta": "탭하여 드래곤 선택",
     "pickerSearchPlaceholder": "이름으로 검색",
     "pickerFilterAll": "전체",
-    "pickerNoMatch": "조건에 맞는 드래곤이 없습니다."
+    "pickerNoMatch": "조건에 맞는 드래곤이 없습니다.",
+    "onboardTitle": "아직 출전할 드래곤이 부족합니다",
+    "onboardBody": "PvP는 3마리 덱이 필요합니다. 스토리 모드를 진행하면 웜과 동료 드래곤을 얻을 수 있습니다.",
+    "onboardCount": "보유 드래곤 {{count}} / 3",
+    "onboardCta": "스토리 모드로 드래곤 얻기"
   },
   "training": {
     "title": "훈련소",

@@ -18,6 +18,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useTranslation } from "react-i18next";
 import { TagBattleEngine } from "../battle/TagBattleEngine";
@@ -418,10 +419,26 @@ export function PvpView() {
             >
               <Search className="h-4 w-4" /> {t("pvp.enterArena")}
             </button>
-            {!deckReady && (
+            {!deckReady && ownedDragonIds.length >= 3 && (
               <p className="text-[10px] text-amber-300/90">
                 {t("pvp.needDeckHint")}
               </p>
+            )}
+            {ownedDragonIds.length < 3 && (
+              <div className="mt-1 w-full rounded-2xl border border-amber-300/30 bg-amber-300/5 p-4 text-center">
+                <p className="text-sm font-bold text-amber-200">{t("pvp.onboardTitle")}</p>
+                <p className="mt-1 text-xs text-slate-300">{t("pvp.onboardBody")}</p>
+                <p className="mt-2 text-[11px] font-semibold text-amber-300/90">
+                  {t("pvp.onboardCount", { count: ownedDragonIds.length })}
+                </p>
+                <Link
+                  to="/story/play/$chapterId"
+                  params={{ chapterId: "dragon_master" }}
+                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300/50 bg-amber-300/10 px-4 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-300/20"
+                >
+                  {t("pvp.onboardCta")}
+                </Link>
+              </div>
             )}
           </div>
         )}
