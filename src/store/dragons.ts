@@ -179,7 +179,38 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
     const rows = (data ?? []) as DragonRow[];
-    const dragons = rows.map((r, i) => rowToDragon(r, i + 1));
+    let dragons = rows.map((r, i) => rowToDragon(r, i + 1));
+
+    // Growth is stored per player in `owned_dragons`; merge the caller's
+    // own progression/bonuses on top of the shared base stats.
+    const { data: authData } = await supabase.auth.getUser();
+    const uid = authData.user?.id;
+    if (uid) {
+      const { data: owned } = await supabase
+        .from("owned_dragons")
+        .select("dragon_id, level, exp, stat_points, bonus_atk, bonus_max_hp, bonus_def, bonus_mp")
+        .eq("user_id", uid);
+      const byDragon = new Map(
+        (owned ?? []).map((o) => [o.dragon_id as string, o]),
+      );
+      dragons = dragons.map((d) => {
+        const g = d.uuid ? byDragon.get(d.uuid) : undefined;
+        if (!g) return { ...d, level: 1, exp: 0, statPoints: 0 };
+        const maxHp = d.maxHp + (g.bonus_max_hp ?? 0);
+        return {
+          ...d,
+          maxHp,
+          hp: maxHp,
+          atk: d.atk + (g.bonus_atk ?? 0),
+          def: d.def + (g.bonus_def ?? 0),
+          mp: d.mp + (g.bonus_mp ?? 0),
+          level: g.level ?? 1,
+          exp: g.exp ?? 0,
+          statPoints: g.stat_points ?? 0,
+        };
+      });
+    }
+
     const customs = dragons.filter((d) => !d.isSeed);
     set({
       dragons,
@@ -188,6 +219,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       loadError: null,
       ownedDragonIds: dragons.map((d) => d.id),
     });
+
   },
   addCustomDragon: async (d) => {
     const { data: auth } = await supabase.auth.getUser();
