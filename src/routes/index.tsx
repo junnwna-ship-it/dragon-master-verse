@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Wand2, Loader2, ArrowRight, X } from "lucide-react";
@@ -40,7 +40,6 @@ interface ShowcaseDragon { name: string; image_url: string | null }
 
 function LandingPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [showSignup, setShowSignup] = useState(false);
   const [showModes, setShowModes] = useState(false);
   // 이미 로그인된 유저는 닉네임 단계를 건너뛰고 바로 모드 선택으로 이동.

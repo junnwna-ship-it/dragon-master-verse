@@ -229,7 +229,7 @@ export function PvpView() {
     const Icon = r.outcome === "win" ? Trophy : r.outcome === "lose" ? Skull : Minus;
     return (
       <div className="space-y-4">
-        <div className={`rounded-2xl border p-6 text-center ${tone}`}>
+        <div className={`rounded-2xl border p-6 text-center backdrop-blur-md ${tone}`}>
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-900/40">
             <Icon className="h-8 w-8" />
           </div>
@@ -283,9 +283,11 @@ export function PvpView() {
   // ---------------- Idle / Searching ----------------
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Swords className="h-5 w-5 text-rose-400" />
-        <h2 className="text-xl font-bold text-slate-100">{t("pvp.title")}</h2>
+      <div className="rounded-2xl border border-white/15 bg-black/50 p-4 text-center backdrop-blur-md">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-amber-300/90">PvP Mode</p>
+        <h2 className="mt-1 flex items-center justify-center gap-2 text-2xl font-bold text-slate-50">
+          <Swords className="h-5 w-5 text-rose-400" /> {t("pvp.title")}
+        </h2>
       </div>
 
       <div className={`rounded-2xl border p-4 ${tier.tone}`}>
@@ -322,7 +324,7 @@ export function PvpView() {
       </div>
 
       {/* 출전 덱 요약 */}
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-800/60 p-3">
+      <div className="rounded-2xl border border-white/15 bg-black/50 p-3 backdrop-blur-md">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
             {t("pvp.deckLabel", { count: playerDeck.length })}
