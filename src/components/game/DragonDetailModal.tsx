@@ -98,7 +98,7 @@ function defaultBuildKey(d: Dragon): BuildKey {
 }
 
 export function DragonDetailModal({
-  dragon,
+  dragon: baseDragon,
   nextDragon,
   prevDragon,
   onClose,
@@ -120,6 +120,11 @@ export function DragonDetailModal({
   hasNext?: boolean;
   hasPrev?: boolean;
 }) {
+  // Current stats (HP/MP/ATK/DEF/level/EXP/stat points) come from the
+  // caller's own `owned_dragons` row, not the shared `dragons` table.
+  const { resolve } = useOwnedGrowth();
+  const dragon = resolve(baseDragon);
+
   // Exit animation gate: closing sets `visible` to false, and the real
   // onClose fires once the exit transition finishes.
   const [visible, setVisible] = useState(true);
