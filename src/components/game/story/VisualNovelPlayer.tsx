@@ -375,6 +375,21 @@ export function VisualNovelPlayer({
 
   const statEntries = Object.entries(stats).filter(([, v]) => v !== 0);
 
+  /** Internal branch markers (Path_*) are shown as a route list, not as stats. */
+  const PATH_LABELS: Record<string, string> = {
+    Path_Court: "You chose the court",
+    Path_Field: "You chose the fields",
+    Path_Group: "You went in with your friends",
+    Path_Alone: "You went in alone",
+    Path_Earth: "You escaped with earth magic",
+    Path_Force: "You escaped by force",
+  };
+  const isPathStat = (k: string) => k.startsWith("Path_");
+  const pathsTaken = Object.entries(stats)
+    .filter(([k, v]) => isPathStat(k) && v > 0)
+    .map(([k]) => PATH_LABELS[k] ?? k.replace(/_/g, " "));
+  const visibleStats = Object.entries(stats).filter(([k]) => !isPathStat(k));
+
 
 
 
