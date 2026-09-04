@@ -159,6 +159,7 @@ function rowToDragon(row: DragonRow, numericId: number): Dragon {
     level: row.level,
     exp: row.exp,
     statPoints: row.stat_points,
+    base: { maxHp: row.max_hp, mp: row.mp, atk: row.atk, def: row.def },
   };
 }
 
