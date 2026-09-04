@@ -576,13 +576,30 @@ export function VisualNovelPlayer({
                   {finalizeError}
                 </p>
               )}
-              {Object.keys(stats).length > 0 && (
+              {pathsTaken.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400">
+                    The path you walked
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {pathsTaken.map((p) => (
+                      <li key={p} className="text-[12px] text-slate-200">
+                        • {p}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Other routes lead to different scenes and a different ending.
+                  </p>
+                </div>
+              )}
+              {visibleStats.length > 0 && (
                 <div className="mt-4">
                   <p className="text-[10px] uppercase tracking-widest text-slate-400">
                     Your run
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {Object.entries(stats)
+                    {visibleStats
                       .sort((a, b) => b[1] - a[1])
                       .map(([k, v]) => (
                         <span
