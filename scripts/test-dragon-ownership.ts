@@ -100,6 +100,74 @@ async function main() {
     _gold: 5000,
     _env: "sandbox",
   });
+  await admin
+    .from("user_inventory")
+    .upsert(
+      { user_id: owner.userId, item_key: "bonding_token", quantity: 5 },
+      { onConflict: "user_id,item_key" },
+    );
+
+  // Open the shop/training gates and seed the data these RPCs need, so a
+  // "shop is closed" / "unknown stat" error cannot mask the ownership check.
+  const { data: prevSettings } = await admin
+    .from("app_settings")
+    .select("key, value")
+    .in("key", ["isShopOpen", "isTrainingOpen"]);
+  await admin
+    .from("app_settings")
+    .upsert(
+      [
+        { key: "isShopOpen", value: true },
+        { key: "isTrainingOpen", value: true },
+      ],
+      { onConflict: "key" },
+    );
+
+  const statName = `OwnershipProbeStat_${stamp}`;
+  const { data: statRow } = await admin
+    .from("training_stats")
+    .insert({
+      stat_name: statName,
+      stat_code: "atk",
+      base_cost: 100,
+      stat_increase: 5,
+      is_published: true,
+    })
+    .select("id")
+    .single();
+
+  const chapterId = `ownership_test_${stamp}`;
+  const { data: nodeRow } = await admin
+    .from("story_nodes")
+    .insert({
+      chapter_id: chapterId,
+      node_key: "Node_1",
+      stage_number: 1,
+      node_type: "scene",
+      title: "Ownership probe",
+      is_published: true,
+      rewards: { stat_points: 1 },
+    })
+    .select("id")
+    .single();
+
+  // Owner needs at least one stat point for spend_stat_point to reach the gate.
+  await admin
+    .from("owned_dragons")
+    .upsert(
+      { user_id: owner.userId, dragon_id: dragonUuid, stat_points: 3 },
+      { onConflict: "user_id,dragon_id" },
+    );
+
+  const teardown = async () => {
+    if (statRow) await admin.from("training_stats").delete().eq("id", (statRow as { id: string }).id);
+    if (nodeRow) await admin.from("story_nodes").delete().eq("id", (nodeRow as { id: string }).id);
+    await admin.from("story_reward_claims").delete().eq("chapter_id", chapterId);
+    if (prevSettings?.length) {
+      await admin.from("app_settings").upsert(prevSettings as never, { onConflict: "key" });
+    }
+  };
+
 
   console.log("\n── non-owner must be rejected with DRAGON_NOT_OWNED");
   for (const call of calls(dragonUuid)) {
