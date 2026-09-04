@@ -25,9 +25,21 @@ const appSearchSchema = z.object({
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
-      { title: "Dragon Masters — 드래곤 마스터즈" },
-      { name: "description", content: "Collect and battle mystical dragons in the mobile fantasy arena." },
+      { title: "Play — Artiati Dragon Masters" },
+      {
+        name: "description",
+        content: "Your dragon lobby: vault, training, shop, PvP arena and story chapters in one mobile-first hub.",
+      },
+      { property: "og:title", content: "Play — Artiati Dragon Masters" },
+      {
+        property: "og:description",
+        content: "Manage your dragons, train stats, shop for items and enter branching story chapters.",
+      },
+      { property: "og:url", content: "https://dragon-master-verse.lovable.app/app" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://dragon-master-verse.lovable.app/app" }],
   }),
   validateSearch: appSearchSchema,
   component: Index,
