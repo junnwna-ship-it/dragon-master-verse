@@ -18,6 +18,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useTranslation } from "react-i18next";
 import { TagBattleEngine } from "../battle/TagBattleEngine";
