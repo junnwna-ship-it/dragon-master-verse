@@ -199,6 +199,8 @@ async function main() {
   }
 
   // Cleanup
+  await teardown();
+  await admin.from("owned_dragons").delete().eq("dragon_id", dragonUuid);
   await admin.from("dragons").delete().eq("id", dragonUuid);
   await admin.auth.admin.deleteUser(owner.userId);
   await admin.auth.admin.deleteUser(stranger.userId);
