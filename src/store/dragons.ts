@@ -30,6 +30,8 @@ export interface Dragon {
   level?: number;
   exp?: number;
   statPoints?: number;
+  /** Shared (global) base stats before per-player `owned_dragons` bonuses. */
+  base?: { maxHp: number; mp: number; atk: number; def: number };
 }
 
 export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "training" | "admin" | "debug";
