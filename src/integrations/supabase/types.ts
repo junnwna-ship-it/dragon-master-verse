@@ -204,16 +204,13 @@ export type Database = {
           created_by: string | null
           def: number
           element: string
-          exp: number
           id: string
           image_url: string | null
           is_seed: boolean
-          level: number
           lore: string | null
           max_hp: number
           mp: number
           name: string
-          stat_points: number
           updated_at: string
         }
         Insert: {
@@ -222,16 +219,13 @@ export type Database = {
           created_by?: string | null
           def?: number
           element: string
-          exp?: number
           id?: string
           image_url?: string | null
           is_seed?: boolean
-          level?: number
           lore?: string | null
           max_hp?: number
           mp?: number
           name: string
-          stat_points?: number
           updated_at?: string
         }
         Update: {
@@ -240,16 +234,13 @@ export type Database = {
           created_by?: string | null
           def?: number
           element?: string
-          exp?: number
           id?: string
           image_url?: string | null
           is_seed?: boolean
-          level?: number
           lore?: string | null
           max_hp?: number
           mp?: number
           name?: string
-          stat_points?: number
           updated_at?: string
         }
         Relationships: []

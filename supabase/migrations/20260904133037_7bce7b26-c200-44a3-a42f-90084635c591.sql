@@ -1,0 +1,4 @@
+ALTER TABLE public.dragons
+  DROP COLUMN IF EXISTS level,
+  DROP COLUMN IF EXISTS exp,
+  DROP COLUMN IF EXISTS stat_points;
