@@ -90,8 +90,8 @@ function ModeCardBody({ icon, title, desc }: Omit<ModeShellProps, "accent">) {
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-black/40">{icon}</span>
       <span className="text-base font-bold text-slate-50">{title}</span>
       <span className="text-xs leading-relaxed text-slate-300">{desc}</span>
-      <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold">
-        {title} <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
+      <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold opacity-90">
+        <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
       </span>
     </>
   );
