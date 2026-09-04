@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { VisualNovelPlayer } from "@/components/game/story/VisualNovelPlayer";
+import { chapterShare, SITE_ORIGIN } from "@/data/chapterShare";
 
 export const Route = createFileRoute("/story/play/$chapterId")({
   validateSearch: (search: Record<string, unknown>): { dragon?: number } => {
