@@ -39,24 +39,30 @@ export function ModeSelect({ onClose }: { onClose: () => void }) {
         <p className="mt-2 text-sm text-slate-300">{t("landing.modeSelect.subtitle")}</p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <ModeCard
+          <Link
             to="/story/play/$chapterId"
             params={{ chapterId: "dragon_master" }}
-            icon={<BookOpen className="h-6 w-6" />}
-            accent="from-amber-400/20 to-purple-500/20 border-amber-300/40 text-amber-200"
-            title={t("landing.modeSelect.storyTitle")}
-            desc={t("landing.modeSelect.storyDesc")}
             onClick={onClose}
-          />
-          <ModeCard
+            className={cardClass("from-amber-400/20 to-purple-500/20 border-amber-300/40 text-amber-200")}
+          >
+            <ModeCardBody
+              icon={<BookOpen className="h-6 w-6" />}
+              title={t("landing.modeSelect.storyTitle")}
+              desc={t("landing.modeSelect.storyDesc")}
+            />
+          </Link>
+          <Link
             to="/app"
-            search={{ view: "pvp" as const }}
-            icon={<Swords className="h-6 w-6" />}
-            accent="from-rose-500/20 to-slate-500/10 border-rose-400/40 text-rose-200"
-            title={t("landing.modeSelect.pvpTitle")}
-            desc={t("landing.modeSelect.pvpDesc")}
+            search={{ view: "pvp" }}
             onClick={onClose}
-          />
+            className={cardClass("from-rose-500/20 to-slate-500/10 border-rose-400/40 text-rose-200")}
+          >
+            <ModeCardBody
+              icon={<Swords className="h-6 w-6" />}
+              title={t("landing.modeSelect.pvpTitle")}
+              desc={t("landing.modeSelect.pvpDesc")}
+            />
+          </Link>
         </div>
 
         <Link
@@ -71,30 +77,25 @@ export function ModeSelect({ onClose }: { onClose: () => void }) {
   );
 }
 
-type ModeCardProps = {
+type ModeShellProps = {
   icon: React.ReactNode;
   accent: string;
   title: string;
   desc: string;
-  onClick: () => void;
-} & (
-  | { to: "/story/play/$chapterId"; params: { chapterId: string }; search?: never }
-  | { to: "/app"; search?: { view: "pvp" }; params?: never }
-);
+};
 
-function ModeCard({ icon, accent, title, desc, onClick, ...link }: ModeCardProps) {
+function ModeCardBody({ icon, title, desc }: Omit<ModeShellProps, "accent">) {
   return (
-    <Link
-      {...(link as never)}
-      onClick={onClick}
-      className={`group flex flex-col items-start gap-2 rounded-2xl border bg-gradient-to-br p-4 text-left backdrop-blur transition hover:scale-[1.02] hover:shadow-lg ${accent}`}
-    >
+    <>
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-black/40">{icon}</span>
       <span className="text-base font-bold text-slate-50">{title}</span>
       <span className="text-xs leading-relaxed text-slate-300">{desc}</span>
       <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold">
         {title} <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
       </span>
-    </Link>
+    </>
   );
 }
+
+const cardClass = (accent: string) =>
+  `group flex flex-col items-start gap-2 rounded-2xl border bg-gradient-to-br p-4 text-left backdrop-blur transition hover:scale-[1.02] hover:shadow-lg ${accent}`;
