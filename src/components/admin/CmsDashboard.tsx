@@ -280,10 +280,29 @@ const STORY_MAP_TAB = {
 
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 
+type NavItem = { key: string; label: string; icon: React.ComponentType<{ className?: string }> };
+
+const ALL_TABS: NavItem[] = [...TABS, HALL_OF_FAME_TAB, STORY_MAP_TAB, AUDIT_LOG_TAB];
+
+/** Grouped navigation so every sub-item fits without horizontal scrolling. */
+const CATEGORIES: { id: string; label: string; keys: string[] }[] = [
+  {
+    id: "story",
+    label: "📖 스토리",
+    keys: ["story_chapters", "story_map_editor", "story_nodes", "ugc_hall_of_fame"],
+  },
+  { id: "growth", label: "⚔️ 성장 · 전투", keys: ["training_stats", "battle_skills"] },
+  { id: "shop", label: "🪙 상점 · 경제", keys: ["store_items"] },
+  { id: "media", label: "🎬 연출 · 미디어", keys: ["characters", "bgm_tracks"] },
+  { id: "system", label: "⚙️ 시스템", keys: ["game_settings", "audit_logs"] },
+];
+
 export function CmsDashboard() {
   const { isAdmin, loading } = useIsAdmin();
-  const [tabKey, setTabKey] = useState<string>("store_items");
+  const [categoryId, setCategoryId] = useState<string>("story");
+  const [tabKey, setTabKey] = useState<string>("story_chapters");
   const tab = TABS.find((x) => x.key === tabKey) ?? TABS[0]!;
+
 
   if (loading) {
     return (
