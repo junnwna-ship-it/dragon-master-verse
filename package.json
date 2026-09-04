@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:ownership": "bun run scripts/test-dragon-ownership.ts",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-location node_modules/.cache/eslint/",
     "lint:ci": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
     "lint:report": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-location node_modules/.cache/eslint/ --format json --output-file reports/eslint-report.json",
