@@ -16,9 +16,11 @@ export const Route = createFileRoute("/studio")({
         property: "og:description",
         content: "Create, edit and delete your own dragon stories — five slots per player.",
       },
+      { property: "og:url", content: "https://dragon-master-verse.lovable.app/studio" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://dragon-master-verse.lovable.app/studio" }],
   }),
   component: StudioRoute,
 });
