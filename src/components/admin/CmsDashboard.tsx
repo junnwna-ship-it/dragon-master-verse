@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
-import { Crown, PenSquare, ScrollText } from "lucide-react";
+import { Crown, PenSquare, ScrollText, Sparkles } from "lucide-react";
 import { UgcReviewPanel } from "./UgcReviewPanel";
 import { AuditLogPanel } from "@/components/admin/AuditLogPanel";
 import { StoryMapEditor } from "./StoryMapEditor";
@@ -252,6 +252,57 @@ const TABS: TabDef[] = [
       is_published: false,
     },
   },
+  {
+    key: "combat_items",
+    id: "combat_items",
+    label: "12. 전투 아이템 관리",
+    icon: Swords,
+    titleField: "name",
+    fields: [
+      { key: "name", label: "아이템 이름", kind: "text", placeholder: "생명의 물약" },
+      { key: "item_key", label: "아이템 코드", kind: "text", placeholder: "hp_potion" },
+      { key: "effect_type", label: "효과 종류", kind: "text", placeholder: "heal_hp / heal_mp / buff_atk / buff_def / debuff_enemy_atk / fixed_damage / revive / shield / random" },
+      { key: "effect_value", label: "효과 수치", kind: "number", placeholder: "50" },
+      { key: "duration_turns", label: "지속 턴 (버프/디버프)", kind: "number", placeholder: "3" },
+      { key: "price_gold", label: "상점 가격 (골드)", kind: "number", placeholder: "300" },
+      { key: "description", label: "설명", kind: "textarea", placeholder: "HP를 50 회복한다." },
+      { key: "icon_url", label: "아이콘 URL (텍스트)", kind: "url", placeholder: "https://.../item.png" },
+      { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
+    ],
+    blank: {
+      name: "",
+      item_key: "",
+      effect_type: "heal_hp",
+      effect_value: 0,
+      duration_turns: 0,
+      price_gold: 0,
+      description: "",
+      icon_url: "",
+      sort_order: 0,
+      is_published: false,
+    },
+  },
+  {
+    key: "dragon_pool",
+    id: "dragon_pool",
+    label: "13. 소환 풀 관리",
+    icon: Sparkles,
+    titleField: "rarity",
+    fields: [
+      { key: "dragon_id", label: "드래곤 UUID", kind: "text", placeholder: "dragons 테이블의 id" },
+      { key: "rarity", label: "등급", kind: "text", placeholder: "common / rare / epic / legendary" },
+      { key: "weight", label: "가중치 (확률)", kind: "number", placeholder: "60" },
+      { key: "shard_cost", label: "파편 교환 비용", kind: "number", placeholder: "30" },
+      { key: "is_active", label: "소환 풀 활성화", kind: "boolean" },
+    ],
+    blank: {
+      dragon_id: "",
+      rarity: "common",
+      weight: 10,
+      shard_cost: 30,
+      is_active: true,
+    },
+  },
 ];
 
 
@@ -291,7 +342,7 @@ const CATEGORIES: { id: string; label: string; keys: string[] }[] = [
     label: "📖 스토리",
     keys: ["story_chapters", "story_map_editor", "story_nodes", "ugc_hall_of_fame"],
   },
-  { id: "growth", label: "⚔️ 성장 · 전투", keys: ["training_stats", "battle_skills"] },
+  { id: "growth", label: "⚔️ 성장 · 전투", keys: ["training_stats", "battle_skills", "combat_items", "dragon_pool"] },
   { id: "shop", label: "🪙 상점 · 경제", keys: ["store_items"] },
   { id: "media", label: "🎬 연출 · 미디어", keys: ["characters", "bgm_tracks"] },
   { id: "system", label: "⚙️ 시스템", keys: ["game_settings", "audit_logs"] },

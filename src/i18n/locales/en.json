@@ -39,7 +39,8 @@
     "shop": "Shop",
     "training": "Training",
     "admin": "Admin",
-    "debug": "Debug"
+    "debug": "Debug",
+    "summon": "Summon"
   },
   "app": {
     "syncingDragons": "Syncing dragons…",
@@ -678,5 +679,50 @@
       },
       "defChange": "[{{event}}] {{name}} DEF {{prevDef}}→{{newDef}} ({{sign}}{{deltaDef}}, {{pctSign}}{{pct}}%) | Stack {{prevStacks}}/3 → {{newStacks}}/3 ({{remaining}} left)"
     }
+  },
+  "summon": {
+    "kicker": "Altar of Awakening",
+    "title": "Dragon Summon",
+    "subtitle": "Spend gold or summon tickets to call a dragon from the pool.",
+    "single": "Summon x1",
+    "ten": "Summon x10",
+    "singleTicket": "Ticket x1",
+    "tenTicket": "Ticket x10",
+    "guarantee": "Every 10-summon guarantees at least one Rare dragon.",
+    "rates": "Current rates",
+    "resultsTitle": "Summon results",
+    "duplicate": "Duplicate — {{shards}} shards",
+    "brandNew": "New companion!",
+    "exchangeTitle": "Shard exchange",
+    "exchangeDesc": "Trade dragon shards for a dragon you don't own yet.",
+    "shardCost": "{{cost}} shards",
+    "owned": "Owned",
+    "exchange": "Exchange",
+    "errNoGold": "Not enough gold.",
+    "errNoTicket": "Not enough summon tickets.",
+    "errEmptyPool": "The summon pool is empty.",
+    "errFailed": "Summon failed: {{msg}}",
+    "errNoShards": "Not enough shards.",
+    "exchangeDone": "{{name}} joined your roster!",
+    "errOwned": "You already own this dragon.",
+    "shards": "Shards",
+    "tickets": "Tickets"
+  },
+  "items": {
+    "button": "Item ({{n}})",
+    "sheetTitle": "Use a battle item",
+    "sheetHint": "You can use up to {{n}} more item(s) this battle. Using one ends your turn.",
+    "empty": "No battle items available yet.",
+    "outOfStock": "You have no {{name}} left.",
+    "noUsesLeft": "No item uses left this battle.",
+    "useFailed": "Could not use the item: {{msg}}",
+    "used": "{{name}} used {{item}}!",
+    "revived": "{{name}} rose again with the Immortal Feather!",
+    "shieldBlocked": "The shield around {{name}} absorbed the attack!",
+    "shopTitle": "Battle items & tickets",
+    "shopDesc": "Consumables you can use during battle, plus summon tickets.",
+    "bought": "Bought {{name}}.",
+    "noGold": "Not enough gold.",
+    "buyFailed": "Purchase failed: {{msg}}"
   }
 }

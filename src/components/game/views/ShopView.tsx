@@ -10,6 +10,7 @@ import { DragonImage } from "../DragonImage";
 import { GoldRecharge } from "../GoldRecharge";
 import { PaymentHistory } from "../PaymentHistory";
 import { CmsStoreItems } from "../cms/CmsSections";
+import { CombatItemShop } from "../shop/CombatItemShop";
 
 /**
  * Shop view — gated by the `isShopOpen` feature flag.
@@ -76,6 +77,10 @@ export function ShopView() {
       <div className="mb-6">
         <PaymentHistory />
       </div>
+      <div className="mb-6">
+        <CombatItemShop />
+      </div>
+
       <div className={settings.isShopOpen ? "" : "pointer-events-none select-none"}>
         <div className="space-y-4">
           <div className="flex items-center justify-between">

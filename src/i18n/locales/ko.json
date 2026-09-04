@@ -39,7 +39,8 @@
     "shop": "Shop",
     "training": "훈련소",
     "admin": "Admin",
-    "debug": "Debug"
+    "debug": "Debug",
+    "summon": "소환"
   },
   "app": {
     "syncingDragons": "드래곤 목록 동기화 중…",
@@ -678,5 +679,50 @@
       },
       "defChange": "[{{event}}] {{name}} DEF {{prevDef}}→{{newDef}} ({{sign}}{{deltaDef}}, {{pctSign}}{{pct}}%) | 스택 {{prevStacks}}/3 → {{newStacks}}/3 (남은 {{remaining}}회)"
     }
+  },
+  "summon": {
+    "kicker": "각성의 제단",
+    "title": "드래곤 소환",
+    "subtitle": "골드나 소환권을 사용해 드래곤을 소환합니다.",
+    "single": "1회 소환",
+    "ten": "10회 소환",
+    "singleTicket": "소환권 1장",
+    "tenTicket": "소환권 10장",
+    "guarantee": "10회 소환 시 레어 이상 1마리가 확정으로 나옵니다.",
+    "rates": "현재 확률",
+    "resultsTitle": "소환 결과",
+    "duplicate": "중복 — 파편 {{shards}}개",
+    "brandNew": "새로운 동료!",
+    "exchangeTitle": "파편 교환",
+    "exchangeDesc": "드래곤 파편으로 아직 없는 드래곤을 교환합니다.",
+    "shardCost": "파편 {{cost}}개",
+    "owned": "보유 중",
+    "exchange": "교환",
+    "errNoGold": "골드가 부족합니다.",
+    "errNoTicket": "소환권이 부족합니다.",
+    "errEmptyPool": "소환 풀이 비어 있습니다.",
+    "errFailed": "소환 실패: {{msg}}",
+    "errNoShards": "파편이 부족합니다.",
+    "exchangeDone": "{{name}}이(가) 합류했습니다!",
+    "errOwned": "이미 보유한 드래곤입니다.",
+    "shards": "파편",
+    "tickets": "소환권"
+  },
+  "items": {
+    "button": "아이템 ({{n}})",
+    "sheetTitle": "전투 아이템 사용",
+    "sheetHint": "이번 전투에서 {{n}}번 더 사용할 수 있습니다. 사용하면 턴이 넘어갑니다.",
+    "empty": "사용할 수 있는 전투 아이템이 없습니다.",
+    "outOfStock": "{{name}}이(가) 없습니다.",
+    "noUsesLeft": "이번 전투의 아이템 사용 횟수를 모두 썼습니다.",
+    "useFailed": "아이템을 사용할 수 없습니다: {{msg}}",
+    "used": "{{name}}이(가) {{item}}을(를) 사용했습니다!",
+    "revived": "{{name}}이(가) 불멸의 깃털로 되살아났습니다!",
+    "shieldBlocked": "{{name}}을(를) 감싼 보호막이 공격을 막았습니다!",
+    "shopTitle": "전투 아이템 · 소환권",
+    "shopDesc": "전투 중 사용하는 소모품과 소환권입니다.",
+    "bought": "{{name}}을(를) 구매했습니다.",
+    "noGold": "골드가 부족합니다.",
+    "buyFailed": "구매 실패: {{msg}}"
   }
 }
