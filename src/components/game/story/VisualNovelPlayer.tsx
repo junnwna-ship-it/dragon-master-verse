@@ -15,6 +15,7 @@ import { QuizModal } from "@/components/game/quiz/QuizModal";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles, Play, Home } from "lucide-react";
 import { resolveResume } from "@/lib/storyResume";
+import { visibleOptions } from "@/lib/storyChoices";
 import {
   sceneArt,
   introArtFor,
@@ -57,6 +58,10 @@ function parseOptions(raw: unknown): VnOption[] {
         quiz_count: Number.isFinite(Number(rawCount)) ? Number(rawCount) : 0,
         quiz_required: Boolean(o.quiz_required ?? o.Quiz_Required),
         quiz_fail_node: pickString(o, ["quiz_fail_node", "Quiz_Fail_Node"]),
+        requires:
+          o.requires && typeof o.requires === "object"
+            ? (o.requires as Record<string, number>)
+            : null,
       } satisfies VnOption;
     });
 }
@@ -556,6 +561,28 @@ export function VisualNovelPlayer({
                   {finalizeError}
                 </p>
               )}
+              {Object.keys(stats).length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400">
+                    Your run
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {Object.entries(stats)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([k, v]) => (
+                        <span
+                          key={k}
+                          className="rounded-full border border-amber-300/40 bg-amber-300/10 px-2.5 py-1 text-[11px] font-semibold text-amber-100"
+                        >
+                          {k.replace(/_/g, " ")} {v > 0 ? `+${v}` : v}
+                        </span>
+                      ))}
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    Scenes visited: {visited.length}
+                  </p>
+                </div>
+              )}
               <div className="mt-4 flex flex-wrap gap-2">
                 {finalizeState === "error" && (
                   <Button
@@ -626,7 +653,7 @@ export function VisualNovelPlayer({
 
 
               <div className="flex flex-col gap-2">
-                {node.options.map((opt, i) => (
+                {visibleOptions(node.options, stats).map((opt, i) => (
                   <motion.button
                     key={`${node.id}-${i}`}
                     initial={{ opacity: 0, y: 10 }}

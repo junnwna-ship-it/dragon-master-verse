@@ -11,6 +11,10 @@ import node2 from "@/assets/story/node2.jpg";
 import node12 from "@/assets/story/node12.jpg";
 import node19 from "@/assets/story/node19.jpg";
 import node20 from "@/assets/story/node20.jpg";
+import castleHall from "@/assets/story/castle_hall.jpg";
+import training from "@/assets/story/training.jpg";
+import tunnel from "@/assets/story/tunnel.jpg";
+import nightCastle from "@/assets/story/night_castle.jpg";
 
 export const CHAPTER_INTRO_ART: Record<string, string> = {
   dragon_master: introArt,
@@ -19,9 +23,26 @@ export const CHAPTER_INTRO_ART: Record<string, string> = {
 export const SCENE_ART: Record<string, string> = {
   "dragon_master::Node_1": node1,
   "dragon_master::Node_2": node2,
+  "dragon_master::Node_3": castleHall,
+  "dragon_master::Node_4": castleHall,
+  "dragon_master::Node_5": castleHall,
+  "dragon_master::Node_6": castleHall,
+  "dragon_master::Node_7": training,
+  "dragon_master::Node_8": training,
+  "dragon_master::Node_9": castleHall,
+  "dragon_master::Node_10": castleHall,
+  "dragon_master::Node_11": nightCastle,
   "dragon_master::Node_12": node12,
+  "dragon_master::Node_13": tunnel,
+  "dragon_master::Node_14": tunnel,
+  "dragon_master::Node_15": tunnel,
+  "dragon_master::Node_16": tunnel,
+  "dragon_master::Node_17": tunnel,
+  "dragon_master::Node_18": tunnel,
   "dragon_master::Node_19": node19,
   "dragon_master::Node_20": node20,
+  "dragon_master::Node_20_alone": nightCastle,
+  "dragon_master::Node_20_lost": node19,
 };
 
 export const CHAPTER_TITLES: Record<string, string> = {

@@ -159,7 +159,11 @@
     "emptySlotCta": "Tap to pick",
     "pickerSearchPlaceholder": "Search by name",
     "pickerFilterAll": "All",
-    "pickerNoMatch": "No dragons match your filters."
+    "pickerNoMatch": "No dragons match your filters.",
+    "onboardTitle": "You do not have enough dragons yet",
+    "onboardBody": "PvP needs a deck of three. Play Story Mode to earn Worm and its companions.",
+    "onboardCount": "Dragons owned {{count}} / 3",
+    "onboardCta": "Earn dragons in Story Mode"
   },
   "training": {
     "title": "Training",
