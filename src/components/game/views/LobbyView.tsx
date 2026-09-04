@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Package, Sparkles, ScanLine, LogOut, ScrollText, ChevronRight } from "lucide-react";
+import { Package, Sparkles, ScanLine, LogOut, ScrollText, ChevronRight, Dumbbell } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
