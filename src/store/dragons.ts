@@ -134,9 +134,6 @@ type DragonRow = {
   lore: string | null;
   is_seed: boolean;
   created_by: string | null;
-  level: number;
-  exp: number;
-  stat_points: number;
 };
 
 function rowToDragon(row: DragonRow, numericId: number): Dragon {
@@ -156,9 +153,10 @@ function rowToDragon(row: DragonRow, numericId: number): Dragon {
     isSeed: row.is_seed,
     isCustom: !row.is_seed,
     createdBy: row.created_by,
-    level: row.level,
-    exp: row.exp,
-    statPoints: row.stat_points,
+    // Growth lives per player in `owned_dragons`; defaults until merged below.
+    level: 1,
+    exp: 0,
+    statPoints: 0,
     base: { maxHp: row.max_hp, mp: row.mp, atk: row.atk, def: row.def },
   };
 }
