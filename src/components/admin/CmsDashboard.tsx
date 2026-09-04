@@ -280,10 +280,29 @@ const STORY_MAP_TAB = {
 
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 
+type NavItem = { key: string; label: string; icon: React.ComponentType<{ className?: string }> };
+
+const ALL_TABS: NavItem[] = [...TABS, HALL_OF_FAME_TAB, STORY_MAP_TAB, AUDIT_LOG_TAB];
+
+/** Grouped navigation so every sub-item fits without horizontal scrolling. */
+const CATEGORIES: { id: string; label: string; keys: string[] }[] = [
+  {
+    id: "story",
+    label: "📖 스토리",
+    keys: ["story_chapters", "story_map_editor", "story_nodes", "ugc_hall_of_fame"],
+  },
+  { id: "growth", label: "⚔️ 성장 · 전투", keys: ["training_stats", "battle_skills"] },
+  { id: "shop", label: "🪙 상점 · 경제", keys: ["store_items"] },
+  { id: "media", label: "🎬 연출 · 미디어", keys: ["characters", "bgm_tracks"] },
+  { id: "system", label: "⚙️ 시스템", keys: ["game_settings", "audit_logs"] },
+];
+
 export function CmsDashboard() {
   const { isAdmin, loading } = useIsAdmin();
-  const [tabKey, setTabKey] = useState<string>("store_items");
+  const [categoryId, setCategoryId] = useState<string>("story");
+  const [tabKey, setTabKey] = useState<string>("story_chapters");
   const tab = TABS.find((x) => x.key === tabKey) ?? TABS[0]!;
+
 
   if (loading) {
     return (
@@ -315,29 +334,56 @@ export function CmsDashboard() {
         </p>
       </header>
 
-      <nav className="-mx-4 mb-5 overflow-x-auto px-4">
-        <div className="flex gap-2">
-          {[...TABS, HALL_OF_FAME_TAB, STORY_MAP_TAB, AUDIT_LOG_TAB].map((x) => {
-            const Icon = x.icon;
-            const active = x.key === tabKey;
+      <nav className="mb-5 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => {
+            const active = c.id === categoryId;
             return (
               <button
-                key={x.key}
+                key={c.id}
                 type="button"
-                onClick={() => setTabKey(x.key)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                onClick={() => {
+                  setCategoryId(c.id);
+                  const first = c.keys[0];
+                  if (first && !c.keys.includes(tabKey)) setTabKey(first);
+                }}
+                className={`rounded-xl border px-3 py-2 text-xs font-bold transition ${
                   active
                     ? "border-amber-400 bg-amber-500/15 text-amber-200"
                     : "border-slate-700 bg-slate-800/50 text-slate-300 hover:border-slate-500"
                 }`}
               >
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/50 p-2">
+          {(CATEGORIES.find((c) => c.id === categoryId) ?? CATEGORIES[0]!).keys.map((key) => {
+            const item = ALL_TABS.find((x) => x.key === key);
+            if (!item) return null;
+            const Icon = item.icon;
+            const active = item.key === tabKey;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setTabKey(item.key)}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                  active
+                    ? "border-amber-400 bg-amber-500/15 text-amber-200"
+                    : "border-transparent bg-slate-800/70 text-slate-300 hover:border-slate-600"
+                }`}
+              >
                 <Icon className="h-3.5 w-3.5" />
-                {x.label}
+                {item.label.replace(/^\d+\.\s*/, "")}
               </button>
             );
           })}
         </div>
       </nav>
+
 
       {tabKey === "ugc_hall_of_fame" ? (
         <UgcReviewPanel />
