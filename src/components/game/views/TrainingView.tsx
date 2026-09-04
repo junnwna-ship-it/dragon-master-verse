@@ -7,6 +7,7 @@ import { DragonImage } from "../DragonImage";
 import { TrainingSection } from "../DragonDetailModal";
 import { CmsTrainingStats } from "../cms/CmsSections";
 import { GoldTrainingSection } from "../training/GoldTrainingSection";
+import { useOwnedGrowth } from "@/hooks/useOwnedGrowth";
 
 /**
  * Training view — dedicated tab for distributing stat points.
@@ -20,9 +21,15 @@ export function TrainingView() {
   const { t } = useTranslation();
   const dragons = useGameStore((s) => s.dragons);
   const { settings, loading } = useAppSettings();
+  // Level / EXP / stat points / stat bonuses come from the player's own
+  // `owned_dragons` rows, not from the shared `dragons` table.
+  const { resolve } = useOwnedGrowth();
 
   // Only cloud-synced dragons can be trained (RPC needs a UUID).
-  const trainable = useMemo(() => dragons.filter((d) => d.uuid), [dragons]);
+  const trainable = useMemo(
+    () => dragons.filter((d) => d.uuid).map(resolve),
+    [dragons, resolve],
+  );
 
   const [pickedId, setPickedId] = useState<number | null>(null);
   // Auto-select the first dragon when the list arrives or the picked one
