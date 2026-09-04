@@ -3,6 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, CheckCircle2, HelpCircle, RotateCcw, XCircle } from "lucide-react";
 import { parseStudioStory, type UgcNode } from "@/lib/studioStory";
 import {
+  deleteUgcProgress,
+  fetchUgcProgress,
+  persistUgcProgress,
+  pickNewestProgress,
+} from "@/lib/ugcProgressCloud";
+import {
   clearUgcProgress,
   loadUgcProgress,
   resolveUgcProgress,
@@ -43,26 +49,53 @@ export function UgcStoryPlayer({
   const [picked, setPicked] = useState<number | null>(null);
   const [quizResult, setQuizResult] = useState<"correct" | "wrong" | null>(null);
   const [restored, setRestored] = useState(false);
+  const [syncedToCloud, setSyncedToCloud] = useState(false);
   const hydratedRef = useRef(false);
 
   // Restore the last node + quiz result once the story text has parsed.
+  // Local storage answers instantly; the cloud row wins when it is newer,
+  // which is what makes progress follow the player across devices.
   useEffect(() => {
     if (hydratedRef.current || !storyId || !nodes.length) return;
     hydratedRef.current = true;
-    const saved = resolveUgcProgress(loadUgcProgress(storyId), [...nodeMap.keys()]);
-    if (!saved) return;
-    setCurrentKey(saved.nodeKey);
-    setFinished(saved.finished);
-    setStats(saved.stats);
-    setPicked(saved.picked);
-    setQuizResult(saved.quizResult);
-    setRestored(true);
+    let cancelled = false;
+    const keys = [...nodeMap.keys()];
+
+    const apply = (saved: ReturnType<typeof resolveUgcProgress>) => {
+      if (cancelled || !saved) return;
+      setCurrentKey(saved.nodeKey);
+      setFinished(saved.finished);
+      setStats(saved.stats);
+      setPicked(saved.picked);
+      setQuizResult(saved.quizResult);
+      setRestored(true);
+    };
+
+    const local = loadUgcProgress(storyId);
+    apply(resolveUgcProgress(local, keys));
+
+    void (async () => {
+      const cloud = await fetchUgcProgress(storyId);
+      if (cancelled) return;
+      if (cloud) {
+        setSyncedToCloud(true);
+        apply(resolveUgcProgress(pickNewestProgress(local, cloud), keys));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [storyId, nodes.length, nodeMap]);
 
   // Persist after every state change (skip the pre-hydration render).
   useEffect(() => {
     if (!storyId || !nodes.length || !hydratedRef.current) return;
-    saveUgcProgress(storyId, { nodeKey: currentKey, finished, stats, picked, quizResult });
+    const snapshot = { nodeKey: currentKey, finished, stats, picked, quizResult };
+    saveUgcProgress(storyId, snapshot);
+    void persistUgcProgress(storyId, snapshot).then((ok) => {
+      if (ok) setSyncedToCloud(true);
+    });
   }, [storyId, nodes.length, currentKey, finished, stats, picked, quizResult]);
 
   const node = currentKey ? nodeMap.get(currentKey) ?? null : null;
@@ -75,6 +108,7 @@ export function UgcStoryPlayer({
     setQuizResult(null);
     setRestored(false);
     clearUgcProgress(storyId);
+    void deleteUgcProgress(storyId);
   };
 
   const goTo = (key: string | null) => {
@@ -158,6 +192,7 @@ export function UgcStoryPlayer({
       {restored && (
         <p className="rounded-lg border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-100">
           이전에 진행하던 지점{currentKey ? ` (${currentKey})` : ""}에서 이어집니다.
+          {syncedToCloud ? " (계정에 저장되어 다른 기기에서도 이어집니다)" : ""}
         </p>
       )}
 

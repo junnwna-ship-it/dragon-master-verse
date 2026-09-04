@@ -707,6 +707,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ugc_story_progress: {
+        Row: {
+          created_at: string
+          finished: boolean
+          node_key: string | null
+          picked: number | null
+          quiz_result: string | null
+          stats: Json
+          story_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          finished?: boolean
+          node_key?: string | null
+          picked?: number | null
+          quiz_result?: string | null
+          stats?: Json
+          story_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          finished?: boolean
+          node_key?: string | null
+          picked?: number | null
+          quiz_result?: string | null
+          stats?: Json
+          story_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_inventory: {
         Row: {
           id: string
