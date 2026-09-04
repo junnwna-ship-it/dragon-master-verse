@@ -290,7 +290,7 @@ export function PvpView() {
         </h2>
       </div>
 
-      <div className={`rounded-2xl border p-4 ${tier.tone}`}>
+      <div className={`rounded-2xl border p-4 backdrop-blur-md ${tier.tone}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Crown className="h-5 w-5" />
@@ -388,7 +388,7 @@ export function PvpView() {
       })()}
 
       {/* 매칭 */}
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 text-center">
+      <div className="rounded-2xl border border-white/15 bg-black/50 p-6 text-center backdrop-blur-md">
         {phase === "searching" ? (
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-10 w-10 animate-spin text-amber-400" />
