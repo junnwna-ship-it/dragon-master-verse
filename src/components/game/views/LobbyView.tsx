@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Package, Sparkles, ScanLine, LogOut, ScrollText, ChevronRight } from "lucide-react";
+import { Package, Sparkles, ScanLine, LogOut, ScrollText, ChevronRight, Dumbbell } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
@@ -365,6 +365,21 @@ export function LobbyView() {
               >
                 <ScrollText className="h-3.5 w-3.5" />
                 {t("lobby.dragonStoryCta", { name: d.name })}
+              </Link>
+              {/* Growth chapter: enhancement / training / bonding scenes whose
+                  rewards are recorded on this player's own dragon row. */}
+              <Link
+                to="/story/play/$chapterId"
+                params={{ chapterId: "dragon_growth" }}
+                search={{ dragon: d.id }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPvpSelectedDragonId(d.id);
+                }}
+                className="mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-100 hover:bg-amber-500/20"
+              >
+                <Dumbbell className="h-3.5 w-3.5" />
+                강화 · 훈련 · 결합
               </Link>
             </li>
           );
