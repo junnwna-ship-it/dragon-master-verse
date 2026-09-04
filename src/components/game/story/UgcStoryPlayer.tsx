@@ -3,6 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, CheckCircle2, HelpCircle, RotateCcw, XCircle } from "lucide-react";
 import { parseStudioStory, type UgcNode } from "@/lib/studioStory";
 import {
+  deleteUgcProgress,
+  fetchUgcProgress,
+  persistUgcProgress,
+  pickNewestProgress,
+} from "@/lib/ugcProgressCloud";
+import {
   clearUgcProgress,
   loadUgcProgress,
   resolveUgcProgress,
