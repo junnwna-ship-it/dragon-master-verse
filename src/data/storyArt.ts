@@ -43,6 +43,16 @@ export const SCENE_ART: Record<string, string> = {
   "dragon_master::Node_20": node20,
   "dragon_master::Node_20_alone": nightCastle,
   "dragon_master::Node_20_lost": node19,
+  "dragon_master::Node_20_two": node20,
+  // Branch scenes: they reuse the art of the place they happen in.
+  "dragon_master::Node_A1_court": castleHall,
+  "dragon_master::Node_A2_court": nightCastle,
+  "dragon_master::Node_A1_field": node1,
+  "dragon_master::Node_A2_field": node1,
+  "dragon_master::Node_B1_alone": tunnel,
+  "dragon_master::Node_B2_alone": tunnel,
+  "dragon_master::Node_C_force": tunnel,
+  "dragon_master::Node_C_setback": tunnel,
 };
 
 export const CHAPTER_TITLES: Record<string, string> = {
