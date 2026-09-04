@@ -34,7 +34,7 @@ export interface Dragon {
   base?: { maxHp: number; mp: number; atk: number; def: number };
 }
 
-export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "training" | "admin" | "debug";
+export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "summon" | "training" | "admin" | "debug";
 
 export type BattleOutcome = "win" | "lose" | "draw";
 

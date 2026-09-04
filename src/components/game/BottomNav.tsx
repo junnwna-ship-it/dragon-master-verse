@@ -1,4 +1,4 @@
-import { Home, ScrollText, Swords, Library, Wrench, Bug, ShoppingBag, Dumbbell } from "lucide-react";
+import { Home, ScrollText, Swords, Library, Wrench, Bug, ShoppingBag, Dumbbell, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGameStore, type View } from "@/store/dragons";
 
@@ -8,6 +8,7 @@ const tabs: { id: View; labelKey: string; icon: React.ComponentType<{ className?
   { id: "story", labelKey: "nav.story", icon: ScrollText },
   { id: "pvp", labelKey: "nav.pvp", icon: Swords },
   { id: "shop", labelKey: "nav.shop", icon: ShoppingBag },
+  { id: "summon", labelKey: "nav.summon", icon: Sparkles },
   { id: "training", labelKey: "nav.training", icon: Dumbbell },
 ];
 

@@ -12,6 +12,16 @@ import {
   onTurnStart,
   performAttack,
 } from "./battleLogic";
+import { BattleItemPanel } from "./BattleItemPanel";
+import {
+  applyItemEffect,
+  consumeShield,
+  createItemBattleState,
+  tickItemBuffs,
+  tryRevive,
+  type ItemBattleState,
+  type ResolvedItemEffect,
+} from "@/lib/battleItems";
 
 interface BattleEngineProps {
   player: Dragon;
@@ -158,14 +168,17 @@ export function BattleEngine({
   const [autoExitEnabled, setAutoExitEnabled] = useState(autoExitMs > 0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [drawByTimeout, setDrawByTimeout] = useState(false);
+  const [itemState, setItemState] = useState<ItemBattleState>(() => createItemBattleState());
 
   const winner = useMemo(() => {
     if (drawByTimeout) return "draw" as const;
-    if (pState.engineHp <= 0 && eState.engineHp <= 0) return "draw" as const;
+    // A pending revive charge keeps the run alive for one more beat.
+    const reviveHolds = pState.engineHp <= 0 && itemState.revive.charges > 0;
+    if (pState.engineHp <= 0 && eState.engineHp <= 0) return reviveHolds ? null : ("draw" as const);
     if (eState.engineHp <= 0) return "player" as const;
-    if (pState.engineHp <= 0) return "enemy" as const;
+    if (pState.engineHp <= 0) return reviveHolds ? null : ("enemy" as const);
     return null;
-  }, [pState.engineHp, eState.engineHp, drawByTimeout]);
+  }, [pState.engineHp, eState.engineHp, drawByTimeout, itemState.revive.charges]);
 
   const pushLogs = (entries: Omit<LogEntry, "id">[]) => {
     setLogs((prev) => {
@@ -176,6 +189,46 @@ export function BattleEngine({
       return next.slice(-40);
     });
   };
+
+  /** Immortal Feather: bring the player back before the loss is reported. */
+  useEffect(() => {
+    if (pState.engineHp > 0 || itemState.revive.charges <= 0) return;
+    const rev = tryRevive(itemState, pState);
+    if (!rev.revived) return;
+    setItemState(rev.state);
+    setPState(rev.self);
+    pushLogs([{ text: t("items.revived", { name: pState.base.name }), tone: "system" }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pState.engineHp, itemState.revive.charges]);
+
+  /** Applies a server-resolved item effect; using an item ends the player turn. */
+  const handleUseItem = (effect: ResolvedItemEffect) => {
+    if (winner || turn !== "player") return;
+    const r = applyItemEffect(itemState, pState, eState, effect);
+    if (!r.applied) {
+      pushLogs([{ text: t("items.noUsesLeft"), tone: "system" }]);
+      return;
+    }
+    setItemState(r.state);
+    pushLogs([
+      { text: t("items.used", { name: pState.base.name, item: effect.name }), tone: "info" },
+      ...r.logs,
+    ]);
+    if (r.enemy.engineHp <= 0) {
+      setPState(r.self);
+      setEState(r.enemy);
+      return;
+    }
+    const drained = endTurnDrain(r.self, r.enemy, { turnNumber });
+    const ticked = tickItemBuffs(r.state, drained.self, drained.opponent);
+    setItemState(ticked.state);
+    setPState(ticked.self);
+    setEState(ticked.enemy);
+    pushLogs([...drained.logs, ...ticked.logs]);
+    setTurn("enemy");
+  };
+
+
 
   useEffect(() => {
     if (!winner || reportedRef.current) return;
@@ -260,6 +313,14 @@ export function BattleEngine({
       // 양쪽 다 갱신.
       let nextEnemy: Combatant | null = null;
       let nextPlayer: Combatant | null = null;
+      // Sanctuary Shield fully nullifies the incoming hit.
+      const shield = consumeShield(itemState);
+      if (shield.blocked) {
+        setItemState(shield.state);
+        pushLogs([{ text: t("items.shieldBlocked", { name: pState.base.name }), tone: "system" }]);
+        nextEnemy = eState;
+        nextPlayer = pState;
+      } else
       setEState((curEnemy) => {
         if (curEnemy.engineHp <= 0) {
           nextEnemy = curEnemy;
@@ -286,8 +347,14 @@ export function BattleEngine({
           return;
         }
         const d = endTurnDrain(nextEnemy, nextPlayer, { turnNumber });
-        setEState(d.self);
-        setPState(d.opponent);
+        // Expire timed item buffs at the end of the full turn.
+        setItemState((cur) => {
+          const ticked = tickItemBuffs(cur, d.opponent, d.self);
+          setPState(ticked.self);
+          setEState(ticked.enemy);
+          if (ticked.logs.length) pushLogs(ticked.logs);
+          return ticked.state;
+        });
         pushLogs(d.logs);
 
         // 15턴 룰 검사
@@ -374,6 +441,15 @@ export function BattleEngine({
           >
             <Zap className="h-5 w-5" /> {t("battle.btnPass")}
           </button>
+          <div className="col-span-2">
+            <div className="grid grid-cols-1">
+              <BattleItemPanel
+                disabled={turn !== "player"}
+                usesLeft={itemState.usesLeft}
+                onUsed={handleUseItem}
+              />
+            </div>
+          </div>
         </div>
       )}
 

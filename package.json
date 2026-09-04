@@ -15,7 +15,8 @@
     "lint:report": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-location node_modules/.cache/eslint/ --format json --output-file reports/eslint-report.json",
     "lint:report:html": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-location node_modules/.cache/eslint/ --format html --output-file reports/eslint-report.html",
     "ci": "bun run lint:ci && bun run build",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:summon": "bun run scripts/test-summon.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

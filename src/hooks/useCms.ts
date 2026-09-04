@@ -21,7 +21,9 @@ export type CmsTable =
   | "game_settings"
   | "characters"
   | "bgm_tracks"
-  | "battle_skills";
+  | "battle_skills"
+  | "combat_items"
+  | "dragon_pool";
 
 export type StoreItem = Tables<"store_items">;
 export type StoryNode = Tables<"story_nodes">;
@@ -30,6 +32,8 @@ export type GameSetting = Tables<"game_settings">;
 export type CharacterRow = Tables<"characters">;
 export type BgmTrack = Tables<"bgm_tracks">;
 export type BattleSkill = Tables<"battle_skills">;
+export type CombatItemRow = Tables<"combat_items">;
+export type DragonPoolRow = Tables<"dragon_pool">;
 
 const ORDER_BY: Record<CmsTable, { column: string; ascending: boolean }> = {
   store_items: { column: "sort_order", ascending: true },
@@ -38,6 +42,8 @@ const ORDER_BY: Record<CmsTable, { column: string; ascending: boolean }> = {
   game_settings: { column: "key", ascending: true },
   characters: { column: "sort_order", ascending: true },
   bgm_tracks: { column: "sort_order", ascending: true },
+  combat_items: { column: "sort_order", ascending: true },
+  dragon_pool: { column: "rarity", ascending: true },
   battle_skills: { column: "sort_order", ascending: true },
 };
 
@@ -52,8 +58,12 @@ export function useCmsList<T>(table: CmsTable, opts?: { publishedOnly?: boolean;
     queryKey: cmsKey(table, publishedOnly),
     enabled: opts?.enabled ?? true,
     queryFn: async (): Promise<T[]> => {
-      let q = supabase.from(table).select("*");
-      if (publishedOnly) q = q.eq("is_published", true);
+      // `dragon_pool` uses `is_active` instead of `is_published`.
+      let q = supabase.from(table).select("*") as unknown as {
+        eq: (col: string, val: unknown) => typeof q;
+        order: (col: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }>;
+      };
+      if (publishedOnly && table !== "dragon_pool") q = q.eq("is_published", true);
       const ord = ORDER_BY[table];
       const { data, error } = await q.order(ord.column, { ascending: ord.ascending });
       if (error) throw error;

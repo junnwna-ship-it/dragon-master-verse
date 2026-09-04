@@ -11,6 +11,7 @@ import { VaultView } from "@/components/game/views/VaultView";
 import { AdminView } from "@/components/game/views/AdminView";
 import { DebugView } from "@/components/game/views/DebugView";
 import { ShopView } from "@/components/game/views/ShopView";
+import { SummonView } from "@/components/game/views/SummonView";
 import { TrainingView } from "@/components/game/views/TrainingView";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,7 +20,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LanguageToggle } from "@/components/LanguageToggle";
 
 const appSearchSchema = z.object({
-  view: z.enum(["lobby", "story", "pvp", "vault", "shop", "training", "admin", "debug"]).optional(),
+  view: z.enum(["lobby", "story", "pvp", "vault", "shop", "summon", "training", "admin", "debug"]).optional(),
 });
 
 export const Route = createFileRoute("/app")({
@@ -129,6 +130,11 @@ function Index() {
           {view === "shop" && (
             <ErrorBoundary label={t("app.shopLabel")}>
               <ShopView />
+            </ErrorBoundary>
+          )}
+          {view === "summon" && (
+            <ErrorBoundary label={t("summon.title")}>
+              <SummonView />
             </ErrorBoundary>
           )}
           {view === "training" && (

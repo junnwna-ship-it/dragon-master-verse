@@ -197,6 +197,98 @@ export type Database = {
         }
         Relationships: []
       }
+      combat_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_turns: number
+          effect_type: string
+          effect_value: number
+          icon_url: string | null
+          id: string
+          is_published: boolean
+          item_key: string
+          log_text: string | null
+          name: string
+          price_gold: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_turns?: number
+          effect_type: string
+          effect_value?: number
+          icon_url?: string | null
+          id?: string
+          is_published?: boolean
+          item_key: string
+          log_text?: string | null
+          name: string
+          price_gold?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_turns?: number
+          effect_type?: string
+          effect_value?: number
+          icon_url?: string | null
+          id?: string
+          is_published?: boolean
+          item_key?: string
+          log_text?: string | null
+          name?: string
+          price_gold?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dragon_pool: {
+        Row: {
+          created_at: string
+          dragon_id: string
+          id: string
+          is_active: boolean
+          rarity: string
+          shard_cost: number
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          dragon_id: string
+          id?: string
+          is_active?: boolean
+          rarity: string
+          shard_cost?: number
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          dragon_id?: string
+          id?: string
+          is_active?: boolean
+          rarity?: string
+          shard_cost?: number
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dragon_pool_dragon_id_fkey"
+            columns: ["dragon_id"]
+            isOneToOne: true
+            referencedRelation: "dragons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dragons: {
         Row: {
           atk: number
@@ -668,6 +760,50 @@ export type Database = {
         }
         Relationships: []
       }
+      summon_history: {
+        Row: {
+          created_at: string
+          dragon_id: string | null
+          dragon_name: string
+          duplicate: boolean
+          id: string
+          paid_with: string
+          rarity: string
+          shards_awarded: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dragon_id?: string | null
+          dragon_name: string
+          duplicate?: boolean
+          id?: string
+          paid_with: string
+          rarity: string
+          shards_awarded?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dragon_id?: string | null
+          dragon_name?: string
+          duplicate?: boolean
+          id?: string
+          paid_with?: string
+          rarity?: string
+          shards_awarded?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summon_history_dragon_id_fkey"
+            columns: ["dragon_id"]
+            isOneToOne: false
+            referencedRelation: "dragons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_stats: {
         Row: {
           base_cost: number
@@ -840,6 +976,10 @@ export type Database = {
         Returns: Json
       }
       bond_with_dragon: { Args: { _dragon_uuid: string }; Returns: Json }
+      buy_combat_item: {
+        Args: { _item_key: string; _quantity?: number }
+        Returns: Json
+      }
       can_use_dragon: {
         Args: { _dragon_uuid: string; _user_id: string }
         Returns: boolean
@@ -849,6 +989,7 @@ export type Database = {
         Args: { _chapter_id: string; _dragon_uuid?: string; _node_key: string }
         Returns: Json
       }
+      consume_battle_item: { Args: { _item_key: string }; Returns: Json }
       credit_gold_from_purchase: {
         Args: { _env: string; _gold: number; _txn_id: string; _user_id: string }
         Returns: Json
@@ -861,6 +1002,7 @@ export type Database = {
         Args: { _dragon_uuid: string; _user_id: string }
         Returns: string
       }
+      exchange_shards: { Args: { _dragon_uuid: string }; Returns: Json }
       finalize_story_run: {
         Args: { _gold?: number; _stats: Json }
         Returns: Json
@@ -889,6 +1031,7 @@ export type Database = {
         Args: { _dragon_uuid: string; _stat: string }
         Returns: Json
       }
+      summon_dragon: { Args: { _count?: number; _pay?: string }; Returns: Json }
       train_stat_with_gold: {
         Args: { _dragon_uuid: string; _stat_code: string }
         Returns: Json
