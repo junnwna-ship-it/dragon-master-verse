@@ -305,23 +305,44 @@ export type Database = {
       owned_dragons: {
         Row: {
           acquired_at: string
+          bonus_atk: number
+          bonus_def: number
+          bonus_max_hp: number
+          bonus_mp: number
           bonus_stat_points: number
           dragon_id: string
+          exp: number
           id: string
+          level: number
+          stat_points: number
           user_id: string
         }
         Insert: {
           acquired_at?: string
+          bonus_atk?: number
+          bonus_def?: number
+          bonus_max_hp?: number
+          bonus_mp?: number
           bonus_stat_points?: number
           dragon_id: string
+          exp?: number
           id?: string
+          level?: number
+          stat_points?: number
           user_id: string
         }
         Update: {
           acquired_at?: string
+          bonus_atk?: number
+          bonus_def?: number
+          bonus_max_hp?: number
+          bonus_mp?: number
           bonus_stat_points?: number
           dragon_id?: string
+          exp?: number
           id?: string
+          level?: number
+          stat_points?: number
           user_id?: string
         }
         Relationships: []
@@ -792,6 +813,10 @@ export type Database = {
         Returns: Json
       }
       bond_with_dragon: { Args: { _dragon_uuid: string }; Returns: Json }
+      can_use_dragon: {
+        Args: { _dragon_uuid: string; _user_id: string }
+        Returns: boolean
+      }
       claim_quiz_reward: { Args: { _correct: number }; Returns: Json }
       claim_story_reward: {
         Args: { _chapter_id: string; _dragon_uuid?: string; _node_key: string }
@@ -804,6 +829,10 @@ export type Database = {
       demote_story_from_hall_of_fame: {
         Args: { _story_id: string }
         Returns: Json
+      }
+      ensure_owned_dragon: {
+        Args: { _dragon_uuid: string; _user_id: string }
+        Returns: string
       }
       finalize_story_run: {
         Args: { _gold?: number; _stats: Json }
