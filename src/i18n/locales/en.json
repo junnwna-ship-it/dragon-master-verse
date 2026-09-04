@@ -445,6 +445,16 @@
       "errorDup": "That nickname is taken. Please pick another.",
       "errorGeneric": "Signup failed",
       "ariaClose": "Close"
+    },
+    "modeSelect": {
+      "kicker": "Choose your mode",
+      "title": "Which adventure first?",
+      "subtitle": "Follow the story, or test your skill in the arena.",
+      "storyTitle": "Story Mode",
+      "storyDesc": "Travel scenes, quizzes and choices with your dragon to earn rewards.",
+      "pvpTitle": "PvP Mode",
+      "pvpDesc": "Bring a 3-dragon deck into ranked tag battles for rank points.",
+      "lobbyLink": "Browse the lobby first"
     }
   },
   "admin": {

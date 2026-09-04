@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Wand2, Loader2, ArrowRight, X } from "lucide-react";
@@ -9,6 +9,7 @@ import i18n from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { ModeSelect } from "@/components/game/ModeSelect";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,11 +40,27 @@ interface ShowcaseDragon { name: string; image_url: string | null }
 
 function LandingPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [showSignup, setShowSignup] = useState(false);
+  const [showModes, setShowModes] = useState(false);
+  // 이미 로그인된 유저는 닉네임 단계를 건너뛰고 바로 모드 선택으로 이동.
+  const [signedIn, setSignedIn] = useState(false);
   const [showcase, setShowcase] = useState<ShowcaseDragon[]>([]);
 
   // 의도적으로 자동 리다이렉트 없음 — 랜딩은 CTA 클릭 전까지 항상 표시.
+
+  useEffect(() => {
+    let cancel = false;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!cancel) setSignedIn(!!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSignedIn(!!session);
+    });
+    return () => {
+      cancel = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   // 게임 속 드래곤들을 마퀴에 노출 — RLS상 비로그인은 못 읽으니 실패 시 샘플 사용.
   useEffect(() => {
@@ -102,11 +119,11 @@ function LandingPage() {
           transition={{ duration: 0.6, delay: 0.6 }}
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => setShowSignup(true)}
+          onClick={() => (signedIn ? setShowModes(true) : setShowSignup(true))}
           className="group relative mt-10 inline-flex items-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500 via-fuchsia-500 to-rose-500 px-8 py-4 text-base font-extrabold text-white shadow-[0_10px_40px_-10px_rgba(217,70,239,0.7)] transition sm:text-lg"
         >
           <Wand2 className="h-5 w-5" />
-          {t("landing.cta")}
+          {signedIn ? t("landing.modeSelect.title") : t("landing.cta")}
           <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
         </motion.button>
@@ -135,10 +152,15 @@ function LandingPage() {
           <NicknameSignupModal
             onClose={() => setShowSignup(false)}
             onSuccess={() => {
-              void navigate({ to: "/app", search: { view: "story" }, replace: true });
+              // 가입/로그인 직후에는 랜딩에 머무르면서 모드를 먼저 고르게 한다.
+              setShowSignup(false);
+              setShowModes(true);
             }}
           />
         )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showModes && <ModeSelect onClose={() => setShowModes(false)} />}
       </AnimatePresence>
       <Toaster />
     </div>
