@@ -192,6 +192,7 @@ export function UgcStoryPlayer({
       {restored && (
         <p className="rounded-lg border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-100">
           이전에 진행하던 지점{currentKey ? ` (${currentKey})` : ""}에서 이어집니다.
+          {syncedToCloud ? " (계정에 저장되어 다른 기기에서도 이어집니다)" : ""}
         </p>
       )}
 
