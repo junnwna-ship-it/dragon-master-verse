@@ -1,4 +1,6 @@
 import { useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ownedGrowthKey } from "@/hooks/useOwnedGrowth";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { emitInventoryChanged } from "./useInventory";
@@ -55,6 +57,7 @@ export function itemLabel(key: string) {
  */
 export function useStoryRewards() {
   const inFlight = useRef(new Set<string>());
+  const queryClient = useQueryClient();
 
   const claim = useCallback(
     async (chapterId: string, nodeKey: string, dragonUuid?: string | null) => {
@@ -93,6 +96,9 @@ export function useStoryRewards() {
           toast.success(`보상 획득: ${parts.join(" · ")}`);
           emitInventoryChanged();
         }
+        // Stat points land on the player's own `owned_dragons` row — refresh
+        // the growth cache so training/detail screens show them right away.
+        void queryClient.invalidateQueries({ queryKey: ownedGrowthKey(auth.user.id) });
         return res;
       } finally {
         inFlight.current.delete(tag);
