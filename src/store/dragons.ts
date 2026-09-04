@@ -30,6 +30,8 @@ export interface Dragon {
   level?: number;
   exp?: number;
   statPoints?: number;
+  /** Shared (global) base stats before per-player `owned_dragons` bonuses. */
+  base?: { maxHp: number; mp: number; atk: number; def: number };
 }
 
 export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "training" | "admin" | "debug";
@@ -157,6 +159,7 @@ function rowToDragon(row: DragonRow, numericId: number): Dragon {
     level: row.level,
     exp: row.exp,
     statPoints: row.stat_points,
+    base: { maxHp: row.max_hp, mp: row.mp, atk: row.atk, def: row.def },
   };
 }
 

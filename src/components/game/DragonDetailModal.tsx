@@ -34,6 +34,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useInventory, emitInventoryChanged } from "@/hooks/useInventory";
+import { useQueryClient } from "@tanstack/react-query";
+import { useOwnedGrowth, ownedGrowthKey } from "@/hooks/useOwnedGrowth";
 
 type ElementMeta = { labelKey: string; color: string; icon: React.ComponentType<{ className?: string }>; strong: Element; weak: Element };
 const ELEMENT_META: Record<Element, ElementMeta> = {
@@ -96,7 +98,7 @@ function defaultBuildKey(d: Dragon): BuildKey {
 }
 
 export function DragonDetailModal({
-  dragon,
+  dragon: baseDragon,
   nextDragon,
   prevDragon,
   onClose,
@@ -118,6 +120,11 @@ export function DragonDetailModal({
   hasNext?: boolean;
   hasPrev?: boolean;
 }) {
+  // Current stats (HP/MP/ATK/DEF/level/EXP/stat points) come from the
+  // caller's own `owned_dragons` row, not the shared `dragons` table.
+  const { resolve } = useOwnedGrowth();
+  const dragon = resolve(baseDragon);
+
   // Exit animation gate: closing sets `visible` to false, and the real
   // onClose fires once the exit transition finishes.
   const [visible, setVisible] = useState(true);
@@ -420,10 +427,14 @@ export function DragonDetailModal({
  * - `isTrainingOpen === false` 또는 보유 포인트가 없으면 버튼 비활성화.
  * - 잠금 시 회색 + 툴팁("드래곤 훈련소 공사 중") 표시.
  */
-export function TrainingSection({ dragon }: { dragon: Dragon }) {
+export function TrainingSection({ dragon: baseDragon }: { dragon: Dragon }) {
   const { t } = useTranslation();
   const { settings } = useAppSettings();
   const refetchDragons = useGameStore((s) => s.fetchDragons);
+  const queryClient = useQueryClient();
+  // Per-player progression lives in `owned_dragons`.
+  const { resolve, userId } = useOwnedGrowth();
+  const dragon = resolve(baseDragon);
   const [busyStat, setBusyStat] = useState<string | null>(null);
   const open = settings.isTrainingOpen;
   const points = dragon.statPoints ?? 0;
@@ -452,6 +463,7 @@ export function TrainingSection({ dragon }: { dragon: Dragon }) {
       return;
     }
     toast.success(t("dragon.training.spendSuccess", { stat: stat.toUpperCase(), defaultValue: `${stat.toUpperCase()} upgraded!` }));
+    void queryClient.invalidateQueries({ queryKey: ownedGrowthKey(userId) });
     void refetchDragons();
   };
 

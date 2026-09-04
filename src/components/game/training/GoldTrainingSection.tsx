@@ -7,6 +7,7 @@ import { useGameStore, type Dragon } from "@/store/dragons";
 import { usePublishedTrainingStats } from "@/hooks/useCms";
 import { useProfileStats, profileStatsKey } from "@/hooks/useProfileStats";
 import { useAuth } from "@/hooks/useAuth";
+import { ownedGrowthKey } from "@/hooks/useOwnedGrowth";
 
 /**
  * Gold-priced training: each published `training_stats` row spends the player's
@@ -48,6 +49,7 @@ export function GoldTrainingSection({ dragon }: { dragon: Dragon }) {
       `훈련 완료! +${result.increase ?? 0} (남은 골드 ${(result.remaining_gold ?? 0).toLocaleString()}G)`,
     );
     void queryClient.invalidateQueries({ queryKey: profileStatsKey(user?.id ?? null) });
+    void queryClient.invalidateQueries({ queryKey: ownedGrowthKey(user?.id ?? null) });
     void refetchDragons();
   };
 
