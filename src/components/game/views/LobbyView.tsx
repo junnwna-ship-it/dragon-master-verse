@@ -234,7 +234,7 @@ export function LobbyView() {
       </div>
       <Link
         to="/story/play/$chapterId"
-        params={{ chapterId: "dragon_master" }}
+        params={{ chapterId: "my_dragon" }}
         className="flex w-full items-center justify-between gap-3 rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-sky-500/10 px-4 py-3 hover:from-violet-500/30 hover:to-sky-500/20"
       >
         <span className="flex items-center gap-2 text-sm font-bold text-violet-100">
@@ -245,6 +245,13 @@ export function LobbyView() {
           {t("lobby.storyCtaSub")}
           <ChevronRight className="h-3 w-3" />
         </span>
+      </Link>
+      <Link
+        to="/story/play/$chapterId"
+        params={{ chapterId: "dragon_master" }}
+        className="block px-2 text-xs text-slate-400 underline-offset-2 hover:text-amber-200 hover:underline"
+      >
+        원작 1권 각색 이야기 보기
       </Link>
       <HallOfFameStories />
 
@@ -355,7 +362,7 @@ export function LobbyView() {
                   the dragon id and attributes scenes/rewards to it. */}
               <Link
                 to="/story/play/$chapterId"
-                params={{ chapterId: "dragon_master" }}
+                params={{ chapterId: "my_dragon" }}
                 search={{ dragon: d.id }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -379,7 +386,7 @@ export function LobbyView() {
                 className="mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-100 hover:bg-amber-500/20"
               >
                 <Dumbbell className="h-3.5 w-3.5" />
-                강화 · 훈련 · 결합
+                {d.name} 성장 이야기
               </Link>
             </li>
           );

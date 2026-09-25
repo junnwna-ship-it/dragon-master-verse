@@ -21,16 +21,21 @@ const DEFAULT_SHARE: ChapterShare = {
 
 export const CHAPTER_SHARE: Record<string, ChapterShare> = {
   dragon_master: {
-    title: "The Dragon Master — Artiati Dragon Masters",
+    title: "드래곤 마스터 · 1권 각색 — Artiati Dragon Masters",
     description:
-      "An onion field, a whispering worm, and a king who needs a dragon tamed. 20 scenes, quiz gates and choices that shape the legend.",
-    image: `${SITE_ORIGIN}/og/dragon_master.jpg`,
+      "양파밭에서 성으로 향해 웜과 동료들을 만나는 1권 기반 이야기.",
+    image: `${SITE_ORIGIN}/og/player_meets_dragon.png`,
+  },
+  my_dragon: {
+    title: "나와 내 드래곤의 첫 만남 — Artiati Dragon Masters",
+    description: "플레이어가 자신의 드래곤을 만나고 함께 첫 훈련을 시작합니다.",
+    image: `${SITE_ORIGIN}/og/player_meets_dragon.png`,
   },
   dragon_growth: {
-    title: "Enhance · Train · Bond — Artiati Dragon Masters",
+    title: "내 드래곤의 성장 이야기 — Artiati Dragon Masters",
     description:
-      "Step into the Growth Chamber: enhance stats, train at the grounds and bond at the altar to power up your own dragon.",
-    image: `${SITE_ORIGIN}/og/dragon_growth.jpg`,
+      "선택한 드래곤과 연습하고 작은 실패를 넘으며 함께 성장합니다.",
+    image: `${SITE_ORIGIN}/og/player_dragon_growth.png`,
   },
 };
 

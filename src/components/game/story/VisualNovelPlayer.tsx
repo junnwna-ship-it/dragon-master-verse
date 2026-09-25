@@ -150,7 +150,12 @@ export function VisualNovelPlayer({
   const schemaReady = data?.schemaReady ?? true;
   const { nodeKey, stats, visited, applied, finished, start, choose, enter, reset, hydrate } =
     useStoryEngine();
-  const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(chapterId);
+  const selectedDragon = useGameStore((state) =>
+    companionId != null ? state.dragons.find((d) => d.id === companionId) ?? null : null,
+  );
+  const personalChapter = chapterId === "my_dragon" || chapterId === "dragon_growth";
+  const runId = personalChapter && selectedDragon?.uuid ? `${chapterId}:${selectedDragon.uuid}` : chapterId;
+  const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(runId);
   const hydratedRef = useRef(false);
   const [quizOption, setQuizOption] = useState<VnOption | null>(null);
   const [introDone, setIntroDone] = useState(false);
@@ -194,9 +199,9 @@ export function VisualNovelPlayer({
     }
     if (decision.kind === "start") {
       hydratedRef.current = true;
-      start(chapterId, decision.nodeKey);
+      start(runId, decision.nodeKey);
     }
-  }, [saveLoading, remote, byKey, startKey, chapterId, start, hydrate]);
+  }, [saveLoading, remote, byKey, startKey, runId, start, hydrate]);
 
 
 
@@ -211,14 +216,12 @@ export function VisualNovelPlayer({
   const { claim } = useStoryRewards();
   // The lobby can hand a specific dragon to the story ("?dragon=<id>"); that
   // companion owns the scene rewards, otherwise fall back to the deck pick.
-  const companion = useGameStore((state) =>
-    companionId != null ? state.dragons.find((d) => d.id === companionId) ?? null : null,
-  );
+  const companion = selectedDragon;
   const dragonUuid = useGameStore((state) => {
-    const picked = companionId ?? state.selectedDeck[0];
+    const picked = companionId ?? (personalChapter ? null : state.selectedDeck[0]);
     const target =
       (picked != null ? state.dragons.find((d) => d.id === picked) : undefined) ??
-      state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-"));
+      (personalChapter ? undefined : state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-")));
     return target?.uuid ?? null;
   });
   useEffect(() => {
@@ -231,8 +234,8 @@ export function VisualNovelPlayer({
   // Persist every progress change so a logout / reconnect resumes exactly here.
   useEffect(() => {
     if (!hydratedRef.current || !nodeKey) return;
-    persist({ chapterId, nodeKey, stats, visited, applied, finished });
-  }, [chapterId, nodeKey, stats, visited, applied, finished, persist]);
+    persist({ chapterId: runId, nodeKey, stats, visited, applied, finished });
+  }, [runId, nodeKey, stats, visited, applied, finished, persist]);
 
   // ---- Chapter ending: flush the temporary run state into `profiles` ----
   // The zustand run only holds transient stats; the last choice (next_node ===
@@ -282,7 +285,11 @@ export function VisualNovelPlayer({
               console.error("[story] stats refresh failed:", e);
             }
             try {
-              await navigate({ to: "/app" });
+              if (chapterId === "my_dragon" && companionId != null) {
+                await navigate({ to: "/story/play/$chapterId", params: { chapterId: "dragon_growth" }, search: { dragon: companionId } });
+              } else {
+                await navigate({ to: "/app" });
+              }
             } catch (e) {
               // Routing must never swallow a successful save — fall back to a
               // hard navigation so the player still lands in the lobby.
@@ -312,7 +319,7 @@ export function VisualNovelPlayer({
         duration: 10000,
       });
     },
-    [signedIn, stats, queryClient, authedUser?.id, navigate, finalizeState],
+    [signedIn, stats, queryClient, authedUser?.id, navigate, finalizeState, chapterId, companionId],
   );
 
   useEffect(() => {
@@ -331,7 +338,7 @@ export function VisualNovelPlayer({
     setIntroDone(false);
     setStaleSave(false);
     hydratedRef.current = true;
-    start(chapterId, startKey, { reset: true });
+    start(runId, startKey, { reset: true });
   };
 
   /**
@@ -442,7 +449,8 @@ export function VisualNovelPlayer({
   }
 
 
-  const body = node?.body_text ?? node?.description ?? "";
+  const personalize = (value: string) => value.replaceAll("{dragon}", companion?.name ?? "내 드래곤");
+  const body = personalize(node?.body_text ?? node?.description ?? "");
   const background = node?.background_image_url ?? sceneArt(chapterId, node?.node_key) ?? null;
   const introImage = introArtFor(chapterId);
   const chapterTitle = CHAPTER_TITLES[chapterId] ?? chapterId.replace(/_/g, " ");
@@ -483,7 +491,7 @@ export function VisualNovelPlayer({
                   />
                 )}
                 <span className="text-sm text-amber-100">
-                  Your companion: <b>{companion.name}</b>
+                  나의 드래곤: <b>{companion.name}</b>
                   <span className="ml-1 text-amber-300/80">({companion.element})</span>
                 </span>
               </div>
@@ -696,7 +704,7 @@ export function VisualNovelPlayer({
                     aria-busy={pendingChoice === i}
                     className="w-full rounded-xl border border-amber-300/30 bg-black/55 px-4 py-3 text-left text-sm text-slate-50 backdrop-blur transition hover:border-amber-300/70 hover:bg-amber-300/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {opt.label}
+                    {personalize(opt.label)}
                     {((opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0) && (
                       <span className="ml-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-200">
                         Quiz

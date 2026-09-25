@@ -41,7 +41,7 @@ export function ModeSelect({ onClose }: { onClose: () => void }) {
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Link
             to="/story/play/$chapterId"
-            params={{ chapterId: "dragon_master" }}
+            params={{ chapterId: "my_dragon" }}
             onClick={onClose}
             className={cardClass("from-amber-400/20 to-purple-500/20 border-amber-300/40 text-amber-200")}
           >

@@ -59,9 +59,9 @@
     "inventoryEmpty": "Clear Story stages to collect items",
     "cardLabel": "{{name}}, element {{element}}. ATK {{atk}}, DEF {{def}}, HP {{hp}} of {{maxHp}}, MP {{mp}}.{{selectedSuffix}} Tap to open details.",
     "currentlySelected": " Currently selected.",
-    "storyCta": "Story Mode",
-    "dragonStoryCta": "Play {{name}}'s story",
-    "storyCtaSub": "Continue the saga"
+    "storyCta": "My Dragon Story",
+    "dragonStoryCta": "Meet {{name}}",
+    "storyCtaSub": "Meet your own dragon"
   },
   "auth": {
     "signin": "Sign in",
@@ -455,8 +455,8 @@
       "kicker": "Choose your mode",
       "title": "Which adventure first?",
       "subtitle": "Follow the story, or test your skill in the arena.",
-      "storyTitle": "Story Mode",
-      "storyDesc": "Travel scenes, quizzes and choices with your dragon to earn rewards.",
+      "storyTitle": "My Dragon Story",
+      "storyDesc": "Meet your own dragon and begin growing together.",
       "pvpTitle": "PvP Mode",
       "pvpDesc": "Bring a 3-dragon deck into ranked tag battles for rank points.",
       "lobbyLink": "Browse the lobby first"

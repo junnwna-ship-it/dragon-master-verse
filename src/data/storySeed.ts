@@ -35,8 +35,8 @@ export const DRAGON_MASTER_SEED: SeedNode[] = [
     node_key: "Node_1",
     stage_number: 1,
     title: "The Dragon Master's Call",
-    description: "You unearth a strange worm in the onion field, and King Roland's soldier drafts you on the spot.",
-    body_text: "You unearth a strange worm in the onion field, and King Roland's soldier drafts you on the spot.",
+    description: "While you work in your family's onion field, King Roland's soldier arrives and takes you to the castle as a newly chosen Dragon Master.",
+    body_text: "While you work in your family's onion field, King Roland's soldier arrives and takes you to the castle as a newly chosen Dragon Master.",
     speaker: "Narrator",
     is_start: true,
     options: [
@@ -52,8 +52,8 @@ export const DRAGON_MASTER_SEED: SeedNode[] = [
     node_key: "Node_2",
     stage_number: 2,
     title: "Meeting Vulcan",
-    description: "You arrive at the castle and witness the giant red dragon Vulcan unleash a torrent of flame.",
-    body_text: "You arrive at the castle and witness the giant red dragon Vulcan unleash a torrent of flame.",
+    description: "You arrive at the castle and witness Rori's giant red dragon, Vulcan, unleash a torrent of flame.",
+    body_text: "You arrive at the castle and witness Rori's giant red dragon, Vulcan, unleash a torrent of flame.",
     speaker: "Narrator",
     is_start: false,
     options: [

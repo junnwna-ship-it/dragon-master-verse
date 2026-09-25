@@ -5,45 +5,44 @@
  * override these. When a node has no URL yet, we fall back to the bundled art
  * below (keyed by `chapter_id::node_key`) so every scene still shows an image.
  */
-import introArt from "@/assets/story/intro.jpg";
-import node1 from "@/assets/story/node1.jpg";
-import node2 from "@/assets/story/node2.jpg";
-import node12 from "@/assets/story/node12.jpg";
-import node19 from "@/assets/story/node19.jpg";
-import node20 from "@/assets/story/node20.jpg";
+import introArt from "@/assets/story/player_meets_dragon.png";
+import node1 from "@/assets/story/onion_field_messenger.png";
+import growthArt from "@/assets/story/player_dragon_growth.png";
+import companionsTraining from "@/assets/story/companions_training.png";
 import castleHall from "@/assets/story/castle_hall.jpg";
-import training from "@/assets/story/training.jpg";
 import tunnel from "@/assets/story/tunnel.jpg";
 import nightCastle from "@/assets/story/night_castle.jpg";
 
 export const CHAPTER_INTRO_ART: Record<string, string> = {
   dragon_master: introArt,
+  my_dragon: introArt,
+  dragon_growth: growthArt,
 };
 
 export const SCENE_ART: Record<string, string> = {
   "dragon_master::Node_1": node1,
-  "dragon_master::Node_2": node2,
+  "dragon_master::Node_2": companionsTraining,
   "dragon_master::Node_3": castleHall,
   "dragon_master::Node_4": castleHall,
   "dragon_master::Node_5": castleHall,
   "dragon_master::Node_6": castleHall,
-  "dragon_master::Node_7": training,
-  "dragon_master::Node_8": training,
+  "dragon_master::Node_7": companionsTraining,
+  "dragon_master::Node_8": companionsTraining,
   "dragon_master::Node_9": castleHall,
   "dragon_master::Node_10": castleHall,
   "dragon_master::Node_11": nightCastle,
-  "dragon_master::Node_12": node12,
+  "dragon_master::Node_12": tunnel,
   "dragon_master::Node_13": tunnel,
   "dragon_master::Node_14": tunnel,
   "dragon_master::Node_15": tunnel,
   "dragon_master::Node_16": tunnel,
   "dragon_master::Node_17": tunnel,
   "dragon_master::Node_18": tunnel,
-  "dragon_master::Node_19": node19,
-  "dragon_master::Node_20": node20,
+  "dragon_master::Node_19": tunnel,
+  "dragon_master::Node_20": introArt,
   "dragon_master::Node_20_alone": nightCastle,
-  "dragon_master::Node_20_lost": node19,
-  "dragon_master::Node_20_two": node20,
+  "dragon_master::Node_20_lost": tunnel,
+  "dragon_master::Node_20_two": introArt,
   // Branch scenes: they reuse the art of the place they happen in.
   "dragon_master::Node_A1_court": castleHall,
   "dragon_master::Node_A2_court": nightCastle,
@@ -53,15 +52,29 @@ export const SCENE_ART: Record<string, string> = {
   "dragon_master::Node_B2_alone": tunnel,
   "dragon_master::Node_C_force": tunnel,
   "dragon_master::Node_C_setback": tunnel,
+  "my_dragon::arrival": node1,
+  "my_dragon::meeting": introArt,
+  "my_dragon::trust": introArt,
+  "my_dragon::training": growthArt,
+  "my_dragon::discovery": growthArt,
+  "my_dragon::promise": growthArt,
+  "dragon_growth::check_in": introArt,
+  "dragon_growth::practice": growthArt,
+  "dragon_growth::setback": growthArt,
+  "dragon_growth::breakthrough": growthArt,
+  "dragon_growth::celebration": growthArt,
 };
 
 export const CHAPTER_TITLES: Record<string, string> = {
-  dragon_master: "The Dragon Master",
+  dragon_master: "드래곤 마스터 · 1권 각색",
+  my_dragon: "나와 내 드래곤의 첫 만남",
+  dragon_growth: "내 드래곤의 성장 이야기",
 };
 
 export const CHAPTER_TAGLINES: Record<string, string> = {
-  dragon_master:
-    "An onion field, a whispering worm, and a king who needs a dragon tamed. Your choices shape the legend.",
+  dragon_master: "양파밭에서 성으로, 그리고 웜과의 첫 만남까지.",
+  my_dragon: "당신이 주인공이 되어 자신의 드래곤과 만나고 첫걸음을 내딛습니다.",
+  dragon_growth: "서로를 알아가며 연습하고, 실패를 넘어 함께 성장합니다.",
 };
 
 export function sceneArt(chapterId: string, nodeKey: string | null | undefined) {
