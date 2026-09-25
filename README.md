@@ -6,9 +6,10 @@
 
 | 모드 | 내용 |
 | --- | --- |
-| 나와 내 드래곤의 첫 만남 (`my_dragon`) | 플레이어가 보유한 드래곤을 고르고, 성에서 만나 첫 교감과 훈련을 합니다. |
+| 나의 드래곤 만들기 | 기본 드래곤의 비늘 빛깔을 꾸미거나 손그림을 업로드/촬영합니다. 선택하면 AI가 원래 형태를 유지하며 선·색·배경을 게임 카드용으로 정돈합니다. 이름, 원소, 성격, 첫 만남과 성장 목표를 정하면 즉시 내 드래곤으로 등록됩니다. |
+| 나와 내 드래곤의 첫 만남 (`my_dragon`) | 직접 만든 드래곤과 성에서 만나 첫 교감과 훈련을 합니다. |
 | 내 드래곤의 성장 이야기 (`dragon_growth`) | 같은 드래곤과 연습, 실패, 재도전을 거치며 성장합니다. 이야기 보상은 보유 드래곤의 능력 포인트와 교감 아이템으로 이어집니다. |
-| 1권 각색 (`dragon_master`) | 《Dragon Masters: Rise of the Earth Dragon》의 핵심 사건을 플레이어 관점으로 각색했습니다. 양파 농장, 성, 동료 마스터, 웜과의 만남, 동굴 사건을 다룹니다. 선택지와 여러 엔딩은 게임 고유 각색입니다. |
+| 1권 각색 (`dragon_master`) | 《Dragon Masters: Rise of the Earth Dragon》의 핵심 사건을 플레이어 관점으로 각색했습니다. 시작 전에 반드시 내 드래곤을 선택하며, 원작에서 웜이 맡은 동행 역할을 선택한 드래곤이 수행합니다. 선택지와 여러 엔딩은 게임 고유 각색입니다. |
 
 원작 인물인 보·아나·로리는 플레이어의 동료 드래곤 마스터입니다. 그리피스는 멘토, 롤랜드는 왕이자 임무를 주는 인물입니다. 표기는 Rori, Ana, Bo, Griffith, King Roland 및 드래곤 Vulcan, Kepri, Shu, Worm을 기준으로 합니다. 게임 고유 수집형 드래곤과 PvP는 원작 사건의 일부로 취급하지 않습니다.
 
@@ -22,7 +23,11 @@
 
 ## 개발과 반영
 
-프로젝트에는 React, TanStack Start, Supabase를 사용합니다. 게임 코드의 새 스토리 장면은 `supabase/migrations/20260925180000_player_protagonist_and_companions.sql` 및 `supabase/migrations/20260925181000_personal_dragon_chapters.sql`에 정의되어 있습니다. GitHub에 코드가 반영되어도 서비스 데이터베이스에 이 마이그레이션이 적용되기 전에는 새 장면이 표시되지 않습니다.
+플레이 순서는 `드래곤 만들기 → 첫 만남 → 선택한 드래곤과 1권 → 성장 이야기`입니다. 1권의 저장 기록은 드래곤별로 분리되어 같은 플레이어도 다른 드래곤과 새롭게 진행할 수 있습니다.
+
+프로젝트에는 React, TanStack Start, Supabase를 사용합니다. 게임 코드의 새 스토리 장면과 개인 드래곤 생성 기능은 `supabase/migrations/20260925180000_player_protagonist_and_companions.sql`, `supabase/migrations/20260925181000_personal_dragon_chapters.sql`, `supabase/migrations/20260925200000_personal_dragon_creation_and_book_one.sql`에 정의되어 있습니다. GitHub에 코드가 반영되어도 서비스 데이터베이스에 이 마이그레이션이 적용되기 전에는 새 장면과 생성 기능이 표시되지 않습니다.
+
+손그림 AI 정돈은 서버 전용 `OPENAI_API_KEY`가 필요합니다. 키는 브라우저 코드에 넣지 않으며, 배포 환경의 비밀 변수로만 설정합니다. 모델은 기본적으로 이미지 편집 정확도가 높은 `gpt-image-2.5-sunburst`를 사용하며 `OPENAI_IMAGE_MODEL`로 변경할 수 있습니다.
 
 ```sh
 npm install

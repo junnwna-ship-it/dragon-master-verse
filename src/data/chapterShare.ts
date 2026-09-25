@@ -23,7 +23,7 @@ export const CHAPTER_SHARE: Record<string, ChapterShare> = {
   dragon_master: {
     title: "드래곤 마스터 · 1권 각색 — Artiati Dragon Masters",
     description:
-      "양파밭에서 성으로 향해 웜과 동료들을 만나는 1권 기반 이야기.",
+      "내가 만든 드래곤과 함께 양파밭에서 성으로 향하는 1권 기반 이야기.",
     image: `${SITE_ORIGIN}/og/player_meets_dragon.png`,
   },
   my_dragon: {

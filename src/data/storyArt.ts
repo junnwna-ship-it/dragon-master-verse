@@ -72,7 +72,7 @@ export const CHAPTER_TITLES: Record<string, string> = {
 };
 
 export const CHAPTER_TAGLINES: Record<string, string> = {
-  dragon_master: "양파밭에서 성으로, 그리고 웜과의 첫 만남까지.",
+  dragon_master: "양파밭에서 성으로, 나의 드래곤과 함께 시작하는 첫 모험.",
   my_dragon: "당신이 주인공이 되어 자신의 드래곤과 만나고 첫걸음을 내딛습니다.",
   dragon_growth: "서로를 알아가며 연습하고, 실패를 넘어 함께 성장합니다.",
 };

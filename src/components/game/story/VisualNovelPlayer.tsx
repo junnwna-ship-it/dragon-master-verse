@@ -153,8 +153,8 @@ export function VisualNovelPlayer({
   const selectedDragon = useGameStore((state) =>
     companionId != null ? state.dragons.find((d) => d.id === companionId) ?? null : null,
   );
-  const personalChapter = chapterId === "my_dragon" || chapterId === "dragon_growth";
-  const runId = personalChapter && selectedDragon?.uuid ? `${chapterId}:${selectedDragon.uuid}` : chapterId;
+  const dragonJourneyChapter = chapterId === "my_dragon" || chapterId === "dragon_master" || chapterId === "dragon_growth";
+  const runId = dragonJourneyChapter && selectedDragon?.uuid ? `${chapterId}:${selectedDragon.uuid}` : chapterId;
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(runId);
   const hydratedRef = useRef(false);
   const [quizOption, setQuizOption] = useState<VnOption | null>(null);
@@ -218,10 +218,10 @@ export function VisualNovelPlayer({
   // companion owns the scene rewards, otherwise fall back to the deck pick.
   const companion = selectedDragon;
   const dragonUuid = useGameStore((state) => {
-    const picked = companionId ?? (personalChapter ? null : state.selectedDeck[0]);
+    const picked = companionId ?? (dragonJourneyChapter ? null : state.selectedDeck[0]);
     const target =
       (picked != null ? state.dragons.find((d) => d.id === picked) : undefined) ??
-      (personalChapter ? undefined : state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-")));
+      (dragonJourneyChapter ? undefined : state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-")));
     return target?.uuid ?? null;
   });
   useEffect(() => {
@@ -286,6 +286,8 @@ export function VisualNovelPlayer({
             }
             try {
               if (chapterId === "my_dragon" && companionId != null) {
+                await navigate({ to: "/story/play/$chapterId", params: { chapterId: "dragon_master" }, search: { dragon: companionId } });
+              } else if (chapterId === "dragon_master" && companionId != null) {
                 await navigate({ to: "/story/play/$chapterId", params: { chapterId: "dragon_growth" }, search: { dragon: companionId } });
               } else {
                 await navigate({ to: "/app" });
@@ -381,6 +383,18 @@ export function VisualNovelPlayer({
   };
 
   const statEntries = Object.entries(stats).filter(([, v]) => v !== 0);
+  const statLabel = (key: string) => {
+    const labels: Record<string, string> = {
+      Worm_Affinity: `${companion?.name ?? "드래곤"} 유대감`,
+      worm_affinity: `${companion?.name ?? "드래곤"} 유대감`,
+      Bond: "유대감",
+      Courage: "용기",
+      Patience: "인내",
+      Trust: "신뢰",
+      Practice: "연습",
+    };
+    return labels[key] ?? key.replace(/_/g, " ");
+  };
 
   /** Internal branch markers (Path_*) are shown as a route list, not as stats. */
   const PATH_LABELS: Record<string, string> = {
@@ -449,7 +463,16 @@ export function VisualNovelPlayer({
   }
 
 
-  const personalize = (value: string) => value.replaceAll("{dragon}", companion?.name ?? "내 드래곤");
+  const personalize = (value: string) => {
+    const dragonName = companion?.name ?? "내 드래곤";
+    return value
+      .replaceAll("{dragon}", dragonName)
+      .replaceAll("{dragon_story}", companion?.lore ?? `${dragonName}과(와)의 성장 이야기가 시작됩니다.`)
+      .replace(/\bThe Worm\b/g, () => dragonName)
+      .replace(/\bthe worm\b/g, () => dragonName)
+      .replace(/\bWorm\b/g, () => dragonName)
+      .replace(/\bworm\b/g, () => dragonName);
+  };
   const body = personalize(node?.body_text ?? node?.description ?? "");
   const background = node?.background_image_url ?? sceneArt(chapterId, node?.node_key) ?? null;
   const introImage = introArtFor(chapterId);
@@ -495,6 +518,11 @@ export function VisualNovelPlayer({
                   <span className="ml-1 text-amber-300/80">({companion.element})</span>
                 </span>
               </div>
+            )}
+            {companion?.lore && (
+              <p className="mt-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs leading-relaxed text-slate-200">
+                {companion.lore}
+              </p>
             )}
             <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
               <Play className="mr-2 h-4 w-4" />
@@ -551,7 +579,7 @@ export function VisualNovelPlayer({
               key={key}
               className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-100 backdrop-blur"
             >
-              {key.replace(/_/g, " ")} <b className="text-amber-300">{value}</b>
+              {statLabel(key)} <b className="text-amber-300">{value}</b>
             </span>
           ))}
           <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
@@ -614,7 +642,7 @@ export function VisualNovelPlayer({
                           key={k}
                           className="rounded-full border border-amber-300/40 bg-amber-300/10 px-2.5 py-1 text-[11px] font-semibold text-amber-100"
                         >
-                          {k.replace(/_/g, " ")} {v > 0 ? `+${v}` : v}
+                          {statLabel(k)} {v > 0 ? `+${v}` : v}
                         </span>
                       ))}
                   </div>
@@ -663,7 +691,7 @@ export function VisualNovelPlayer({
                 className="rounded-2xl border border-white/15 bg-black/70 p-5 shadow-2xl backdrop-blur-md"
               >
                 <p className="text-xs uppercase tracking-widest text-amber-300/90">
-                  {node.speaker || node.title}
+                  {personalize(node.speaker || node.title)}
                 </p>
                 <div className="mt-2">
                   <Typewriter text={body} />

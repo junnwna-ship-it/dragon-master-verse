@@ -989,6 +989,19 @@ export type Database = {
         Args: { _chapter_id: string; _dragon_uuid?: string; _node_key: string }
         Returns: Json
       }
+      create_personal_dragon: {
+        Args: {
+          _atk: number
+          _def: number
+          _element: string
+          _image_url: string
+          _lore: string
+          _max_hp: number
+          _mp: number
+          _name: string
+        }
+        Returns: string
+      }
       consume_battle_item: { Args: { _item_key: string }; Returns: Json }
       credit_gold_from_purchase: {
         Args: { _env: string; _gold: number; _txn_id: string; _user_id: string }
