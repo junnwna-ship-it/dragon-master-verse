@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Heart, Droplet, Sword, Shield } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Dragon } from "@/store/dragons";
@@ -19,7 +19,7 @@ const LONG_PRESS_MS = 350;
 function StatBar({
   label,
   value,
-  max = 100,
+  max,
   icon,
   color,
 }: {
@@ -30,7 +30,7 @@ function StatBar({
   color: string;
 }) {
   const { t } = useTranslation();
-  const pct = Math.min(100, (value / max) * 100);
+  const pct = max && max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 100;
   const [open, setOpen] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -49,11 +49,11 @@ function StatBar({
   }, [open]);
 
   const desc = t(`dragon.stats.${label}`, { defaultValue: "" });
-  const tooltipId = `stat-${label.toLowerCase()}-tooltip`;
+  const tooltipId = useId();
   // Full sentence used as the accessible name so screen readers announce
   // the stat label, current/max values, and the explanatory description in
   // one go (e.g. "공격력 ATK 80 of 100. 공격력. 한 번의 공격으로 ...").
-  const srLabel = `${label} ${value}${max !== 100 ? ` of ${max}` : " of 100"}. ${desc}`;
+  const srLabel = `${label} ${value}${max !== undefined ? ` / ${max}` : ""}. ${desc}`;
 
   return (
     <div
@@ -81,20 +81,21 @@ function StatBar({
         </span>
         <span className="font-mono text-slate-200" aria-hidden="true">
           {value}
-          {max !== 100 && <span className="text-slate-500">/{max}</span>}
+          {max !== undefined && <span className="text-slate-500">/{max}</span>}
         </span>
       </div>
       <div
         className="h-2 w-full overflow-hidden rounded-full bg-slate-700/60"
-        role="progressbar"
+        role={max !== undefined ? "progressbar" : undefined}
+        aria-hidden={max === undefined ? true : undefined}
         aria-label={t("dragon.stats2.progress", { label })}
-        aria-valuemin={0}
+        aria-valuemin={max !== undefined ? 0 : undefined}
         aria-valuemax={max}
-        aria-valuenow={value}
-        aria-valuetext={`${value} / ${max}`}
+        aria-valuenow={max !== undefined ? Math.max(0, Math.min(value, max)) : undefined}
+        aria-valuetext={max !== undefined ? `${value} / ${max}` : undefined}
         // Native browser tooltip as a last-resort fallback (e.g. desktop
         // assistive tech or environments that suppress our custom popup).
-        title={`${label}: ${value}${max !== 100 ? `/${max}` : ""} — ${desc}`}
+        title={`${label}: ${value}${max !== undefined ? `/${max}` : ""} — ${desc}`}
       >
         <div
           aria-hidden="true"
@@ -119,7 +120,7 @@ function StatBar({
           {label}
           <span className="ml-1 font-mono text-slate-400">
             {value}
-            {max !== 100 ? `/${max}` : ""}
+            {max !== undefined ? `/${max}` : ""}
           </span>
         </span>
         <span className="mt-0.5 block text-slate-400">{desc}</span>
@@ -133,7 +134,7 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
   const tone = elementColors[dragon.element] ?? elementColors.Wood;
   const total = dragon.maxHp + dragon.mp + dragon.atk + dragon.def;
   return (
-    <div className="snap-center shrink-0 w-[78vw] max-w-[320px] rounded-3xl border border-white/15 bg-white/5 p-4 shadow-2xl shadow-black/40 backdrop-blur-md">
+    <div className="dragon-card snap-center shrink-0 w-[78vw] max-w-[320px] rounded-3xl border border-white/15 bg-white/5 p-4 shadow-xl shadow-black/20 backdrop-blur-md">
       <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${tone}`}>
         <DragonImage
           dragon={dragon}
@@ -150,8 +151,8 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
         </span>
         {/* 이미지 위에 이름 + 합계 — 글래스 스타일 */}
         <div className="absolute inset-x-0 bottom-0 p-3">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-xl font-extrabold tracking-wide text-white drop-shadow-lg">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="min-w-0 break-words text-xl font-extrabold tracking-wide text-white drop-shadow-lg">
               {dragon.name}
             </h3>
             <span className="font-mono text-[11px] font-bold text-white/80">

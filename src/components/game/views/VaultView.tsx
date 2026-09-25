@@ -5,6 +5,7 @@ import { useGameStore, type Dragon } from "@/store/dragons";
 import { DragonImage } from "../DragonImage";
 import { GlassDragonCard } from "../GlassDragonCard";
 import { DragonDetailModal } from "../DragonDetailModal";
+import { Link } from "@tanstack/react-router";
 
 /**
  * 내 카드 저장소 — 보유 드래곤 그리드와 출전 덱(0/3) 슬롯.
@@ -43,7 +44,7 @@ export function VaultView() {
 
       {/* 출전 덱 슬롯 — sticky로 항상 보이게 */}
       <section
-        className={`sticky top-0 z-10 -mx-4 rounded-b-2xl border-b border-slate-700/60 bg-slate-900/95 px-4 pb-3 pt-3 backdrop-blur transition ${
+        className={`mx-auto max-w-md rounded-2xl border border-slate-700/60 bg-slate-900/95 px-4 pb-3 pt-3 backdrop-blur transition ${
           ready ? "shadow-[0_4px_20px_-8px_rgba(245,158,11,0.4)]" : ""
         }`}
       >
@@ -156,6 +157,12 @@ export function VaultView() {
 
       {/* 보유 드래곤 */}
       <section>
+        {owned.length === 0 && (
+          <div className="mb-4 rounded-2xl border border-dashed border-slate-600 p-6 text-center">
+            <p className="text-sm text-slate-300">{t("vault.emptyRoster")}</p>
+            <Link to="/story/play/$chapterId" params={{ chapterId: "my_dragon" }} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-slate-950">{t("lobby.storyCtaSub")}</Link>
+          </div>
+        )}
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
             {t("vault.ownedTitle", { count: owned.length })}
@@ -164,7 +171,7 @@ export function VaultView() {
             <p className="text-[10px] text-amber-300">{t("vault.deckFullHint")}</p>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {owned.map((d) => {
             const slotIdx = selectedDeck.indexOf(d.id);
             const sel = slotIdx >= 0;

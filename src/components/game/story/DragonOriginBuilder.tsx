@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Camera, Check, ImageUp, Loader2, Sparkles, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -98,6 +98,14 @@ export function DragonOriginBuilder({
   const queryClient = useQueryClient();
   const fetchDragons = useGameStore((state) => state.fetchDragons);
   const [step, setStep] = useState(1);
+  const stepPanel = useRef<HTMLDivElement>(null);
+  const lastStep = useRef(1);
+  useEffect(() => {
+    if (lastStep.current === step) return;
+    lastStep.current = step;
+    stepPanel.current?.scrollIntoView({ block: "start" });
+    stepPanel.current?.focus({ preventScroll: true });
+  }, [step]);
   const [name, setName] = useState("");
   const [element, setElement] = useState<Element>("Earth");
   const [personality, setPersonality] = useState(PERSONALITIES[0]!);
@@ -126,7 +134,7 @@ export function DragonOriginBuilder({
 
   const storyPreview = useMemo(
     () =>
-      `${name.trim() || "나의 드래곤"}은(는) ${personality} 성격의 ${ELEMENTS.find((item) => item.value === element)?.label} 드래곤입니다. ${origin.trim()} 앞으로 당신과 함께 ‘${goal}’을 배우며 성장합니다.`,
+      `${name.trim() || "나의 드래곤"} — ${personality} 성격의 ${ELEMENTS.find((item) => item.value === element)?.label} 드래곤. ${origin.trim()} 우리의 성장 약속은 ‘${goal}’. 앞으로 함께 배우며 성장합니다.`,
     [name, personality, element, origin, goal],
   );
 
@@ -206,7 +214,7 @@ export function DragonOriginBuilder({
   };
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-violet-300/25 bg-slate-900/95 shadow-2xl shadow-violet-950/50">
+    <section className="dragon-builder overflow-hidden rounded-3xl border border-amber-200/25 bg-slate-900/95 shadow-2xl shadow-black/30" aria-busy={saving || cleaning}>
       <div className="relative h-44 overflow-hidden sm:h-56">
         <img src={creationArt} alt="마법의 부화실에 놓인 드래곤 알" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
@@ -216,34 +224,36 @@ export function DragonOriginBuilder({
         </div>
       </div>
 
-      <div className="p-5">
+      <div className="p-4 sm:p-6 lg:p-8">
         <ol className="mb-6 grid grid-cols-3 gap-2" aria-label="드래곤 만들기 단계">
-          {["모습", "이름과 성격", "성장 약속"].map((label, index) => {
+          {["모습", "이름·성격", "성장 약속"].map((label, index) => {
             const number = index + 1;
             return (
-              <li key={label} className={`rounded-xl border px-2 py-2 text-center text-[11px] ${number === step ? "border-violet-300 bg-violet-400/15 text-violet-100" : number < step ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-white/10 text-slate-500"}`}>
+              <li key={label} aria-current={number === step ? "step" : undefined} className={`rounded-xl border px-2 py-2 text-center text-xs ${number === step ? "border-violet-300 bg-violet-400/15 text-violet-100" : number < step ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-white/10 text-slate-400"}`}>
                 <span className="block font-black">{number < step ? "✓" : number}</span>{label}
               </li>
             );
           })}
         </ol>
 
+        <div ref={stepPanel} tabIndex={-1} aria-label={`${step}단계`} className="scroll-mt-6 focus:outline-none">
+        {step > 1 && <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200/20 bg-amber-200/5 p-3"><img src={preview} alt="내 드래곤 미리보기" style={{ filter: file ? "none" : appearance.filter }} className="h-16 w-16 shrink-0 rounded-lg object-contain" /><p className="min-w-0 text-sm font-bold text-amber-100">{name.trim() || "이름을 기다리는 나의 드래곤"}</p></div>}
         {step === 1 && (
           <div>
             <h3 className="text-lg font-bold text-white">드래곤의 모습을 정해 주세요</h3>
             <p className="mt-1 text-sm text-slate-400">기본 드래곤을 꾸미거나, 손그림을 업로드하거나, 카메라로 바로 촬영할 수 있습니다.</p>
-            <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-stretch">
-              <div className="aspect-square w-44 overflow-hidden rounded-3xl border-2 border-violet-300/50 bg-slate-950 shadow-lg">
-                <img src={preview} alt="내 드래곤 미리보기" style={{ filter: file ? "none" : appearance.filter }} className="h-full w-full object-cover" />
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 sm:items-start">
+              <div className="mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-3xl border-2 border-amber-200/40 bg-slate-950 shadow-lg">
+                <img src={preview} alt="내 드래곤 미리보기" style={{ filter: file ? "none" : appearance.filter }} className="h-full w-full object-contain" />
               </div>
               <div className="flex flex-1 flex-col justify-center gap-2">
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-300/40 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-100 hover:bg-sky-400/20">
                   <ImageUp className="h-4 w-4" /> 그림·사진 업로드
-                  <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={chooseFile} />
+                  <input type="file" accept="image/png,image/jpeg,image/webp" disabled={cleaning} className="sr-only" onChange={chooseFile} />
                 </label>
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100 hover:bg-emerald-400/20">
                   <Camera className="h-4 w-4" /> 카메라로 손그림 찍기
-                  <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={chooseFile} />
+                  <input type="file" accept="image/*" capture="environment" disabled={cleaning} className="sr-only" onChange={chooseFile} />
                 </label>
                 {file && (
                   <>
@@ -252,11 +262,11 @@ export function DragonOriginBuilder({
                       {cleaning ? "AI가 선과 색을 정돈하는 중…" : aiImage ? "AI로 다시 정돈하기" : "손그림을 AI로 정돈하기"}
                     </button>
                     {aiImage && (
-                      <button type="button" onClick={() => setAiImage(null)} className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5">
+                      <button type="button" disabled={cleaning} onClick={() => setAiImage(null)} className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50">
                         촬영한 원본으로 보기
                       </button>
                     )}
-                    <button type="button" onClick={() => { setFile(null); setAiImage(null); }} className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5">
+                    <button type="button" disabled={cleaning} onClick={() => { setFile(null); setAiImage(null); }} className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50">
                       기본 드래곤으로 되돌리기
                     </button>
                   </>
@@ -269,7 +279,7 @@ export function DragonOriginBuilder({
                 <p className="text-xs font-bold text-slate-300">비늘의 빛깔</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {APPEARANCES.map((item) => (
-                    <button key={item.id} type="button" onClick={() => setAppearance(item)} className={`rounded-full border px-3 py-1.5 text-xs ${appearance.id === item.id ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}>
+                    <button key={item.id} type="button" aria-pressed={appearance.id === item.id} onClick={() => setAppearance(item)} className={`rounded-full border px-3 py-1.5 text-xs ${appearance.id === item.id ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}>
                       {item.label}
                     </button>
                   ))}
@@ -282,12 +292,12 @@ export function DragonOriginBuilder({
         {step === 2 && (
           <div>
             <h3 className="text-lg font-bold text-white">이름과 타고난 힘을 정해요</h3>
-            <label className="mt-4 block text-xs font-bold text-slate-300">드래곤 이름</label>
-            <input value={name} onChange={(event) => setName(event.target.value)} maxLength={24} autoFocus placeholder="예: 루미" className="mt-1 w-full rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-300" />
+            <label htmlFor="dragon-name" className="mt-4 block text-sm font-bold text-slate-300">드래곤 이름</label>
+            <input id="dragon-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={24} placeholder="예: 루미" className="mt-1 w-full rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-300" />
             <p className="mt-4 text-xs font-bold text-slate-300">원소</p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {ELEMENTS.map((item) => (
-                <button key={item.value} type="button" onClick={() => setElement(item.value)} className={`rounded-xl border px-3 py-2 text-sm font-bold transition ${element === item.value ? item.color : "border-white/10 bg-white/5 text-slate-400"}`}>
+                <button key={item.value} type="button" aria-pressed={element === item.value} onClick={() => setElement(item.value)} className={`rounded-xl border px-3 py-2 text-sm font-bold transition ${element === item.value ? item.color : "border-white/10 bg-white/5 text-slate-400"}`}>
                   {item.label}
                 </button>
               ))}
@@ -295,7 +305,7 @@ export function DragonOriginBuilder({
             <p className="mt-4 text-xs font-bold text-slate-300">성격</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {PERSONALITIES.map((item) => (
-                <button key={item} type="button" onClick={() => setPersonality(item)} className={`rounded-full border px-3 py-1.5 text-xs ${personality === item ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}>
+                <button key={item} type="button" aria-pressed={personality === item} onClick={() => setPersonality(item)} className={`rounded-full border px-3 py-1.5 text-xs ${personality === item ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}>
                   {item}
                 </button>
               ))}
@@ -306,12 +316,12 @@ export function DragonOriginBuilder({
         {step === 3 && (
           <div>
             <h3 className="text-lg font-bold text-white">함께 만들 성장서사를 약속해요</h3>
-            <label className="mt-4 block text-xs font-bold text-slate-300">우리의 첫 만남</label>
-            <textarea value={origin} onChange={(event) => setOrigin(event.target.value)} maxLength={120} rows={3} className="mt-1 w-full resize-none rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-violet-300" />
+            <label htmlFor="dragon-origin" className="mt-4 block text-sm font-bold text-slate-300">우리의 첫 만남</label>
+            <textarea id="dragon-origin" value={origin} onChange={(event) => setOrigin(event.target.value)} maxLength={120} rows={3} className="mt-1 w-full resize-none rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-violet-300" />
             <p className="mt-4 text-xs font-bold text-slate-300">첫 번째 성장 목표</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {GOALS.map((item) => (
-                <button key={item} type="button" onClick={() => setGoal(item)} className={`rounded-full border px-3 py-1.5 text-xs ${goal === item ? "border-amber-300 bg-amber-400/15 text-amber-100" : "border-white/10 text-slate-400"}`}>
+                <button key={item} type="button" aria-pressed={goal === item} onClick={() => setGoal(item)} className={`rounded-full border px-3 py-1.5 text-xs ${goal === item ? "border-amber-300 bg-amber-400/15 text-amber-100" : "border-white/10 text-slate-400"}`}>
                   {item}
                 </button>
               ))}
@@ -323,12 +333,13 @@ export function DragonOriginBuilder({
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <button type="button" onClick={() => step > 1 ? setStep(step - 1) : onCancel?.()} className="flex items-center gap-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">
+        </div>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
+          <button type="button" disabled={saving || cleaning} onClick={() => step > 1 ? setStep(step - 1) : onCancel?.()} className="flex items-center gap-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-50">
             <ArrowLeft className="h-4 w-4" /> {step === 1 ? "취소" : "이전"}
           </button>
           {step < 3 ? (
-            <button type="button" onClick={() => setStep(step + 1)} disabled={step === 2 && !name.trim()} className="flex items-center gap-1 rounded-xl bg-violet-300 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-violet-200 disabled:opacity-40">
+            <button type="button" onClick={() => setStep(step + 1)} disabled={cleaning || (step === 2 && !name.trim())} className="flex items-center gap-1 rounded-xl bg-violet-300 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-violet-200 disabled:opacity-40">
               다음 <ArrowRight className="h-4 w-4" />
             </button>
           ) : (

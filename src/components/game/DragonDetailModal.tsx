@@ -223,7 +223,7 @@ export function DragonDetailModal({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 32, scale: 0.97 }}
         transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.8 }}
-        className="w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-slate-700/70 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl shadow-black/60"
+        className="max-h-[calc(100dvh-1rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl sm:rounded-3xl border border-slate-700/70 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl shadow-black/60"
       >
         {/* Inner content is keyed by dragon.id so swapping the globally
             selected dragon while the modal is open re-runs a quick

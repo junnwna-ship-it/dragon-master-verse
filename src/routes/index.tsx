@@ -7,9 +7,10 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
-import { Toaster } from "@/components/ui/sonner";
+import hatchlingArt from "@/assets/dragons/personal-hatchling.png";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ModeSelect } from "@/components/game/ModeSelect";
+import * as Dialog from "@radix-ui/react-dialog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -92,14 +93,14 @@ function LandingPage() {
       </div>
 
       {/* 히어로 */}
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-220px)] max-w-3xl flex-col items-center justify-center px-6 pt-16 pb-12 text-center">
+      <section className="relative z-10 mx-auto flex min-h-[calc(100dvh-220px)] max-w-6xl flex-col items-center justify-center gap-8 px-6 pt-20 pb-12 text-center lg:grid lg:grid-cols-2 lg:gap-16 lg:py-24 lg:text-left">
         <FloatingDragonCard />
-
+        <div className="lg:col-start-1 lg:row-start-1">
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="mt-10 bg-gradient-to-br from-amber-200 via-purple-200 to-rose-300 bg-clip-text text-4xl font-black leading-tight tracking-tight text-transparent drop-shadow-[0_0_30px_rgba(168,85,247,0.4)] sm:text-6xl"
+          className="bg-gradient-to-br from-amber-100 via-amber-200 to-rose-200 bg-clip-text text-3xl font-black leading-tight tracking-tight text-transparent sm:text-5xl lg:text-6xl"
         >
           {t("landing.h1")}
         </motion.h1>
@@ -108,7 +109,7 @@ function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-4 max-w-md text-base text-slate-300 sm:text-lg"
+          className="mx-auto mt-4 max-w-md text-base leading-relaxed text-slate-300 sm:text-lg lg:mx-0"
         >
           {t("landing.tagline")}
         </motion.p>
@@ -120,7 +121,7 @@ function LandingPage() {
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => (signedIn ? setShowModes(true) : setShowSignup(true))}
-          className="group relative mt-10 inline-flex items-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500 via-fuchsia-500 to-rose-500 px-8 py-4 text-base font-extrabold text-white shadow-[0_10px_40px_-10px_rgba(217,70,239,0.7)] transition sm:text-lg"
+          className="group relative mt-8 inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-amber-200 px-6 py-4 text-base font-extrabold text-slate-950 shadow-lg shadow-amber-900/20 transition hover:bg-amber-100 sm:text-lg"
         >
           <Wand2 className="h-5 w-5" />
           {signedIn ? t("landing.modeSelect.title") : t("landing.cta")}
@@ -128,12 +129,13 @@ function LandingPage() {
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
         </motion.button>
 
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-4 text-sm text-slate-400">
           {t("landing.loginHint")}{" "}
           <Link to="/app" className="text-purple-300 underline-offset-2 hover:underline">
             {t("landing.loginLink")}
           </Link>
         </p>
+        </div>
       </section>
 
       {/* 마퀴 — 쇼케이스 */}
@@ -162,7 +164,6 @@ function LandingPage() {
       <AnimatePresence>
         {showModes && <ModeSelect onClose={() => setShowModes(false)} />}
       </AnimatePresence>
-      <Toaster />
     </div>
   );
 }
@@ -170,28 +171,24 @@ function LandingPage() {
 /* -------------------- Floating Glassmorphism Card -------------------- */
 
 function FloatingDragonCard() {
+  const { i18n } = useTranslation();
   return (
     <motion.div
       animate={{ y: [-10, 10, -10] }}
       transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-      className="relative"
+      className="relative lg:col-start-2 lg:row-start-1 lg:justify-self-center"
     >
       {/* 외곽 광채 */}
       <div className="absolute inset-0 -z-10 rounded-[2rem] bg-gradient-to-br from-purple-500/30 via-fuchsia-500/20 to-amber-400/20 blur-3xl" />
-      <div className="relative flex h-72 w-52 items-center justify-center rounded-[1.75rem] border border-white/15 bg-white/5 shadow-[0_25px_80px_-20px_rgba(168,85,247,0.5)] backdrop-blur-xl sm:h-80 sm:w-60">
+      <div className="relative flex h-56 w-56 items-center justify-center overflow-hidden rounded-[2rem] border border-amber-200/30 bg-slate-900 shadow-2xl shadow-amber-950/30 sm:h-72 sm:w-72 lg:h-[420px] lg:w-[360px]">
         {/* 카드 내부 실루엣 */}
         <div className="absolute inset-3 rounded-[1.4rem] border border-white/10 bg-gradient-to-b from-slate-900/40 to-slate-950/60" />
-        <motion.div
-          animate={{ opacity: [0.5, 1, 0.5], scale: [0.95, 1.05, 0.95] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          className="relative text-7xl drop-shadow-[0_0_25px_rgba(217,70,239,0.7)] sm:text-8xl"
-        >
-          🐉
-        </motion.div>
+        <img src={hatchlingArt} alt={i18n.language.startsWith("ko") ? "첫 모험을 기다리는 아기 드래곤" : "A young dragon waiting for its first adventure"} className="absolute inset-0 h-full w-full object-cover" fetchPriority="high" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
         <Sparkles className="absolute right-4 top-4 h-5 w-5 text-amber-300/80" />
         <Sparkles className="absolute bottom-5 left-5 h-4 w-4 text-purple-300/70" />
-        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-[0.3em] text-slate-300/70">
-          ??? · Locked
+        <p className="absolute inset-x-4 bottom-5 text-center text-sm font-bold tracking-wide text-amber-100">
+          {i18n.language.startsWith("ko") ? "너와 함께, 첫 번째 모험" : "Our first adventure, together"}
         </p>
       </div>
     </motion.div>
@@ -374,26 +371,24 @@ function NicknameSignupModal({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <Dialog.Root open onOpenChange={(open) => { if (!open && !submitting) onClose(); }}>
+    <Dialog.Portal>
+    <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm" />
+    <Dialog.Content asChild onEscapeKeyDown={(event) => { if (submitting) event.preventDefault(); }} onPointerDownOutside={(event) => { if (submitting) event.preventDefault(); }}>
       <motion.div
         initial={{ scale: 0.92, y: 20, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 22 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-purple-400/30 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-6 shadow-[0_20px_60px_-20px_rgba(168,85,247,0.6)]"
+        className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-purple-400/30 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-6 shadow-[0_20px_60px_-20px_rgba(168,85,247,0.6)]"
       >
         <button
           type="button"
           onClick={onClose}
+          disabled={submitting}
           aria-label={t("landing.modal.ariaClose")}
-          className="absolute right-3 top-3 rounded-full p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-800 hover:text-slate-100"
         >
           <X className="h-4 w-4" />
         </button>
@@ -403,12 +398,12 @@ function NicknameSignupModal({
             🧙‍♂️
           </div>
         </div>
-        <h3 className="text-center text-xl font-extrabold text-slate-100">
+        <Dialog.Title className="text-center text-xl font-extrabold text-slate-100">
           {t("landing.modal.askName")}
-        </h3>
-        <p className="mt-1 text-center text-xs text-slate-400">
+        </Dialog.Title>
+        <Dialog.Description className="mt-1 text-center text-sm text-slate-400">
           {t("landing.modal.askHint")}
-        </p>
+        </Dialog.Description>
 
         <div className="mt-5">
           <label htmlFor="nickname" className="sr-only">
@@ -428,7 +423,7 @@ function NicknameSignupModal({
             className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-center text-base font-bold text-slate-100 outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-500/40 disabled:opacity-60"
           />
           {error && (
-            <p className="mt-2 text-center text-xs font-bold text-rose-300">{error}</p>
+            <p role="alert" className="mt-2 text-center text-xs font-bold text-rose-300">{error}</p>
           )}
         </div>
 
@@ -452,6 +447,8 @@ function NicknameSignupModal({
           {t("landing.modal.fineprint")}
         </p>
       </motion.div>
-    </motion.div>
+    </Dialog.Content>
+    </Dialog.Portal>
+    </Dialog.Root>
   );
 }

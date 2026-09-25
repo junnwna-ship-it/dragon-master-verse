@@ -10,6 +10,7 @@ import { CardScanner } from "@/components/game/scan/CardScanner";
 import { supabase } from "@/integrations/supabase/client";
 import { DragonDetailModal } from "../DragonDetailModal";
 import { HallOfFameStories } from "../story/HallOfFameStories";
+import { mergeScannedDragons } from "@/lib/dragonRoster";
 
 export function LobbyView() {
   const { t } = useTranslation();
@@ -192,7 +193,6 @@ export function LobbyView() {
         .select("id,name,element,hp,max_hp,mp,atk,def")
         .order("created_at", { ascending: true });
       if (cancelled || !data) return;
-      const seed = useGameStore.getState().dragons.filter((d) => d.id <= 3);
       const remote: Dragon[] = data.map((r, i) => ({
         id: 1000 + i,
         name: r.name,
@@ -203,7 +203,7 @@ export function LobbyView() {
         atk: r.atk,
         def: r.def,
       }));
-      setDragons([...seed, ...remote]);
+      setDragons(mergeScannedDragons(useGameStore.getState().dragons, remote));
     })();
     return () => {
       cancelled = true;
@@ -235,7 +235,7 @@ export function LobbyView() {
       <Link
         to="/story/play/$chapterId"
         params={{ chapterId: "my_dragon" }}
-        className="flex w-full items-center justify-between gap-3 rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-sky-500/10 px-4 py-3 hover:from-violet-500/30 hover:to-sky-500/20"
+        className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200/30 bg-gradient-to-r from-amber-200/10 to-emerald-300/5 px-5 py-5 hover:bg-amber-200/10"
       >
         <span className="flex items-center gap-2 text-sm font-bold text-violet-100">
           <ScrollText className="h-4 w-4" />
@@ -283,7 +283,7 @@ export function LobbyView() {
         aria-roledescription="carousel"
         aria-label={t("lobby.ariaCarousel")}
         tabIndex={0}
-        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+        className="dragon-roster -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 py-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         <ul role="list" className="contents">
         {dragons.map((d) => {
@@ -318,23 +318,8 @@ export function LobbyView() {
                 if (el) cardRefs.current.set(d.id, el);
                 else cardRefs.current.delete(d.id);
               }}
-              role="button"
-              aria-roledescription="slide"
               aria-label={cardLabel}
               aria-current={isSelected ? "true" : undefined}
-              tabIndex={0}
-              aria-pressed={isSelected}
-              onClick={() => {
-                setPvpSelectedDragonId(d.id);
-                setDetailOpen(true);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setPvpSelectedDragonId(d.id);
-                  setDetailOpen(true);
-                }
-              }}
               // Transition timing differs by phase:
               //  • live swipe → short 180ms ease-out (springy follow)
               //  • settled    → calmer 300ms ease-out (locks in place)
@@ -347,17 +332,18 @@ export function LobbyView() {
                 isScrolling ? "transition-all duration-[180ms] ease-out" : "transition-all duration-300 ease-out"
               } ${
                 isSelected
-                  ? "scale-[1.04] opacity-100 ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30 brightness-105"
+                  ? "opacity-100 ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30 brightness-105"
                   : liveHover
-                    ? "scale-[1.035] -translate-y-0.5 opacity-100 shadow-xl shadow-black/40 brightness-110"
+                    ? "opacity-100 shadow-xl shadow-black/40 brightness-110"
                     : settledSnap
-                      ? "scale-[1.02] opacity-100 shadow-lg shadow-black/40 ring-1 ring-slate-300/20"
+                      ? "opacity-100 shadow-lg shadow-black/40 ring-1 ring-slate-300/20"
                       : isCentered
-                        ? "scale-[1.01] opacity-95 shadow-lg shadow-black/30"
-                        : "scale-95 opacity-80 hover:scale-100 hover:opacity-100"
+                        ? "opacity-95 shadow-lg shadow-black/30"
+                        : "opacity-90 hover:opacity-100"
               }`}
             >
               <DragonCard dragon={d} />
+              <button type="button" aria-label={`${d.name} 자세히 보기`} onClick={() => { setPvpSelectedDragonId(d.id); setDetailOpen(true); }} className="mt-2 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700">자세히 보기</button>
               {/* Take THIS dragon into the story: the chapter player receives
                   the dragon id and attributes scenes/rewards to it. */}
               <Link

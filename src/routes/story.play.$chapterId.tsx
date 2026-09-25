@@ -41,7 +41,7 @@ function StoryPlayRoute() {
   if (chapterId === "my_dragon" || chapterId === "dragon_growth" || chapterId === "dragon_master") {
     return <DragonJourneyGate chapterId={chapterId} dragonId={dragon ?? null} />;
   }
-  return <VisualNovelPlayer chapterId={chapterId} companionId={dragon ?? null} />;
+  return <VisualNovelPlayer key={`${chapterId}:${dragon ?? "none"}`} chapterId={chapterId} companionId={dragon ?? null} />;
 }
 
 function DragonJourneyGate({ chapterId, dragonId }: { chapterId: string; dragonId: number | null }) {
@@ -62,7 +62,7 @@ function DragonJourneyGate({ chapterId, dragonId }: { chapterId: string; dragonI
 
   const owned = dragons.filter((d) => d.uuid && byDragon.has(d.uuid));
   const selected = owned.find((d) => d.id === dragonId);
-  if (selected) return <VisualNovelPlayer chapterId={chapterId} companionId={selected.id} />;
+  if (selected) return <VisualNovelPlayer key={`${chapterId}:${selected.uuid}`} chapterId={chapterId} companionId={selected.id} />;
 
   const title = chapterId === "dragon_master"
     ? "1권을 함께할 나의 드래곤"
@@ -73,11 +73,11 @@ function DragonJourneyGate({ chapterId, dragonId }: { chapterId: string; dragonI
   if (userId && (creating || owned.length === 0)) {
     return (
       <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
-        <div className="mx-auto max-w-3xl">
-          <Link to="/app" className="text-sm text-amber-200 hover:underline">← 로비로 돌아가기</Link>
+        <div className="mx-auto max-w-4xl">
+          <Link to="/app" search={{ view: "lobby" }} className="inline-flex min-h-11 items-center text-sm text-amber-200 hover:underline">← 로비로 돌아가기</Link>
           <div className="mt-5">
             <DragonOriginBuilder
-              onCancel={owned.length > 0 ? () => setCreating(false) : undefined}
+              onCancel={() => owned.length > 0 ? setCreating(false) : void navigate({ to: "/app", search: { view: "lobby" } })}
               onCreated={(createdId) => {
                 void navigate({
                   to: "/story/play/$chapterId",
@@ -95,7 +95,7 @@ function DragonJourneyGate({ chapterId, dragonId }: { chapterId: string; dragonI
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-10 text-slate-100">
       <div className="mx-auto max-w-3xl">
-        <Link to="/app" className="text-sm text-amber-200 hover:underline">← 로비로 돌아가기</Link>
+        <Link to="/app" search={{ view: "lobby" }} className="inline-flex min-h-11 items-center text-sm text-amber-200 hover:underline">← 로비로 돌아가기</Link>
         <h1 className="mt-6 text-3xl font-bold">{title}</h1>
         <p className="mt-2 text-sm text-slate-300">
           {chapterId === "dragon_master"

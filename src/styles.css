@@ -140,5 +140,32 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    overflow-wrap: anywhere;
+    -webkit-tap-highlight-color: transparent;
   }
+  html.dark { color-scheme: dark; }
+  h1, h2, h3 { word-break: keep-all; text-wrap: balance; }
+  button, a, input, textarea, select { touch-action: manipulation; }
+  :focus-visible { outline: 2px solid oklch(0.879 0.169 91.605); outline-offset: 3px; }
+  button:not(:disabled), a { -webkit-touch-callout: default; }
+  input, textarea, select { font-size: max(1rem, 1em); }
+}
+
+.mobile-game-nav { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+.mobile-menu-sheet { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+.dragon-builder button, .dragon-builder label:has(input[type="file"]) { min-height: 44px; }
+.dragon-builder label:has(input:focus-visible) { outline: 2px solid oklch(0.879 0.169 91.605); outline-offset: 3px; }
+.dragon-roster > ul > li { flex-shrink: 0; width: min(78vw, 320px); }
+.dragon-roster > ul > li > a { min-height: 44px; }
+@media (min-width: 768px) {
+  .dragon-roster { display: block; overflow: visible; margin-inline: 0; padding-inline: 0; }
+  .dragon-roster > ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+  .dragon-roster > ul > li { width: auto; min-width: 0; opacity: 1; }
+  .dragon-roster .dragon-card { width: 100%; max-width: none; }
+}
+@media (min-width: 1280px) {
+  .dragon-roster > ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

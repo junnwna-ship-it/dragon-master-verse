@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { BookOpen, Swords, X, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import * as Dialog from "@radix-ui/react-dialog";
 
 /**
  * 로그인 직후 랜딩에서 노출되는 모드 선택 오버레이.
@@ -12,22 +13,20 @@ export function ModeSelect({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
-    >
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog.Portal>
+    <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm" />
+    <Dialog.Content asChild>
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.98 }}
-        className="relative w-full max-w-lg rounded-2xl border border-white/15 bg-black/60 p-6 text-center shadow-2xl backdrop-blur-md"
+        className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950 p-6 text-center shadow-2xl backdrop-blur-md"
       >
         <button
           onClick={onClose}
           aria-label={t("landing.modal.ariaClose")}
-          className="absolute right-3 top-3 rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
+          className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
         >
           <X className="h-4 w-4" />
         </button>
@@ -35,8 +34,8 @@ export function ModeSelect({ onClose }: { onClose: () => void }) {
         <p className="text-xs uppercase tracking-[0.3em] text-amber-300/90">
           {t("landing.modeSelect.kicker")}
         </p>
-        <h2 className="mt-2 text-2xl font-bold text-slate-50">{t("landing.modeSelect.title")}</h2>
-        <p className="mt-2 text-sm text-slate-300">{t("landing.modeSelect.subtitle")}</p>
+        <Dialog.Title className="mt-2 text-2xl font-bold text-slate-50">{t("landing.modeSelect.title")}</Dialog.Title>
+        <Dialog.Description className="mt-2 text-sm text-slate-300">{t("landing.modeSelect.subtitle")}</Dialog.Description>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Link
@@ -73,7 +72,9 @@ export function ModeSelect({ onClose }: { onClose: () => void }) {
           {t("landing.modeSelect.lobbyLink")} <ArrowRight className="h-3 w-3" />
         </Link>
       </motion.div>
-    </motion.div>
+    </Dialog.Content>
+    </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 

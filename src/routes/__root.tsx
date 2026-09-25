@@ -1,6 +1,9 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { MotionConfig } from "framer-motion";
+import { useTranslation } from "react-i18next";
+import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 
@@ -30,7 +33,7 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "google-site-verification", content: "QT5aLYeZpyBB60PrI4ULzMVmqTCpLSq5XnPX4g8M86o" },
       { title: "Artiati Dragon Masters" },
       { name: "description", content: "Collect, train and battle mystical dragons, then play branching story chapters in Artiati Dragon Masters." },
@@ -52,7 +55,7 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ko" className="dark">
       <head>
         <HeadContent />
       </head>
@@ -65,6 +68,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const { i18n } = useTranslation();
+  useEffect(() => { document.documentElement.lang = i18n.language; }, [i18n.language]);
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -73,7 +78,10 @@ function RootComponent() {
   );
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <MotionConfig reducedMotion="user">
+        <Outlet />
+        <Toaster />
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

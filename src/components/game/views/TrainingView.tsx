@@ -148,11 +148,11 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
   const passive = PASSIVES[dragon.name];
 
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
-      <GoldTrainingSection dragon={dragon} />
+    <section className="grid gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4 md:grid-cols-2 md:p-6">
+      <div className="md:col-span-2"><GoldTrainingSection dragon={dragon} /></div>
 
       {/* Hero */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 md:col-span-2">
         <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-900 ring-1 ring-slate-700/60">
           <DragonImage dragon={dragon} className="h-full w-full" preferLarge />
         </div>

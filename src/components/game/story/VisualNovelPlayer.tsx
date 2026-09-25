@@ -9,6 +9,7 @@ import { useVnSave } from "@/hooks/useVnSave";
 import { useStoryRewards, parseReward, itemLabel, type StoryReward } from "@/hooks/useStoryRewards";
 import { profileStatsKey } from "@/hooks/useProfileStats";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
 import { toast } from "sonner";
 import { QuizModal } from "@/components/game/quiz/QuizModal";
@@ -146,6 +147,8 @@ export function VisualNovelPlayer({
   companionId?: number | null;
 }) {
   const { data, isLoading, error } = useChapterNodes(chapterId);
+  const { i18n } = useTranslation();
+  const ko = i18n.language.startsWith("ko");
   const nodes = useMemo(() => data?.nodes ?? [], [data]);
   const schemaReady = data?.schemaReady ?? true;
   const { nodeKey, stats, visited, applied, finished, start, choose, enter, reset, hydrate } =
@@ -493,7 +496,7 @@ export function VisualNovelPlayer({
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/30 to-slate-950/95" />
-        <div className="relative z-10 flex min-h-screen flex-col justify-between p-4">
+        <div className="relative z-10 flex min-h-dvh flex-col justify-between gap-16 p-4 sm:p-8">
           <BackLink />
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -510,7 +513,7 @@ export function VisualNovelPlayer({
                   <img
                     src={companion.imageUrl}
                     alt={companion.name}
-                    className="h-10 w-10 rounded-lg object-cover"
+                    className="h-20 w-20 shrink-0 rounded-xl object-contain sm:h-28 sm:w-28"
                   />
                 )}
                 <span className="text-sm text-amber-100">
@@ -526,7 +529,7 @@ export function VisualNovelPlayer({
             )}
             <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
               <Play className="mr-2 h-4 w-4" />
-              {remote?.nodeKey && !remote.finished ? "Continue your story" : "Begin the story"}
+              {remote?.nodeKey && !remote.finished ? (ko ? "이야기 이어하기" : "Continue your story") : (ko ? "이야기 시작하기" : "Begin the story")}
             </Button>
           </motion.div>
         </div>
@@ -536,7 +539,7 @@ export function VisualNovelPlayer({
 
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-slate-950">
+    <div className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-slate-950">
       {/* Background from DB (plain URL string) */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -559,16 +562,16 @@ export function VisualNovelPlayer({
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/20 to-slate-950/90" />
 
       {/* HUD */}
-      <div className="relative z-10 flex items-center justify-between gap-2 p-4">
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-wrap items-start justify-between gap-3 p-4 sm:p-6">
         <BackLink />
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
           {companion && (
             <span className="flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-black/50 px-2 py-1 text-xs text-amber-100 backdrop-blur">
               {companion.imageUrl && (
                 <img
                   src={companion.imageUrl}
                   alt={companion.name}
-                  className="h-5 w-5 rounded-full object-cover"
+                  className="h-8 w-8 shrink-0 rounded-full object-contain"
                 />
               )}
               {companion.name}
@@ -583,22 +586,22 @@ export function VisualNovelPlayer({
             </span>
           ))}
           <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
-            {signedIn ? (saving ? "Saving…" : "Saved to cloud") : "Sign in to save your progress"}
+            {signedIn ? (saving ? (ko ? "저장 중…" : "Saving…") : (ko ? "클라우드 저장" : "Saved to cloud")) : (ko ? "로그인하면 진행 기록을 저장해요" : "Sign in to save your progress")}
           </span>
           <Button size="sm" variant="secondary" onClick={restart}>
-            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Restart
+            <RotateCcw className="mr-1 h-3.5 w-3.5" /> {ko ? "다시 시작" : "Restart"}
           </Button>
 
         </div>
       </div>
 
       {/* Dialog box */}
-      <div className="relative z-10 flex min-h-[calc(100vh-5rem)] flex-col justify-end p-4 pb-8">
-        <div className="mx-auto w-full max-w-3xl space-y-3">
+      <div className="relative z-10 flex flex-1 flex-col justify-end px-4 pt-24 pb-8 sm:px-8 sm:pt-40">
+        <div className="mx-auto w-full max-w-4xl space-y-3">
           {finished || !node ? (
             <div className="rounded-2xl border border-white/15 bg-black/70 p-5 backdrop-blur-md">
               <p className="flex items-center gap-2 text-lg font-semibold text-amber-300">
-                <Sparkles className="h-5 w-5" /> Chapter complete
+                <Sparkles className="h-5 w-5" /> {ko ? "이야기 완료" : "Chapter complete"}
               </p>
               <p className="mt-2 text-sm text-slate-200">
                 {finalizeState === "saving"
@@ -661,7 +664,7 @@ export function VisualNovelPlayer({
                   </Button>
                 )}
                 <Button onClick={restart} disabled={finalizeState === "saving"}>
-                  Play again
+                  {ko ? "다시 플레이" : "Play again"}
                 </Button>
                 <Button
                   variant="secondary"
@@ -671,11 +674,11 @@ export function VisualNovelPlayer({
                   }}
                   asChild={false}
                 >
-                  Clear save
+                  {ko ? "저장 기록 초기화" : "Clear save"}
                 </Button>
                 <Button variant="outline" asChild>
                   <Link to="/">
-                    <Home className="mr-1 h-4 w-4" /> Home
+                    <Home className="mr-1 h-4 w-4" /> {ko ? "홈" : "Home"}
                   </Link>
                 </Button>
               </div>
@@ -720,7 +723,7 @@ export function VisualNovelPlayer({
               </motion.div>
 
 
-              <div className="flex flex-col gap-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {visibleOptions(node.options, stats).map((opt, i) => (
                   <motion.button
                     key={`${node.id}-${i}`}
@@ -730,7 +733,7 @@ export function VisualNovelPlayer({
                     onClick={() => handleChoose(opt, i)}
                     disabled={pendingChoice !== null}
                     aria-busy={pendingChoice === i}
-                    className="w-full rounded-xl border border-amber-300/30 bg-black/55 px-4 py-3 text-left text-sm text-slate-50 backdrop-blur transition hover:border-amber-300/70 hover:bg-amber-300/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-12 w-full rounded-xl border border-amber-300/30 bg-slate-950/85 px-4 py-3 text-left text-sm leading-relaxed text-slate-50 backdrop-blur transition hover:border-amber-300/70 hover:bg-amber-300/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {personalize(opt.label)}
                     {((opt.quiz_ids?.length ?? 0) > 0 || (opt.quiz_count ?? 0) > 0) && (
@@ -745,7 +748,7 @@ export function VisualNovelPlayer({
                     onClick={() => choose({ label: "Continue", next_node: null })}
                     className="w-full"
                   >
-                    Continue
+                    {ko ? "계속" : "Continue"}
                   </Button>
                 )}
               </div>
@@ -779,16 +782,18 @@ function Shell({ children }: { children: React.ReactNode }) {
  * entirely and lands on the landing page.
  */
 function BackLink() {
+  const { i18n } = useTranslation();
+  const ko = i18n.language.startsWith("ko");
   const setView = useGameStore((state) => state.setView);
   const cls =
-    "inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-slate-100 backdrop-blur hover:bg-black/60";
+    "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/40 px-4 py-2 text-sm text-slate-100 backdrop-blur hover:bg-black/60";
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       <Link to="/app" search={{}} onClick={() => setView("lobby")} className={cls}>
-        <ChevronLeft className="h-3.5 w-3.5" /> Back
+        <ChevronLeft className="h-3.5 w-3.5" /> {ko ? "로비" : "Back"}
       </Link>
       <Link to="/" onClick={() => setView("lobby")} className={cls} aria-label="Exit story mode and go home">
-        <Home className="h-3.5 w-3.5" /> Home
+        <Home className="h-3.5 w-3.5" /> {ko ? "홈" : "Home"}
       </Link>
     </div>
   );

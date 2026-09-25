@@ -116,7 +116,7 @@ export function SummonView() {
         </div>
       </header>
 
-      <section className="grid grid-cols-2 gap-2">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <button
           onClick={() => draw(1, "gold")}
           disabled={busy != null}
@@ -164,7 +164,7 @@ export function SummonView() {
       {results && (
         <section className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-3">
           <h3 className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">{t("summon.resultsTitle")}</h3>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {results.map((r, i) => {
               const style = RARITY_STYLE[r.rarity];
               const shown = i < revealed;
