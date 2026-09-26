@@ -38,26 +38,65 @@ function requireSuccess(result, operation) {
   return result.data;
 }
 
+export async function inspectConnection(target, fetcher = fetch) {
+  // The OpenAPI root can reject a valid client key. Check the actual Auth and
+  // table routes instead, without requesting player rows or invoking an RPC.
+  const headers = {
+    apikey: target.key,
+    Accept: "application/json",
+    ...(target.key.startsWith("eyJ") ? { Authorization: `Bearer ${target.key}` } : {}),
+  };
+  const probe = async (path, validateBody) => {
+    try {
+      const response = await fetcher(`${target.url}${path}`, {
+        headers,
+        signal: AbortSignal.timeout(15_000),
+      });
+      // Do not print response bodies: they may contain configuration or details.
+      let valid = false;
+      if (response.ok) {
+        try {
+          valid = validateBody(await response.json());
+        } catch {
+          // A proxy's HTTP 200 HTML page is not a healthy API response.
+        }
+      }
+      return { status: response.status, ok: response.ok && valid };
+    } catch {
+      return { status: null, ok: false };
+    }
+  };
+  const [auth, database] = await Promise.all([
+    probe(
+      "/auth/v1/settings",
+      (body) =>
+        body !== null &&
+        typeof body === "object" &&
+        !Array.isArray(body) &&
+        typeof body.external === "object" &&
+        body.external !== null,
+    ),
+    probe("/rest/v1/dragons?select=id&limit=0", (body) => Array.isArray(body) && body.length === 0),
+  ]);
+  return { auth, database, ok: auth.ok && database.ok };
+}
+
 async function readOnlyProbe(target) {
-  // No table rows or secret values are printed, and no RPC is invoked.
-  const response = await fetch(`${target.url}/rest/v1/`, {
-    headers: {
-      apikey: target.key,
-      Accept: "application/openapi+json",
-      // Legacy anon JWTs need the same bearer header the Supabase SDK adds.
-      ...(target.key.startsWith("eyJ") ? { Authorization: `Bearer ${target.key}` } : {}),
-    },
-    signal: AbortSignal.timeout(15_000),
-  });
-  console.log(`REST schema connection: HTTP ${response.status}`);
-  if (!response.ok) throw new Error("Read-only connection check failed.");
-  const schema = await response.json();
-  const visible = !!schema.paths?.["/rpc/create_personal_dragon"];
+  const result = await inspectConnection(target);
+  for (const [label, check] of [
+    ["Auth settings", result.auth],
+    ["Database zero-row query", result.database],
+  ]) {
+    console.log(
+      `${check.ok ? "PASS" : "FAIL"}: ${label}: ${check.status === null ? "network/timeout error" : `HTTP ${check.status}`}`,
+    );
+  }
+  if (!result.ok)
+    throw new Error(
+      "Read-only connection check failed. Check the reported endpoint, key configuration, network and table permissions; no writes performed.",
+    );
   console.log(
-    `Personal-dragon RPC in anonymous schema: ${visible ? "visible" : "not visible (not proof of absence for authenticated users)"}`,
-  );
-  console.log(
-    "NOT TESTED: upload, authenticated creation, relogin persistence, RLS, deployed migration history.",
+    "NOT TESTED: upload, authenticated creation, relogin persistence, RLS isolation, RPC availability, deployed migration history. OpenAPI root access is not required for this check.",
   );
 }
 
