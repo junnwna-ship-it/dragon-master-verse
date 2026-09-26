@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Download } from "lucide-react";
 import { loadDragonArchive, type DragonDraft } from "@/lib/dragonDraftStorage";
+import { loadCloudDragonArchive } from "@/lib/dragonCloudStorage";
 
 type ArchiveProps = {
   ownerId: string;
@@ -13,6 +14,7 @@ type ArchiveState =
   | {
       status: "ready";
       draft: DragonDraft | null;
+      source: "local" | "cloud";
       originalUrl: string | null;
       preparedUrl: string | null;
       cleanedUrl: string | null;
@@ -41,12 +43,16 @@ function DragonDrawingArchiveContent({ ownerId, dragonUuid }: ArchiveProps) {
     };
 
     void loadDragonArchive(ownerId, dragonUuid)
-      .then((draft) => {
+      .then(async (local) => ({
+        draft: local ?? (await loadCloudDragonArchive(ownerId, dragonUuid)),
+        source: local ? ("local" as const) : ("cloud" as const),
+      }))
+      .then(({ draft, source }) => {
         if (!active) return;
         const originalUrl = imageUrl(draft?.originalImage ?? null);
         const preparedUrl = imageUrl(draft?.preparedImage ?? null);
         const cleanedUrl = imageUrl(draft?.cleanedImage ?? null);
-        setState({ status: "ready", draft, originalUrl, preparedUrl, cleanedUrl });
+        setState({ status: "ready", draft, source, originalUrl, preparedUrl, cleanedUrl });
       })
       .catch(() => {
         releaseUrls();
@@ -73,8 +79,8 @@ function DragonDrawingArchiveContent({ ownerId, dragonUuid }: ArchiveProps) {
         role="status"
         className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs text-amber-100"
       >
-        이 기기에 보관한 그림을 불러오지 못했습니다. 브라우저 저장 공간과 설정을 확인해 주세요.
-        서버에 저장된 드래곤과는 별도의 보관함입니다.
+        드래곤 그림 보관함을 불러오지 못했습니다. 브라우저 저장 공간과 클라우드 연결을 확인해
+        주세요.
       </p>
     );
   }
@@ -100,7 +106,9 @@ function DragonDrawingArchiveContent({ ownerId, dragonUuid }: ArchiveProps) {
       </summary>
       <div className="space-y-4 px-4 pb-4">
         <p className="text-xs leading-relaxed text-slate-300">
-          이 기기·브라우저에 보관한 그림입니다. 다른 기기로 동기화되지 않습니다.
+          {state.source === "cloud"
+            ? "비공개 클라우드에서 복원한 그림과 첫 약속입니다."
+            : "이 기기·브라우저에 보관한 그림입니다. 클라우드 적용 전 자료는 다른 기기와 동기화되지 않을 수 있습니다."}
         </p>
 
         {originalUrl || cleanedUrl ? (

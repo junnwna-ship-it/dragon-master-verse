@@ -21,6 +21,10 @@ export interface DragonDraft {
   /** Non-idempotent RPC checkpoint: do not silently retry when its outcome is unknown. */
   creationAttemptedAt: number | null;
   createdDragonUuid: string | null;
+  /** Last acknowledged cloud revision and local timestamp; absent in older drafts. */
+  cloudRevision?: number;
+  cloudSyncedAt?: number;
+  creationBackend?: "legacy" | "cloud" | null;
 }
 
 export const DRAGON_DRAFT_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -123,6 +127,22 @@ export function validateDragonDraft(value: unknown, ownerId: string): DragonDraf
     selectedImage: draft.selectedImage as DragonDraft["selectedImage"],
     creationAttemptedAt: draft.creationAttemptedAt,
     createdDragonUuid: draft.createdDragonUuid === null ? null : uuid(draft.createdDragonUuid),
+    cloudRevision:
+      typeof draft.cloudRevision === "number" &&
+      Number.isSafeInteger(draft.cloudRevision) &&
+      draft.cloudRevision >= 0
+        ? draft.cloudRevision
+        : 0,
+    cloudSyncedAt:
+      typeof draft.cloudSyncedAt === "number" &&
+      Number.isSafeInteger(draft.cloudSyncedAt) &&
+      draft.cloudSyncedAt >= 0
+        ? draft.cloudSyncedAt
+        : 0,
+    creationBackend:
+      draft.creationBackend === "cloud" || draft.creationBackend === "legacy"
+        ? draft.creationBackend
+        : null,
   };
 }
 
@@ -148,6 +168,9 @@ export function createEmptyDragonDraft(ownerId: string): DragonDraft {
     selectedImage: "original",
     creationAttemptedAt: null,
     createdDragonUuid: null,
+    cloudRevision: 0,
+    cloudSyncedAt: 0,
+    creationBackend: null,
   };
 }
 

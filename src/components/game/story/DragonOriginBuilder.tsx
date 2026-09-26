@@ -22,6 +22,7 @@ import { cleanDragonDrawing } from "@/lib/dragonImage.functions";
 import { useGameStore, type Element } from "@/store/dragons";
 import { archiveDragonDraft, selectedDragonDrawing } from "@/lib/dragonDraftStorage";
 import { completePersonalDragonCreation } from "@/lib/personalDragonCreation";
+import { createCloudDragon } from "@/lib/dragonCloudStorage";
 import { imageToJpeg, loadDrawing } from "@/lib/dragonDrawingImage";
 import { DragonDrawingEditor } from "./DragonDrawingEditor";
 
@@ -64,12 +65,12 @@ const ELEMENT_STATS: Record<Element, { maxHp: number; mp: number; atk: number; d
   Dark: { maxHp: 1350, mp: 1400, atk: 1550, def: 1000 },
 };
 
-async function uploadDragonImage(blob: Blob, userId: string) {
-  const path = `${userId}/personal-${crypto.randomUUID()}.jpg`;
+async function uploadDragonImage(blob: Blob, userId: string, draftId?: string) {
+  const path = `${userId}/personal-${draftId ?? crypto.randomUUID()}.jpg`;
   const { error } = await supabase.storage
     .from("dragon-images")
     .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-  if (error) throw error;
+  if (error && !(draftId && /asset already exists/i.test(error.message))) throw error;
   return supabase.storage.from("dragon-images").getPublicUrl(path).data.publicUrl;
 }
 
@@ -130,6 +131,8 @@ function DragonOriginEditor({
     retrySave,
     clear,
     discard,
+    cloudState,
+    cloudEnabled,
   } = useDragonDraft(ownerId);
   const step = draft?.step ?? 1;
   const setStep = (value: number) =>
@@ -247,7 +250,7 @@ function DragonOriginEditor({
   };
 
   const createDragon = async () => {
-    if (!draft || busy.current || status === "error") return;
+    if (!draft || busy.current || status === "error" || cloudState === "error") return;
     if (!name.trim()) {
       setStep(2);
       toast.error("드래곤의 이름을 지어 주세요.");
@@ -258,8 +261,9 @@ function DragonOriginEditor({
     setSaving(true);
     try {
       await requireCurrentOwner();
-      await checkpoint(draft);
+      if (!draft.creationAttemptedAt) await checkpoint(draft);
       const createdId = await completePersonalDragonCreation(draft, {
+        backend: cloudEnabled ? "cloud" : "legacy",
         checkpoint,
         upload: async (snapshot) => {
           const source = selectedDragonDrawing(snapshot);
@@ -268,10 +272,11 @@ function DragonOriginEditor({
             snapshot.originalImage ? "none" : appearance.filter,
           );
           await requireCurrentOwner();
-          return uploadDragonImage(blob, ownerId);
+          return uploadDragonImage(blob, ownerId, cloudEnabled ? snapshot.draftId : undefined);
         },
         create: async (snapshot, imageUrl) => {
           await requireCurrentOwner();
+          if (cloudEnabled) return createCloudDragon(snapshot, imageUrl);
           const stats = ELEMENT_STATS[snapshot.element];
           const { data, error } = await supabase.rpc("create_personal_dragon", {
             _name: snapshot.name.trim().slice(0, 24),
@@ -390,23 +395,28 @@ function DragonOriginEditor({
         <div className="mb-5 rounded-xl border border-sky-300/20 bg-sky-400/5 p-3 text-sm text-slate-300">
           <p role="status" aria-live="polite" className="font-bold text-sky-100">
             {status === "saving"
-              ? "이 기기에 초안 저장 중…"
+              ? cloudEnabled
+                ? "기기와 클라우드에 초안 저장 중…"
+                : "이 기기에 초안 저장 중…"
               : status === "error"
                 ? "초안 저장 확인 필요"
                 : restored
                   ? "저장한 초안을 이어서 만들고 있어요"
-                  : "이 기기에 초안이 저장되어 있어요"}
+                  : cloudState === "synced"
+                    ? "기기와 클라우드에 초안이 저장되어 있어요"
+                    : "이 기기에 초안이 저장되어 있어요"}
           </p>
           <p className="mt-1 text-xs leading-relaxed">
-            이 계정의 그림과 설정은 현재 기기·브라우저에 보관됩니다. 다른 기기로 동기화되지 않으며,
-            브라우저 데이터를 지우면 사라집니다. 공용 기기에서는 주의해 주세요.
+            {cloudState === "synced"
+              ? "이 계정의 초안과 비공개 그림이 클라우드에 동기화되었습니다. 공용 기기에는 로컬 사본도 남으니 주의해 주세요."
+              : "이 계정의 그림과 설정은 현재 기기·브라우저에 보관됩니다. 클라우드 동기화가 확인되기 전에는 브라우저 데이터를 지우지 마세요."}
           </p>
           {draftError && (
             <p role="alert" className="mt-2 text-amber-200">
               {draftError}
             </p>
           )}
-          {status === "error" && (
+          {(status === "error" || cloudState === "error") && (
             <button
               type="button"
               disabled={saving || cleaning || readingImage || editingImage}
@@ -428,8 +438,8 @@ function DragonOriginEditor({
           {confirmDiscard && (
             <div role="alert" className="mt-3 rounded-lg border border-amber-300/40 p-3">
               <p>
-                현재 초안의 그림과 설정을 이 브라우저에서 삭제할까요? 이미 등록한 드래곤의 보관
-                기록은 유지됩니다.
+                현재 초안의 그림과 설정을 삭제할까요? 클라우드 동기화된 초안과 비공개 그림도 함께
+                삭제됩니다. 이미 등록한 드래곤의 보관 기록은 유지됩니다.
               </p>
               <div className="mt-2 flex gap-3">
                 <button
@@ -468,8 +478,9 @@ function DragonOriginEditor({
           )}
           {draft.creationAttemptedAt && !draft.createdDragonUuid && (
             <p role="alert" className="mt-2 text-amber-200">
-              생성 결과 확인이 필요합니다. 중복 생성을 막기 위해 재전송을 멈췄습니다. 보관함에서
-              결과를 확인해 주세요. 원본과 초안은 유지됩니다.
+              {draft.creationBackend === "cloud" && cloudEnabled
+                ? "생성 응답을 확인하지 못했습니다. 같은 초안으로 다시 확인해도 새 드래곤이 중복 생성되지 않습니다."
+                : "생성 결과 확인이 필요합니다. 중복 생성을 막기 위해 재전송을 멈췄습니다. 보관함에서 결과를 확인해 주세요. 원본과 초안은 유지됩니다."}
             </p>
           )}
         </div>
@@ -770,8 +781,9 @@ function DragonOriginEditor({
           )}
         </fieldset>
         <p className="mt-4 text-xs leading-relaxed text-slate-400">
-          등록 시 선택한 카드 그림은 기존 공개 이미지 저장소에 올라가며, 이름·소개는 게임 도감에
-          표시됩니다. 손그림 원본의 별도 클라우드 비공개 보관은 아직 제공되지 않습니다.
+          {cloudState === "synced"
+            ? "제작 초안과 손그림은 비공개 클라우드에 동기화됩니다. 등록 카드 그림과 이름·소개는 게임 도감에 공개됩니다."
+            : "현재 초안은 이 브라우저에 보관됩니다. 등록 카드 그림과 이름·소개는 게임 도감에 공개됩니다. 클라우드 동기화는 아직 확인되지 않았습니다."}
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
           <button
@@ -799,7 +811,10 @@ function DragonOriginEditor({
                 saving ||
                 cleaning ||
                 status !== "saved" ||
-                (!!draft.creationAttemptedAt && !draft.createdDragonUuid)
+                cloudState === "error" ||
+                (!!draft.creationAttemptedAt &&
+                  !draft.createdDragonUuid &&
+                  !(draft.creationBackend === "cloud" && cloudEnabled))
               }
               className="flex items-center gap-2 rounded-xl bg-amber-300 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-amber-200 disabled:opacity-50"
             >

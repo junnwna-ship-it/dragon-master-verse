@@ -17,6 +17,7 @@ export class PersonalDragonCreationError extends Error {
 }
 
 export interface PersonalDragonCreationDependencies {
+  backend?: "legacy" | "cloud";
   checkpoint: (draft: DragonDraft) => Promise<void>;
   upload: (draft: DragonDraft) => Promise<string>;
   create: (draft: DragonDraft, imageUrl: string) => Promise<string>;
@@ -31,7 +32,8 @@ function nextTimestamp(previous: number): number {
 
 /**
  * Creation and UI hydration are separate phases. Once the RPC may have run,
- * never retry it automatically: an absent response is not proof of rollback.
+ * Legacy requests cannot be retried after an uncertain response. Cloud
+ * requests are idempotent by draft ID and can safely recover that response.
  * A confirmed UUID remains recoverable until archiving and hydration succeed.
  */
 export async function completePersonalDragonCreation(
@@ -47,19 +49,31 @@ export async function completePersonalDragonCreation(
       );
     }
   } else {
-    if (draft.creationAttemptedAt != null) {
+    if (
+      draft.creationAttemptedAt != null &&
+      (draft.creationBackend !== "cloud" || deps.backend !== "cloud")
+    ) {
       throw new PersonalDragonCreationError("uncertain_creation", UNCERTAIN_CREATION_MESSAGE);
     }
 
-    const imageUrl = await deps.upload(draft);
-    const attemptedAt = Date.now();
-    const attempted: DragonDraft = {
-      ...draft,
-      creationAttemptedAt: attemptedAt,
-      updatedAt: Math.max(attemptedAt, draft.updatedAt + 1),
-    };
-    // Persist before making a request that may commit even if its response is lost.
-    await deps.checkpoint(attempted);
+    const attemptedAt = draft.creationAttemptedAt ?? Date.now();
+    const attempted: DragonDraft =
+      draft.creationAttemptedAt != null
+        ? draft
+        : {
+            ...draft,
+            creationAttemptedAt: attemptedAt,
+            creationBackend: deps.backend ?? "legacy",
+            updatedAt: Math.max(attemptedAt, draft.updatedAt + 1),
+          };
+    // In cloud mode, freeze the draft before uploading its deterministic public
+    // card path. A failed upload can then be retried without changing the card.
+    if (deps.backend === "cloud" && draft.creationAttemptedAt == null)
+      await deps.checkpoint(attempted);
+    const imageUrl = await deps.upload(deps.backend === "cloud" ? attempted : draft);
+    // Legacy mode preserves the old pre-request checkpoint order.
+    if (deps.backend !== "cloud" && draft.creationAttemptedAt == null)
+      await deps.checkpoint(attempted);
 
     let dragonUuid: string;
     try {

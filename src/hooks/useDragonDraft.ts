@@ -6,8 +6,14 @@ import {
   saveDragonDraft,
   type DragonDraft,
 } from "@/lib/dragonDraftStorage";
+import {
+  abandonCloudDraft,
+  cloudSchemaAvailable,
+  loadCloudDraft,
+  saveCloudDraft,
+} from "@/lib/dragonCloudStorage";
 
-/** Local-only autosave: each edit is queued immediately, including before unmount. */
+/** Local-first autosave with an owner-scoped, revision-checked cloud copy. */
 export function useDragonDraft(ownerId: string) {
   const [draft, setDraft] = useState<DragonDraft | null>(null);
   const [status, setStatus] = useState<"loading" | "saving" | "saved" | "error">("loading");
@@ -17,30 +23,121 @@ export function useDragonDraft(ownerId: string) {
   const alive = useRef(false);
   const revision = useRef(0);
   const loadRevision = useRef(0);
+  const cloudEnabled = useRef(false);
+  const cloudRevision = useRef(0);
+  const cloudQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const [cloudState, setCloudState] = useState<"local" | "synced" | "error">("local");
+
+  const syncCloud = useCallback((snapshot: DragonDraft): Promise<void> => {
+    if (!cloudEnabled.current || snapshot.createdDragonUuid) return Promise.resolve();
+    setCloudState("local");
+    const task = cloudQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const nextRevision = await saveCloudDraft(
+          snapshot,
+          cloudRevision.current,
+          async (partial) => {
+            cloudRevision.current = partial;
+            if (current.current?.draftId === snapshot.draftId) {
+              const amended = { ...current.current, cloudRevision: partial };
+              current.current = amended;
+              await saveDragonDraft(amended);
+              if (alive.current) setDraft(amended);
+            }
+          },
+        );
+        cloudRevision.current = nextRevision;
+        if (current.current?.draftId === snapshot.draftId) {
+          const latest = current.current;
+          const acknowledged = {
+            ...latest,
+            cloudRevision: nextRevision,
+            cloudSyncedAt:
+              latest.updatedAt === snapshot.updatedAt ? snapshot.updatedAt : latest.cloudSyncedAt,
+          };
+          current.current = acknowledged;
+          await saveDragonDraft(acknowledged);
+          if (alive.current) setDraft(acknowledged);
+        }
+        if (alive.current)
+          setCloudState(
+            current.current?.updatedAt === current.current?.cloudSyncedAt ? "synced" : "local",
+          );
+      });
+    cloudQueue.current = task;
+    return task;
+  }, []);
 
   const reload = useCallback(async () => {
     const request = ++loadRevision.current;
+    let saved: DragonDraft | null = null;
     setStatus("loading");
     setError(null);
     try {
-      const saved = await loadDragonDraft(ownerId);
+      await cloudQueue.current.catch(() => undefined);
+      saved = await loadDragonDraft(ownerId);
+      const available = await cloudSchemaAvailable();
+      const remote = available ? await loadCloudDraft(ownerId) : null;
       if (!alive.current || request !== loadRevision.current) return;
-      const next = saved ?? createEmptyDragonDraft(ownerId);
+      if (saved && remote && saved.draftId !== remote.draftId)
+        throw new Error(
+          "다른 기기의 제작 초안이 있습니다. 이 기기의 초안을 보존했습니다. 충돌 해결 전에는 생성을 진행할 수 없습니다.",
+        );
+      if (
+        saved &&
+        remote &&
+        remote.cloudRevision! > (saved.cloudRevision ?? 0) &&
+        saved.updatedAt > (saved.cloudSyncedAt ?? 0)
+      )
+        throw new Error("두 기기에서 초안이 동시에 수정되었습니다. 이 기기의 초안을 보존했습니다.");
+      const next =
+        remote && (!saved || remote.cloudRevision! > (saved.cloudRevision ?? 0))
+          ? {
+              ...remote,
+              updatedAt: Math.max(remote.updatedAt, (saved?.updatedAt ?? 0) + 1),
+              cloudSyncedAt: Math.max(remote.updatedAt, (saved?.updatedAt ?? 0) + 1),
+            }
+          : (saved ?? createEmptyDragonDraft(ownerId));
       // Never write defaults until the existing account-specific record was read.
-      if (!saved) await saveDragonDraft(next);
+      if (!saved || next !== saved) await saveDragonDraft(next);
       if (!alive.current || request !== loadRevision.current) return;
+      cloudEnabled.current = available;
+      cloudRevision.current = next.cloudRevision ?? 0;
       current.current = next;
       setDraft(next);
-      setRestored(!!saved);
-      setStatus("saved");
-    } catch {
+      setRestored(!!saved || !!remote);
+      if (
+        available &&
+        !(next.creationBackend === "cloud" && next.creationAttemptedAt) &&
+        (!remote || next.updatedAt > (next.cloudSyncedAt ?? 0))
+      ) {
+        await syncCloud(next);
+      }
       if (!alive.current || request !== loadRevision.current) return;
+      setCloudState(
+        available && current.current?.updatedAt === current.current?.cloudSyncedAt
+          ? "synced"
+          : "local",
+      );
+      setStatus("saved");
+    } catch (cause) {
+      if (!alive.current || request !== loadRevision.current) return;
+      if (saved && !current.current) {
+        current.current = saved;
+        cloudRevision.current = saved.cloudRevision ?? 0;
+        setDraft(saved);
+        setRestored(true);
+      }
+      setCloudState("error");
       setError(
-        "이 브라우저에서 초안을 읽지 못했습니다. 저장소 권한·용량을 확인하고 다시 열어 주세요. 기존 초안은 덮어쓰지 않았습니다.",
+        cause instanceof Error
+          ? cause.message
+          : "초안을 읽지 못했습니다. 기존 초안은 덮어쓰지 않았습니다.",
       );
       setStatus("error");
     }
-  }, [ownerId]);
+  }, [ownerId, syncCloud]);
 
   useEffect(() => {
     alive.current = true;
@@ -66,12 +163,16 @@ export function useDragonDraft(ownerId: string) {
       }
       try {
         await saveDragonDraft(next);
+        await syncCloud(next);
         if (alive.current && request === revision.current) setStatus("saved");
-      } catch {
+      } catch (cause) {
         if (alive.current && request === revision.current) {
           setStatus("error");
+          setCloudState("error");
           setError(
-            "초안을 저장하지 못했습니다. 현재 입력은 화면에 남아 있습니다. 저장 공간을 확인한 뒤 다시 저장해 주세요.",
+            cause instanceof Error
+              ? cause.message
+              : "초안을 저장하지 못했습니다. 현재 입력은 화면에 남아 있습니다.",
           );
         }
         throw new Error(
@@ -79,7 +180,7 @@ export function useDragonDraft(ownerId: string) {
         );
       }
     },
-    [ownerId],
+    [ownerId, syncCloud],
   );
 
   const updateDraft = useCallback(
@@ -100,8 +201,14 @@ export function useDragonDraft(ownerId: string) {
   );
 
   const retrySave = useCallback(async () => {
-    if (current.current) await checkpoint(current.current);
-  }, [checkpoint]);
+    if (!current.current) return;
+    if (!cloudEnabled.current && cloudState === "error") {
+      await saveDragonDraft(current.current);
+      await reload();
+    } else {
+      await checkpoint(current.current);
+    }
+  }, [checkpoint, cloudState, reload]);
 
   const clear = useCallback(
     async (completed: DragonDraft) => {
@@ -114,6 +221,9 @@ export function useDragonDraft(ownerId: string) {
   const discard = useCallback(async () => {
     const previous = current.current;
     if (!previous || previous.creationAttemptedAt || previous.createdDragonUuid) return;
+    await cloudQueue.current.catch(() => undefined);
+    if (cloudEnabled.current && cloudRevision.current > 0)
+      await abandonCloudDraft(ownerId, previous.draftId);
     await deleteDragonDraft(ownerId, previous.draftId);
     if (!alive.current) return;
     const next = createEmptyDragonDraft(ownerId);
@@ -132,5 +242,7 @@ export function useDragonDraft(ownerId: string) {
     retrySave,
     clear,
     discard,
+    cloudState,
+    cloudEnabled: cloudEnabled.current,
   };
 }

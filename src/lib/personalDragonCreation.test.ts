@@ -167,6 +167,31 @@ describe("personal dragon creation checkpoints", () => {
     expect(deps.clear).not.toHaveBeenCalled();
   });
 
+  it("retries a cloud draft by its idempotent draft ID after losing the response", async () => {
+    const { deps, state } = harness();
+    deps.create.mockRejectedValueOnce(new Error("response lost after commit"));
+    await expect(
+      completePersonalDragonCreation(draftFixture(), { ...deps, backend: "cloud" }),
+    ).rejects.toMatchObject({ code: "uncertain_creation" });
+    expect(state.active?.creationBackend).toBe("cloud");
+    await expect(
+      completePersonalDragonCreation(state.active!, { ...deps, backend: "cloud" }),
+    ).resolves.toBe(17);
+    expect(deps.create).toHaveBeenCalledTimes(2);
+    expect(deps.checkpoint).toHaveBeenCalledTimes(2);
+    expect(deps.create.mock.calls[0][0].draftId).toBe(deps.create.mock.calls[1][0].draftId);
+    expect(state.calls.slice(0, 2)).toEqual(["checkpoint", "upload"]);
+  });
+
+  it("never retries a cloud attempt through the legacy backend", async () => {
+    const { deps } = harness();
+    const uncertain = draftFixture({ creationAttemptedAt: 1000, creationBackend: "cloud" });
+    await expect(completePersonalDragonCreation(uncertain, deps)).rejects.toMatchObject({
+      code: "uncertain_creation",
+    });
+    expect(deps.upload).not.toHaveBeenCalled();
+  });
+
   it.each(["", "not-a-uuid", null, undefined, 42])(
     "treats malformed creation response %s as uncertain without clearing its checkpoint",
     async (result) => {
