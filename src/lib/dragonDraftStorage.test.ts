@@ -10,6 +10,7 @@ import {
   loadDragonDraft,
   saveDragonDraft,
   validateDragonDraft,
+  selectedDragonDrawing,
   type DragonDraft,
 } from "./dragonDraftStorage";
 
@@ -142,7 +143,7 @@ describe("dragon draft validation", () => {
   it("creates an account-scoped versioned draft with resumable defaults", () => {
     const value = createEmptyDragonDraft(OWNER);
     expect(value).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       ownerId: OWNER,
       step: 1,
       element: "Earth",
@@ -173,7 +174,7 @@ describe("dragon draft validation", () => {
   it.each([
     null,
     [],
-    { schemaVersion: 2 },
+    { schemaVersion: 3 },
     { step: 4 },
     { element: "Storm" },
     { name: "a".repeat(41) },
@@ -206,6 +207,51 @@ describe("dragon draft validation", () => {
       selectedImage: "cleaned",
     });
     expect(validateDragonDraft(value, OWNER)).toEqual(value);
+  });
+
+  it("upgrades existing version-one drafts and archives without changing their artwork", () => {
+    const legacy = {
+      ...draft({
+        originalImage: drawing("old original"),
+        cleanedImage: drawing("old AI"),
+        selectedImage: "cleaned",
+      }),
+      schemaVersion: 1,
+    };
+    const { preparedImage: _unused, ...stored } = legacy;
+    const upgraded = validateDragonDraft(stored, OWNER);
+    expect(upgraded.schemaVersion).toBe(2);
+    expect(upgraded.preparedImage).toBeNull();
+    expect(upgraded.originalImage).toBe(legacy.originalImage);
+    expect(selectedDragonDrawing(upgraded)).toBe(legacy.cleanedImage);
+  });
+
+  it("requires an original and a valid prepared blob for a prepared selection", () => {
+    expect(() => validateDragonDraft(draft({ selectedImage: "prepared" }), OWNER)).toThrow();
+    expect(() => validateDragonDraft(draft({ preparedImage: drawing() }), OWNER)).toThrow();
+    expect(() =>
+      validateDragonDraft(
+        draft({
+          originalImage: drawing(),
+          preparedImage: new Blob(["bad"], { type: "text/plain" }),
+        }),
+        OWNER,
+      ),
+    ).toThrow();
+  });
+
+  it("selects the exact original, prepared or AI version for card upload and AI input", () => {
+    const originalImage = drawing("original");
+    const preparedImage = drawing("cropped");
+    const cleanedImage = drawing("AI");
+    const versions = { original: originalImage, prepared: preparedImage, cleaned: cleanedImage };
+    for (const selectedImage of ["original", "prepared", "cleaned"] as const) {
+      const value = validateDragonDraft(
+        draft({ originalImage, preparedImage, cleanedImage, selectedImage }),
+        OWNER,
+      );
+      expect(selectedDragonDrawing(value)).toBe(versions[selectedImage]);
+    }
   });
 
   it("rejects empty, unsupported, oversized, and non-Blob images", () => {
@@ -311,22 +357,26 @@ describe("dragon draft persistence (transaction double)", () => {
     await expect(loadDragonDraft(OWNER)).rejects.toThrow("다른 계정");
   });
 
-  it("archives immutable original and cleaned blobs without clearing the active draft", async () => {
+  it("restores and archives original, prepared and AI bytes independently", async () => {
     installDatabaseDouble();
     const value = draft({
       originalImage: drawing("original"),
+      preparedImage: drawing("cropped and rotated"),
       cleanedImage: drawing("cleaned"),
-      selectedImage: "cleaned",
+      selectedImage: "prepared",
       creationAttemptedAt: 1000,
       createdDragonUuid: DRAGON,
     });
     await saveDragonDraft(value);
+    const restored = await loadDragonDraft(OWNER);
+    expect(await selectedDragonDrawing(restored!)?.text()).toBe("cropped and rotated");
     await archiveDragonDraft(value, DRAGON);
     expect(await loadDragonDraft(OWNER)).not.toBeNull();
     await deleteDragonDraft(OWNER, DRAFT);
     const archived = await loadDragonArchive(OWNER, DRAGON);
     expect(archived?.createdDragonUuid).toBe(DRAGON);
     expect(await archived?.originalImage?.text()).toBe("original");
+    expect(await archived?.preparedImage?.text()).toBe("cropped and rotated");
     expect(await archived?.cleanedImage?.text()).toBe("cleaned");
     expect(await loadDragonArchive(OTHER_OWNER, DRAGON)).toBeNull();
   });

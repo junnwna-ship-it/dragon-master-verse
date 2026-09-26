@@ -14,6 +14,7 @@ type ArchiveState =
       status: "ready";
       draft: DragonDraft | null;
       originalUrl: string | null;
+      preparedUrl: string | null;
       cleanedUrl: string | null;
     };
 
@@ -43,8 +44,9 @@ function DragonDrawingArchiveContent({ ownerId, dragonUuid }: ArchiveProps) {
       .then((draft) => {
         if (!active) return;
         const originalUrl = imageUrl(draft?.originalImage ?? null);
+        const preparedUrl = imageUrl(draft?.preparedImage ?? null);
         const cleanedUrl = imageUrl(draft?.cleanedImage ?? null);
-        setState({ status: "ready", draft, originalUrl, cleanedUrl });
+        setState({ status: "ready", draft, originalUrl, preparedUrl, cleanedUrl });
       })
       .catch(() => {
         releaseUrls();
@@ -79,7 +81,7 @@ function DragonDrawingArchiveContent({ ownerId, dragonUuid }: ArchiveProps) {
 
   if (!state.draft) return null;
 
-  const { draft, originalUrl, cleanedUrl } = state;
+  const { draft, originalUrl, preparedUrl, cleanedUrl } = state;
   const storyFields = [
     { label: "우리의 첫 만남", value: draft.origin },
     { label: "드래곤의 성격", value: draft.personality },
@@ -105,6 +107,7 @@ function DragonDrawingArchiveContent({ ownerId, dragonUuid }: ArchiveProps) {
           <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
             {[
               { kind: "original", label: "원본 그림", url: originalUrl },
+              { kind: "prepared", label: "자르기·회전 편집본", url: preparedUrl },
               { kind: "cleaned", label: "AI 정돈본", url: cleanedUrl },
             ].map(({ kind, label, url }) =>
               url ? (

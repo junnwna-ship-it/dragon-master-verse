@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Camera,
   Check,
+  Crop,
   ImageUp,
   Loader2,
   Sparkles,
@@ -19,8 +20,10 @@ import { ownedGrowthKey } from "@/hooks/useOwnedGrowth";
 import { supabase } from "@/integrations/supabase/client";
 import { cleanDragonDrawing } from "@/lib/dragonImage.functions";
 import { useGameStore, type Element } from "@/store/dragons";
-import { archiveDragonDraft } from "@/lib/dragonDraftStorage";
+import { archiveDragonDraft, selectedDragonDrawing } from "@/lib/dragonDraftStorage";
 import { completePersonalDragonCreation } from "@/lib/personalDragonCreation";
+import { imageToJpeg, loadDrawing } from "@/lib/dragonDrawingImage";
+import { DragonDrawingEditor } from "./DragonDrawingEditor";
 
 const ELEMENTS: Array<{ value: Element; label: string; color: string }> = [
   { value: "Earth", label: "대지", color: "border-amber-400/60 bg-amber-400/10 text-amber-100" },
@@ -60,46 +63,6 @@ const ELEMENT_STATS: Record<Element, { maxHp: number; mp: number; atk: number; d
   Light: { maxHp: 1450, mp: 1550, atk: 1350, def: 1100 },
   Dark: { maxHp: 1350, mp: 1400, atk: 1550, def: 1000 },
 };
-
-async function imageToJpeg(source: Blob | string, filter = "none"): Promise<Blob> {
-  const sourceUrl = typeof source === "string" ? source : URL.createObjectURL(source);
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const element = new Image();
-      element.onload = () => resolve(element);
-      element.onerror = () => reject(new Error("이미지를 읽지 못했습니다."));
-      element.src = sourceUrl;
-    });
-    if (
-      !image.naturalWidth ||
-      !image.naturalHeight ||
-      image.naturalWidth * image.naturalHeight > 40_000_000
-    )
-      throw new Error(
-        "이미지가 너무 크거나 읽을 수 없습니다. 4천만 화소 이하의 그림을 사용해 주세요.",
-      );
-    const max = 720;
-    const ratio = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("이미지를 변환하지 못했습니다.");
-    context.fillStyle = "#fff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.filter = filter;
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("이미지를 저장하지 못했습니다."))),
-        "image/jpeg",
-        0.86,
-      );
-    });
-  } finally {
-    if (typeof source !== "string") URL.revokeObjectURL(sourceUrl);
-  }
-}
 
 async function uploadDragonImage(blob: Blob, userId: string) {
   const path = `${userId}/personal-${crypto.randomUUID()}.jpg`;
@@ -177,14 +140,23 @@ function DragonOriginEditor({
   const goal = draft?.goal ?? GOALS[0];
   const origin = draft?.origin ?? "";
   const file = draft?.originalImage ?? null;
+  const preparedImage = draft?.preparedImage ?? null;
   const aiImage = draft?.cleanedImage ?? null;
   const appearance = APPEARANCES.find((item) => item.id === draft?.appearanceId) ?? APPEARANCES[0];
   const originalUrl = useImageUrl(file);
+  const preparedUrl = useImageUrl(preparedImage);
   const cleanedUrl = useImageUrl(aiImage);
   const preview =
-    (draft?.selectedImage === "cleaned" ? cleanedUrl : originalUrl) ?? defaultDragonArt;
+    (draft?.selectedImage === "cleaned"
+      ? cleanedUrl
+      : draft?.selectedImage === "prepared"
+        ? preparedUrl
+        : originalUrl) ?? defaultDragonArt;
   const [saving, setSaving] = useState(false);
   const [cleaning, setCleaning] = useState(false);
+  const [readingImage, setReadingImage] = useState(false);
+  const [editingImage, setEditingImage] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const busy = useRef(false);
   const alive = useRef(false);
@@ -203,7 +175,13 @@ function DragonOriginEditor({
     stepPanel.current?.focus({ preventScroll: true });
   }, [step]);
   const storyPreview = `${name.trim() || "나의 드래곤"} — ${personality} 성격의 ${ELEMENTS.find((item) => item.value === element)?.label} 드래곤. ${origin.trim()} 우리의 성장 약속은 ‘${goal}’. 앞으로 함께 배우며 성장합니다.`;
-  const locked = saving || cleaning || !!draft?.creationAttemptedAt || !!draft?.createdDragonUuid;
+  const locked =
+    saving ||
+    cleaning ||
+    readingImage ||
+    editingImage ||
+    !!draft?.creationAttemptedAt ||
+    !!draft?.createdDragonUuid;
 
   const requireCurrentOwner = async () => {
     if (!alive.current) throw new Error("제작 화면이 닫혔습니다. 다시 열어 주세요.");
@@ -212,7 +190,7 @@ function DragonOriginEditor({
       throw new Error("로그인 계정이 변경되었습니다. 초안은 원래 계정에 보관됩니다.");
   };
 
-  const chooseFile = (event: ChangeEvent<HTMLInputElement>) => {
+  const chooseFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0] ?? null;
     event.target.value = "";
     if (!selected) return;
@@ -225,15 +203,33 @@ function DragonOriginEditor({
       toast.error("이미지는 8MB 이하로 선택해 주세요.");
       return;
     }
-    updateDraft({ originalImage: selected, cleanedImage: null, selectedImage: "original" });
+    busy.current = true;
+    setReadingImage(true);
+    try {
+      const decoded = await loadDrawing(selected);
+      decoded.close();
+      if (!alive.current) return;
+      updateDraft({
+        originalImage: selected,
+        preparedImage: null,
+        cleanedImage: null,
+        selectedImage: "original",
+      });
+    } catch (error) {
+      if (alive.current)
+        toast.error(error instanceof Error ? error.message : "그림을 읽지 못했습니다.");
+    } finally {
+      busy.current = false;
+      if (alive.current) setReadingImage(false);
+    }
   };
 
   const cleanWithAi = async () => {
-    if (!file || busy.current || locked) return;
+    if (!draft || !file || busy.current || locked) return;
     busy.current = true;
     setCleaning(true);
     try {
-      const compressed = await imageToJpeg(file);
+      const compressed = await imageToJpeg(selectedDragonDrawing(draft) ?? file);
       const imageBase64 = await blobToDataUrl(compressed);
       await requireCurrentOwner();
       const result = await cleanDragonDrawing({ data: { imageBase64 } });
@@ -266,8 +262,7 @@ function DragonOriginEditor({
       const createdId = await completePersonalDragonCreation(draft, {
         checkpoint,
         upload: async (snapshot) => {
-          const source =
-            snapshot.selectedImage === "cleaned" ? snapshot.cleanedImage : snapshot.originalImage;
+          const source = selectedDragonDrawing(snapshot);
           const blob = await imageToJpeg(
             source ?? defaultDragonArt,
             snapshot.originalImage ? "none" : appearance.filter,
@@ -357,8 +352,25 @@ function DragonOriginEditor({
   return (
     <section
       className="dragon-builder overflow-hidden rounded-3xl border border-amber-200/25 bg-slate-900/95 shadow-2xl shadow-black/30"
-      aria-busy={saving || cleaning}
+      aria-busy={saving || cleaning || readingImage}
     >
+      {editingImage && file && (
+        <DragonDrawingEditor
+          original={file}
+          returnFocusRef={editButton}
+          onClose={() => setEditingImage(false)}
+          onApply={async (image) => {
+            if (!alive.current || draft.creationAttemptedAt || draft.createdDragonUuid)
+              throw new Error("제작 화면이 변경되었습니다. 다시 열어 주세요.");
+            await checkpoint({
+              ...draft,
+              preparedImage: image,
+              selectedImage: "prepared",
+              updatedAt: Math.max(Date.now(), draft.updatedAt + 1),
+            });
+          }}
+        />
+      )}
       <div className="relative h-44 overflow-hidden sm:h-56">
         <img
           src={creationArt}
@@ -397,7 +409,7 @@ function DragonOriginEditor({
           {status === "error" && (
             <button
               type="button"
-              disabled={saving || cleaning}
+              disabled={saving || cleaning || readingImage || editingImage}
               onClick={() => void retrySave().catch(() => undefined)}
               className="mt-2 min-h-11 rounded-lg border border-amber-200/40 px-3 text-amber-100"
             >
@@ -520,7 +532,7 @@ function DragonOriginEditor({
                       accept="image/png,image/jpeg,image/webp"
                       disabled={locked}
                       className="sr-only"
-                      onChange={chooseFile}
+                      onChange={(event) => void chooseFile(event)}
                     />
                   </label>
                   <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100 hover:bg-emerald-400/20">
@@ -531,11 +543,20 @@ function DragonOriginEditor({
                       capture="environment"
                       disabled={locked}
                       className="sr-only"
-                      onChange={chooseFile}
+                      onChange={(event) => void chooseFile(event)}
                     />
                   </label>
                   {file && (
                     <>
+                      <button
+                        ref={editButton}
+                        type="button"
+                        onClick={() => setEditingImage(true)}
+                        disabled={locked || status !== "saved"}
+                        className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-sm font-bold text-amber-100 disabled:opacity-50"
+                      >
+                        <Crop aria-hidden="true" className="size-4" /> 그림 자르기·회전
+                      </button>
                       <button
                         type="button"
                         onClick={() => void cleanWithAi()}
@@ -559,6 +580,7 @@ function DragonOriginEditor({
                         onClick={() =>
                           updateDraft({
                             originalImage: null,
+                            preparedImage: null,
                             cleanedImage: null,
                             selectedImage: "original",
                           })
@@ -570,12 +592,18 @@ function DragonOriginEditor({
                     </>
                   )}
                   <p className="text-xs leading-relaxed text-slate-500">
-                    AI 정돈은 버튼을 누른 경우에만 실행됩니다. 사람 얼굴이 들어간 사진은 사용하지
-                    말고, 종이에 그린 드래곤만 촬영해 주세요.
+                    사진을 자르고 회전해 드래곤만 남길 수 있어요. AI는 선택한 그림을 정돈하며,
+                    버튼을 눌렀을 때만 실행됩니다. 사람 얼굴은 제외하고 종이에 그린 드래곤만 촬영해
+                    주세요.
                   </p>
+                  {readingImage && (
+                    <p role="status" className="text-sm text-amber-100">
+                      그림과 사진 방향을 확인하는 중…
+                    </p>
+                  )}
                 </div>
               </div>
-              {file && aiImage && (
+              {file && (preparedImage || aiImage) && (
                 <div
                   className="mt-5 grid grid-cols-2 gap-3"
                   role="group"
@@ -584,32 +612,35 @@ function DragonOriginEditor({
                   {(
                     [
                       { value: "original", label: "내가 그린 원본", url: originalUrl },
+                      { value: "prepared", label: "자르기·회전 편집본", url: preparedUrl },
                       { value: "cleaned", label: "AI 정돈본", url: cleanedUrl },
                     ] as const
-                  ).map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      aria-pressed={draft.selectedImage === item.value}
-                      onClick={() => updateDraft({ selectedImage: item.value })}
-                      className={`overflow-hidden rounded-xl border-2 p-2 text-sm ${draft.selectedImage === item.value ? "border-amber-300 bg-amber-300/10 text-amber-100" : "border-white/15 text-slate-300"}`}
-                    >
-                      {item.url && (
-                        <img
-                          src={item.url}
-                          alt={item.label}
-                          className="aspect-square w-full rounded-lg bg-slate-950 object-contain"
-                        />
-                      )}
-                      <span className="mt-2 block font-bold">
-                        {item.label}
-                        {draft.selectedImage === item.value ? " · 선택됨" : " 선택"}
-                      </span>
-                    </button>
-                  ))}
+                  )
+                    .filter((item) => item.url)
+                    .map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        aria-pressed={draft.selectedImage === item.value}
+                        onClick={() => updateDraft({ selectedImage: item.value })}
+                        className={`overflow-hidden rounded-xl border-2 p-2 text-sm ${draft.selectedImage === item.value ? "border-amber-300 bg-amber-300/10 text-amber-100" : "border-white/15 text-slate-300"}`}
+                      >
+                        {item.url && (
+                          <img
+                            src={item.url}
+                            alt={item.label}
+                            className="aspect-square w-full rounded-lg bg-slate-950 object-contain"
+                          />
+                        )}
+                        <span className="mt-2 block font-bold">
+                          {item.label}
+                          {draft.selectedImage === item.value ? " · 선택됨" : " 선택"}
+                        </span>
+                      </button>
+                    ))}
                   <p className="col-span-2 text-xs text-slate-400">
-                    그림을 바꿔 선택해도 두 이미지는 유지됩니다. 비교·선택에는 AI를 다시 호출하지
-                    않습니다.
+                    원본·편집본·AI 정돈본은 따로 보관합니다. 비교하거나 선택을 바꿔도 AI를 다시
+                    호출하지 않습니다. 새 원본을 올리면 이전 편집본과 정돈본은 교체됩니다.
                   </p>
                 </div>
               )}
@@ -745,7 +776,7 @@ function DragonOriginEditor({
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
           <button
             type="button"
-            disabled={saving || cleaning}
+            disabled={saving || cleaning || readingImage || editingImage}
             onClick={() => (step > 1 && !locked ? setStep(step - 1) : onCancel?.())}
             className="flex items-center gap-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-50"
           >

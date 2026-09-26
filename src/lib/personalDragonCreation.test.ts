@@ -11,7 +11,7 @@ const IMAGE_URL = "https://example.test/personal-dragon.jpg";
 
 function draftFixture(overrides: Partial<DragonDraft> = {}): DragonDraft {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     ownerId: "11111111-1111-4111-8111-111111111111",
     draftId: "22222222-2222-4222-8222-222222222222",
     updatedAt: 1000,
@@ -24,6 +24,7 @@ function draftFixture(overrides: Partial<DragonDraft> = {}): DragonDraft {
     appearanceId: "pearl",
     distinctiveFeatures: "작은 별 모양 무늬",
     originalImage: new Blob(["original drawing"], { type: "image/png" }),
+    preparedImage: null,
     cleanedImage: null,
     selectedImage: "original",
     creationAttemptedAt: null,

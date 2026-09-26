@@ -2,7 +2,7 @@ import type { Element } from "@/store/dragons";
 
 /** Browser-local authoring data. Never send these blobs to localStorage. */
 export interface DragonDraft {
-  schemaVersion: 1;
+  schemaVersion: 2;
   ownerId: string;
   draftId: string;
   updatedAt: number;
@@ -15,8 +15,9 @@ export interface DragonDraft {
   appearanceId: string;
   distinctiveFeatures: string;
   originalImage: Blob | null;
+  preparedImage: Blob | null;
   cleanedImage: Blob | null;
-  selectedImage: "original" | "cleaned";
+  selectedImage: "original" | "prepared" | "cleaned";
   /** Non-idempotent RPC checkpoint: do not silently retry when its outcome is unknown. */
   creationAttemptedAt: number | null;
   createdDragonUuid: string | null;
@@ -75,11 +76,11 @@ function imageBlob(value: unknown): Blob | null {
 export function validateDragonDraft(value: unknown, ownerId: string): DragonDraft {
   const expectedOwner = uuid(ownerId);
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(INVALID);
-  const draft = value as Partial<DragonDraft>;
+  const draft = value as Omit<Partial<DragonDraft>, "schemaVersion"> & { schemaVersion?: number };
   const actualOwner = uuid(draft.ownerId);
   if (actualOwner !== expectedOwner) throw new Error(WRONG_OWNER);
   if (
-    draft.schemaVersion !== 1 ||
+    (draft.schemaVersion !== 1 && draft.schemaVersion !== 2) ||
     typeof draft.updatedAt !== "number" ||
     !Number.isSafeInteger(draft.updatedAt) ||
     draft.updatedAt <= 0 ||
@@ -89,17 +90,22 @@ export function validateDragonDraft(value: unknown, ownerId: string): DragonDraf
       (typeof draft.creationAttemptedAt !== "number" ||
         !Number.isSafeInteger(draft.creationAttemptedAt) ||
         draft.creationAttemptedAt <= 0)) ||
-    (draft.selectedImage !== "original" && draft.selectedImage !== "cleaned")
+    !["original", "prepared", "cleaned"].includes(draft.selectedImage ?? "")
   ) {
     throw new Error(INVALID);
   }
   const originalImage = imageBlob(draft.originalImage);
+  const preparedImage = draft.schemaVersion === 1 ? null : imageBlob(draft.preparedImage);
   const cleanedImage = imageBlob(draft.cleanedImage);
-  if ((cleanedImage && !originalImage) || (draft.selectedImage === "cleaned" && !cleanedImage)) {
+  if (
+    ((cleanedImage || preparedImage) && !originalImage) ||
+    (draft.selectedImage === "cleaned" && !cleanedImage) ||
+    (draft.selectedImage === "prepared" && !preparedImage)
+  ) {
     throw new Error(INVALID);
   }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     ownerId: actualOwner,
     draftId: uuid(draft.draftId),
     updatedAt: draft.updatedAt,
@@ -112,8 +118,9 @@ export function validateDragonDraft(value: unknown, ownerId: string): DragonDraf
     appearanceId: textField(draft.appearanceId, 80, false),
     distinctiveFeatures: textField(draft.distinctiveFeatures, 2000),
     originalImage,
+    preparedImage,
     cleanedImage,
-    selectedImage: draft.selectedImage,
+    selectedImage: draft.selectedImage as DragonDraft["selectedImage"],
     creationAttemptedAt: draft.creationAttemptedAt,
     createdDragonUuid: draft.createdDragonUuid === null ? null : uuid(draft.createdDragonUuid),
   };
@@ -123,7 +130,7 @@ export function createEmptyDragonDraft(ownerId: string): DragonDraft {
   const normalizedOwner = uuid(ownerId);
   if (typeof globalThis.crypto?.randomUUID !== "function") throw new Error(UNAVAILABLE);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     ownerId: normalizedOwner,
     draftId: globalThis.crypto.randomUUID(),
     updatedAt: Date.now(),
@@ -136,11 +143,19 @@ export function createEmptyDragonDraft(ownerId: string): DragonDraft {
     appearanceId: "pearl",
     distinctiveFeatures: "",
     originalImage: null,
+    preparedImage: null,
     cleanedImage: null,
     selectedImage: "original",
     creationAttemptedAt: null,
     createdDragonUuid: null,
   };
+}
+
+/** The same selected version is used in preview, AI input and card upload. */
+export function selectedDragonDrawing(draft: DragonDraft): Blob | null {
+  if (draft.selectedImage === "prepared") return draft.preparedImage;
+  if (draft.selectedImage === "cleaned") return draft.cleanedImage;
+  return draft.originalImage;
 }
 
 // All calls in this tab observe invocation order, including load-after-save and delete-after-save.
