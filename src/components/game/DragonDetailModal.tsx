@@ -58,6 +58,7 @@ import { toast } from "sonner";
 import { useInventory, emitInventoryChanged } from "@/hooks/useInventory";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOwnedGrowth, ownedGrowthKey } from "@/hooks/useOwnedGrowth";
+import { DragonDrawingArchive } from "./story/DragonDrawingArchive";
 
 type ElementMeta = {
   labelKey: string;
@@ -187,7 +188,7 @@ export function DragonDetailModal({
 }) {
   // Current stats (HP/MP/ATK/DEF/level/EXP/stat points) come from the
   // caller's own `owned_dragons` row, not the shared `dragons` table.
-  const { resolve } = useOwnedGrowth();
+  const { resolve, userId } = useOwnedGrowth();
   const dragon = resolve(baseDragon);
 
   // Exit animation gate: closing sets `visible` to false, and the real
@@ -498,6 +499,9 @@ export function DragonDetailModal({
                   </div>
                 </section>
 
+                {userId && dragon.uuid && dragon.createdBy === userId && (
+                  <DragonDrawingArchive ownerId={userId} dragonUuid={dragon.uuid} />
+                )}
                 <TrainingSection dragon={dragon} />
                 <BondingSection dragon={dragon} />
               </div>

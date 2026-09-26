@@ -62,13 +62,20 @@ function DragonJourneyGate({
   const fetchDragons = useGameStore((s) => s.fetchDragons);
   const { byDragon, loading, userId } = useOwnedGrowth();
   const navigate = useNavigate();
-  const [creating, setCreating] = useState(false);
+  const [creatingFor, setCreatingFor] = useState<string | null>(null);
+  const creating = !!userId && creatingFor === userId;
+  const owned = dragons.filter((d) => d.uuid && byDragon.has(d.uuid));
+
+  // Keep the first-ever creation flow mounted when its ownership/roster refreshes.
+  useEffect(() => {
+    if (userId && !loading && !loadingDragons && owned.length === 0) setCreatingFor(userId);
+  }, [userId, loading, loadingDragons, owned.length]);
 
   useEffect(() => {
     if (dragons.length === 0) void fetchDragons();
   }, [dragons.length, fetchDragons]);
 
-  if (loading || loadingDragons) {
+  if ((loading || loadingDragons) && !creating) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
         드래곤을 불러오는 중…
@@ -76,9 +83,8 @@ function DragonJourneyGate({
     );
   }
 
-  const owned = dragons.filter((d) => d.uuid && byDragon.has(d.uuid));
   const selected = owned.find((d) => d.id === dragonId);
-  if (selected)
+  if (selected && !creating)
     return (
       <VisualNovelPlayer
         key={`${chapterId}:${selected.uuid}`}
@@ -109,10 +115,11 @@ function DragonJourneyGate({
             <DragonOriginBuilder
               onCancel={() =>
                 owned.length > 0
-                  ? setCreating(false)
+                  ? setCreatingFor(null)
                   : void navigate({ to: "/app", search: { view: "lobby" } })
               }
               onCreated={(createdId) => {
+                setCreatingFor(null);
                 void navigate({
                   to: "/story/play/$chapterId",
                   params: { chapterId: "my_dragon" },
@@ -156,7 +163,7 @@ function DragonJourneyGate({
           <>
             <button
               type="button"
-              onClick={() => setCreating(true)}
+              onClick={() => setCreatingFor(userId)}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300/40 bg-violet-400/15 px-4 py-3 font-bold text-violet-100 hover:bg-violet-400/25"
             >
               ✨ 새 드래곤의 이미지와 성장서사 만들기
