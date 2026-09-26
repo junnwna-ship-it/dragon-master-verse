@@ -32,9 +32,7 @@ export function useInventory() {
       setLoading(false);
       return;
     }
-    const { data, error } = await supabase
-      .from("user_inventory")
-      .select("item_key, quantity");
+    const { data, error } = await supabase.from("user_inventory").select("item_key, quantity");
     if (error) {
       console.error("[useInventory] fetch:", error);
       setItems({});
@@ -48,9 +46,13 @@ export function useInventory() {
 
   useEffect(() => {
     void refetch();
-    const onChange = () => { void refetch(); };
+    const onChange = () => {
+      void refetch();
+    };
     window.addEventListener(INVENTORY_CHANGED_EVENT, onChange);
-    const { data: sub } = supabase.auth.onAuthStateChange(() => { void refetch(); });
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      void refetch();
+    });
     return () => {
       window.removeEventListener(INVENTORY_CHANGED_EVENT, onChange);
       sub.subscription.unsubscribe();

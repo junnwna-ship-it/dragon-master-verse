@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, ArrowLeft, ScrollText, Loader2, Sparkles, HelpCircle, GitBranch, LayoutTemplate, Play } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Save,
+  ArrowLeft,
+  ScrollText,
+  Loader2,
+  Sparkles,
+  HelpCircle,
+  GitBranch,
+  LayoutTemplate,
+  Play,
+} from "lucide-react";
 import { UgcStoryPlayer } from "@/components/game/story/UgcStoryPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,10 +39,7 @@ type UserStory = {
   updated_at: string;
 };
 
-// The table is fresh, so the generated types may not include it yet.
-const table = () => (supabase as unknown as {
-  from: (t: string) => any;
-}).from("user_stories");
+const table = () => supabase.from("user_stories");
 
 export function CreatorStudio() {
   const { user, loading: authLoading } = useAuth();
@@ -61,7 +70,7 @@ export function CreatorStudio() {
       return;
     }
     setLoading(true);
-    const { data: profile } = await (supabase as unknown as { from: (t: string) => any })
+    const { data: profile } = await supabase
       .from("profiles")
       .select("bonus_story_slots")
       .eq("user_id", user.id)
@@ -100,7 +109,9 @@ export function CreatorStudio() {
     setCreating(false);
     if (error) {
       toast.error(
-        error.message?.includes("STORY_LIMIT_REACHED") ? limitMessage : `생성 실패: ${error.message}`,
+        error.message?.includes("STORY_LIMIT_REACHED")
+          ? limitMessage
+          : `생성 실패: ${error.message}`,
       );
       return;
     }
@@ -125,7 +136,8 @@ export function CreatorStudio() {
   };
 
   const handleDelete = async (story: UserStory) => {
-    if (!window.confirm(`"${story.title}" 스토리를 삭제할까요? 삭제하면 슬롯 1개가 확보됩니다.`)) return;
+    if (!window.confirm(`"${story.title}" 스토리를 삭제할까요? 삭제하면 슬롯 1개가 확보됩니다.`))
+      return;
     const { error } = await table().delete().eq("id", story.id);
     if (error) {
       toast.error(`삭제 실패: ${error.message}`);
@@ -141,7 +153,10 @@ export function CreatorStudio() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <div className="flex items-center justify-between">
-        <Link to="/app" className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
+        <Link
+          to="/app"
+          className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
+        >
           <ArrowLeft className="h-3 w-3" /> Back
         </Link>
         <Link to="/" className="text-xs text-slate-400 hover:text-slate-200">
@@ -152,8 +167,7 @@ export function CreatorStudio() {
       <header className="space-y-1">
         <p className="text-xs uppercase tracking-widest text-violet-400">Creator Studio</p>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-100">
-          <ScrollText className="h-5 w-5 text-violet-300" />
-          내 스토리 만들기
+          <ScrollText className="h-5 w-5 text-violet-300" />내 스토리 만들기
         </h1>
       </header>
 
@@ -168,9 +182,7 @@ export function CreatorStudio() {
             }`}
           >
             {count} / {maxStories}
-            {bonusSlots > 0 && (
-              <span className="ml-1 text-amber-300">(+{bonusSlots} 보너스)</span>
-            )}
+            {bonusSlots > 0 && <span className="ml-1 text-amber-300">(+{bonusSlots} 보너스)</span>}
           </span>
         </div>
         <div
@@ -214,8 +226,8 @@ export function CreatorStudio() {
               : "border border-violet-400/40 bg-violet-500/20 text-violet-100 hover:bg-violet-500/30"
           }`}
         >
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          새 스토리 만들기
+          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}새
+          스토리 만들기
         </button>
         {atLimit && (
           <button
@@ -276,11 +288,16 @@ export function CreatorStudio() {
       ) : !user ? (
         <p className="text-sm text-slate-400">로그인하면 나만의 스토리를 만들 수 있습니다.</p>
       ) : stories.length === 0 ? (
-        <p className="text-sm text-slate-400">아직 만든 스토리가 없습니다. 위 버튼으로 시작해 보세요.</p>
+        <p className="text-sm text-slate-400">
+          아직 만든 스토리가 없습니다. 위 버튼으로 시작해 보세요.
+        </p>
       ) : (
         <ul className="space-y-4">
           {stories.map((s) => (
-            <li key={s.id} className="space-y-2 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+            <li
+              key={s.id}
+              className="space-y-2 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4"
+            >
               <input
                 value={s.title}
                 onChange={(e) => patch(s.id, { title: e.target.value })}
@@ -301,11 +318,13 @@ export function CreatorStudio() {
               />
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] text-slate-400">블록 추가:</span>
-                {([
-                  ["장면", SCENE_BLOCK],
-                  ["선택지", CHOICE_BLOCK],
-                  ["퀴즈", QUIZ_BLOCK],
-                ] as const).map(([label, block]) => (
+                {(
+                  [
+                    ["장면", SCENE_BLOCK],
+                    ["선택지", CHOICE_BLOCK],
+                    ["퀴즈", QUIZ_BLOCK],
+                  ] as const
+                ).map(([label, block]) => (
                   <button
                     key={label}
                     type="button"
@@ -347,7 +366,11 @@ export function CreatorStudio() {
                     disabled={savingId === s.id}
                     className="flex items-center gap-1 rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
                   >
-                    {savingId === s.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                    {savingId === s.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Save className="h-3 w-3" />
+                    )}
                     저장
                   </button>
                   <button

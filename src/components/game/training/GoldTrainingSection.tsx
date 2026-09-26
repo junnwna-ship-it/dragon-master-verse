@@ -30,7 +30,9 @@ export function GoldTrainingSection({ dragon }: { dragon: Dragon }) {
       return;
     }
     if (stats.gold < cost) {
-      toast.error(`골드가 부족합니다. (보유 ${stats.gold.toLocaleString()}G / 필요 ${cost.toLocaleString()}G)`);
+      toast.error(
+        `골드가 부족합니다. (보유 ${stats.gold.toLocaleString()}G / 필요 ${cost.toLocaleString()}G)`,
+      );
       return;
     }
     setBusy(statCode);
@@ -79,7 +81,12 @@ export function GoldTrainingSection({ dragon }: { dragon: Dragon }) {
               }`}
             >
               {s.icon_url ? (
-                <img src={s.icon_url} alt={s.stat_name} loading="lazy" className="h-8 w-8 rounded-lg object-cover" />
+                <img
+                  src={s.icon_url}
+                  alt={s.stat_name}
+                  loading="lazy"
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
               ) : (
                 <div className="h-8 w-8 rounded-lg border border-dashed border-slate-700" />
               )}

@@ -10,14 +10,7 @@ import type { Combatant, LogEntry } from "@/components/game/battle/battleLogic";
  */
 
 export type BattleEffectType =
-  | "heal_hp"
-  | "heal_mp"
-  | "buff_atk"
-  | "buff_def"
-  | "damage"
-  | "debuff_atk"
-  | "revive"
-  | "shield";
+  "heal_hp" | "heal_mp" | "buff_atk" | "buff_def" | "damage" | "debuff_atk" | "revive" | "shield";
 
 export interface ResolvedItemEffect {
   item_key: string;
@@ -82,8 +75,8 @@ export function applyItemEffect(
     selfBuffs: [...stateIn.selfBuffs],
     enemyBuffs: [...stateIn.enemyBuffs],
   };
-  let self: Combatant = { ...selfIn };
-  let enemy: Combatant = { ...enemyIn };
+  const self: Combatant = { ...selfIn };
+  const enemy: Combatant = { ...enemyIn };
   const logs: Omit<LogEntry, "id">[] = [];
 
   if (state.usesLeft <= 0) {
@@ -99,7 +92,10 @@ export function applyItemEffect(
       const heal = Math.round((self.engineMaxHp * value) / 100);
       const before = self.engineHp;
       self.engineHp = Math.min(self.engineMaxHp, self.engineHp + heal);
-      logs.push({ text: `${label}: ${self.base.name} +${self.engineHp - before} HP`, tone: "info" });
+      logs.push({
+        text: `${label}: ${self.base.name} +${self.engineHp - before} HP`,
+        tone: "info",
+      });
       break;
     }
     case "heal_mp": {
@@ -197,7 +193,10 @@ export function tickItemBuffs(
 }
 
 /** Consumes one shield charge; returns whether the incoming hit is nullified. */
-export function consumeShield(stateIn: ItemBattleState): { state: ItemBattleState; blocked: boolean } {
+export function consumeShield(stateIn: ItemBattleState): {
+  state: ItemBattleState;
+  blocked: boolean;
+} {
   if (stateIn.shieldCharges <= 0) return { state: stateIn, blocked: false };
   return { state: { ...stateIn, shieldCharges: stateIn.shieldCharges - 1 }, blocked: true };
 }

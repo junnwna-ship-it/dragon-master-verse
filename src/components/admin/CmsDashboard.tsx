@@ -1,5 +1,22 @@
 import { useMemo, useState } from "react";
-import { Loader2, Plus, Save, Trash2, ShieldAlert, Store, Dumbbell, Map, Settings2, BookOpen, Eye, EyeOff, X, Users, Music, Swords } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Save,
+  Trash2,
+  ShieldAlert,
+  Store,
+  Dumbbell,
+  Map,
+  Settings2,
+  BookOpen,
+  Eye,
+  EyeOff,
+  X,
+  Users,
+  Music,
+  Swords,
+} from "lucide-react";
 import { Crown, PenSquare, ScrollText, Sparkles } from "lucide-react";
 import { UgcReviewPanel } from "./UgcReviewPanel";
 import { AuditLogPanel } from "@/components/admin/AuditLogPanel";
@@ -90,10 +107,23 @@ const TABS: TabDef[] = [
       { key: "price_usd", label: "가격 (USD)", kind: "number", placeholder: "1.99" },
       { key: "gold_reward", label: "지급 골드", kind: "number", placeholder: "1000" },
       { key: "item_type", label: "아이템 타입", kind: "text", placeholder: "gold / potion / pass" },
-      { key: "image_url", label: "이미지 URL (텍스트)", kind: "url", placeholder: "https://.../item.png" },
+      {
+        key: "image_url",
+        label: "이미지 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../item.png",
+      },
       { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
     ],
-    blank: { name: "", price_usd: 0, gold_reward: 0, item_type: "gold", image_url: "", sort_order: 0, is_published: false },
+    blank: {
+      name: "",
+      price_usd: 0,
+      gold_reward: 0,
+      item_type: "gold",
+      image_url: "",
+      sort_order: 0,
+      is_published: false,
+    },
   },
   {
     key: "training_stats",
@@ -106,10 +136,23 @@ const TABS: TabDef[] = [
       { key: "stat_code", label: "능력 코드", kind: "text", placeholder: "atk / def / hp / mp" },
       { key: "base_cost", label: "기본 비용", kind: "number", placeholder: "100" },
       { key: "stat_increase", label: "상승치", kind: "number", placeholder: "10" },
-      { key: "icon_url", label: "아이콘 URL (텍스트)", kind: "url", placeholder: "https://.../icon.png" },
+      {
+        key: "icon_url",
+        label: "아이콘 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../icon.png",
+      },
       { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
     ],
-    blank: { stat_name: "", stat_code: "", base_cost: 100, stat_increase: 10, icon_url: "", sort_order: 0, is_published: false },
+    blank: {
+      stat_name: "",
+      stat_code: "",
+      base_cost: 100,
+      stat_increase: 10,
+      icon_url: "",
+      sort_order: 0,
+      is_published: false,
+    },
   },
   {
     key: "story_nodes",
@@ -122,10 +165,28 @@ const TABS: TabDef[] = [
       { key: "stage_number", label: "스테이지 번호", kind: "number", placeholder: "1" },
       { key: "node_type", label: "노드 타입", kind: "text", placeholder: "battle / quiz / boss" },
       { key: "description", label: "설명", kind: "textarea", placeholder: "노드 소개 문구" },
-      { key: "quiz_ids", label: "퀴즈 ID 목록 (콤마 구분)", kind: "uuidlist", placeholder: "uuid, uuid" },
-      { key: "background_image_url", label: "배경 이미지 URL (텍스트)", kind: "url", placeholder: "https://.../bg.jpg" },
+      {
+        key: "quiz_ids",
+        label: "퀴즈 ID 목록 (콤마 구분)",
+        kind: "uuidlist",
+        placeholder: "uuid, uuid",
+      },
+      {
+        key: "background_image_url",
+        label: "배경 이미지 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../bg.jpg",
+      },
     ],
-    blank: { title: "", stage_number: 1, node_type: "battle", description: "", quiz_ids: [], background_image_url: "", is_published: false },
+    blank: {
+      title: "",
+      stage_number: 1,
+      node_type: "battle",
+      description: "",
+      quiz_ids: [],
+      background_image_url: "",
+      is_published: false,
+    },
   },
   {
     key: "game_settings",
@@ -163,7 +224,12 @@ const TABS: TabDef[] = [
       { key: "body_text", label: "본문 텍스트", kind: "textarea", hidden: true },
       { key: "options", label: "선택지", kind: "json", hidden: true },
       { key: "state_changes", label: "노드 진입 시 스탯 변화", kind: "json", hidden: true },
-      { key: "background_image_url", label: "배경 이미지 URL (텍스트)", kind: "url", placeholder: "https://.../bg.jpg" },
+      {
+        key: "background_image_url",
+        label: "배경 이미지 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../bg.jpg",
+      },
     ],
     blank: {
       chapter_id: "prologue",
@@ -189,12 +255,35 @@ const TABS: TabDef[] = [
     fields: [
       { key: "name", label: "캐릭터 이름", kind: "text", placeholder: "마법사 멀린" },
       { key: "role", label: "역할", kind: "text", placeholder: "npc / boss / ally / narrator" },
-      { key: "description", label: "소개", kind: "textarea", placeholder: "고대의 지식을 지키는 현자" },
-      { key: "dialogue_sample", label: "대표 대사", kind: "textarea", placeholder: "\"준비되었는가, 어린 드래곤 마스터?\"" },
-      { key: "portrait_url", label: "초상화 URL (텍스트)", kind: "url", placeholder: "https://.../merlin.png" },
+      {
+        key: "description",
+        label: "소개",
+        kind: "textarea",
+        placeholder: "고대의 지식을 지키는 현자",
+      },
+      {
+        key: "dialogue_sample",
+        label: "대표 대사",
+        kind: "textarea",
+        placeholder: '"준비되었는가, 어린 드래곤 마스터?"',
+      },
+      {
+        key: "portrait_url",
+        label: "초상화 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../merlin.png",
+      },
       { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
     ],
-    blank: { name: "", role: "npc", description: "", dialogue_sample: "", portrait_url: "", sort_order: 0, is_published: false },
+    blank: {
+      name: "",
+      role: "npc",
+      description: "",
+      dialogue_sample: "",
+      portrait_url: "",
+      sort_order: 0,
+      is_published: false,
+    },
   },
   {
     key: "bgm_tracks",
@@ -204,9 +293,24 @@ const TABS: TabDef[] = [
     titleField: "title",
     fields: [
       { key: "title", label: "트랙 제목", kind: "text", placeholder: "Dragon's Lullaby" },
-      { key: "scene_code", label: "적용 장면 코드", kind: "text", placeholder: "lobby / story / battle / shop" },
-      { key: "audio_url", label: "오디오 URL (텍스트)", kind: "url", placeholder: "https://.../bgm.mp3" },
-      { key: "cover_image_url", label: "커버 이미지 URL (텍스트)", kind: "url", placeholder: "https://.../cover.jpg" },
+      {
+        key: "scene_code",
+        label: "적용 장면 코드",
+        kind: "text",
+        placeholder: "lobby / story / battle / shop",
+      },
+      {
+        key: "audio_url",
+        label: "오디오 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../bgm.mp3",
+      },
+      {
+        key: "cover_image_url",
+        label: "커버 이미지 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../cover.jpg",
+      },
       { key: "credit", label: "저작자 표기", kind: "text", placeholder: "Music by ..." },
       { key: "loop_enabled", label: "반복 재생", kind: "boolean" },
       { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
@@ -231,12 +335,32 @@ const TABS: TabDef[] = [
     fields: [
       { key: "name", label: "스킬 이름", kind: "text", placeholder: "화염 브레스" },
       { key: "skill_code", label: "스킬 코드", kind: "text", placeholder: "fire_breath" },
-      { key: "element", label: "속성", kind: "text", placeholder: "fire / water / wind / earth / neutral" },
+      {
+        key: "element",
+        label: "속성",
+        kind: "text",
+        placeholder: "fire / water / wind / earth / neutral",
+      },
       { key: "mp_cost", label: "MP 소모", kind: "number", placeholder: "30" },
       { key: "power", label: "위력", kind: "number", placeholder: "120" },
-      { key: "description", label: "스킬 설명", kind: "textarea", placeholder: "적 전체에게 화염 피해를 입힌다." },
-      { key: "log_text", label: "전투 로그 텍스트", kind: "textarea", placeholder: "{attacker}의 화염 브레스! {target}에게 {damage} 피해!" },
-      { key: "icon_url", label: "아이콘 URL (텍스트)", kind: "url", placeholder: "https://.../skill.png" },
+      {
+        key: "description",
+        label: "스킬 설명",
+        kind: "textarea",
+        placeholder: "적 전체에게 화염 피해를 입힌다.",
+      },
+      {
+        key: "log_text",
+        label: "전투 로그 텍스트",
+        kind: "textarea",
+        placeholder: "{attacker}의 화염 브레스! {target}에게 {damage} 피해!",
+      },
+      {
+        key: "icon_url",
+        label: "아이콘 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../skill.png",
+      },
       { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
     ],
     blank: {
@@ -261,12 +385,23 @@ const TABS: TabDef[] = [
     fields: [
       { key: "name", label: "아이템 이름", kind: "text", placeholder: "생명의 물약" },
       { key: "item_key", label: "아이템 코드", kind: "text", placeholder: "hp_potion" },
-      { key: "effect_type", label: "효과 종류", kind: "text", placeholder: "heal_hp / heal_mp / buff_atk / buff_def / debuff_enemy_atk / fixed_damage / revive / shield / random" },
+      {
+        key: "effect_type",
+        label: "효과 종류",
+        kind: "text",
+        placeholder:
+          "heal_hp / heal_mp / buff_atk / buff_def / debuff_enemy_atk / fixed_damage / revive / shield / random",
+      },
       { key: "effect_value", label: "효과 수치", kind: "number", placeholder: "50" },
       { key: "duration_turns", label: "지속 턴 (버프/디버프)", kind: "number", placeholder: "3" },
       { key: "price_gold", label: "상점 가격 (골드)", kind: "number", placeholder: "300" },
       { key: "description", label: "설명", kind: "textarea", placeholder: "HP를 50 회복한다." },
-      { key: "icon_url", label: "아이콘 URL (텍스트)", kind: "url", placeholder: "https://.../item.png" },
+      {
+        key: "icon_url",
+        label: "아이콘 URL (텍스트)",
+        kind: "url",
+        placeholder: "https://.../item.png",
+      },
       { key: "sort_order", label: "정렬 순서", kind: "number", placeholder: "0" },
     ],
     blank: {
@@ -290,7 +425,12 @@ const TABS: TabDef[] = [
     titleField: "rarity",
     fields: [
       { key: "dragon_id", label: "드래곤 UUID", kind: "text", placeholder: "dragons 테이블의 id" },
-      { key: "rarity", label: "등급", kind: "text", placeholder: "common / rare / epic / legendary" },
+      {
+        key: "rarity",
+        label: "등급",
+        kind: "text",
+        placeholder: "common / rare / epic / legendary",
+      },
       { key: "weight", label: "가중치 (확률)", kind: "number", placeholder: "60" },
       { key: "shard_cost", label: "파편 교환 비용", kind: "number", placeholder: "30" },
       { key: "is_active", label: "소환 풀 활성화", kind: "boolean" },
@@ -304,7 +444,6 @@ const TABS: TabDef[] = [
     },
   },
 ];
-
 
 /** Custom (non table-editor) tab: user story review + Hall of Fame promotion. */
 const HALL_OF_FAME_TAB = {
@@ -327,8 +466,6 @@ const STORY_MAP_TAB = {
   icon: PenSquare,
 } as const;
 
-
-
 type AnyRow = (StoreItem | StoryNode | TrainingStat | GameSetting) & Record<string, unknown>;
 
 type NavItem = { key: string; label: string; icon: React.ComponentType<{ className?: string }> };
@@ -342,7 +479,11 @@ const CATEGORIES: { id: string; label: string; keys: string[] }[] = [
     label: "📖 스토리",
     keys: ["story_chapters", "story_map_editor", "story_nodes", "ugc_hall_of_fame"],
   },
-  { id: "growth", label: "⚔️ 성장 · 전투", keys: ["training_stats", "battle_skills", "combat_items", "dragon_pool"] },
+  {
+    id: "growth",
+    label: "⚔️ 성장 · 전투",
+    keys: ["training_stats", "battle_skills", "combat_items", "dragon_pool"],
+  },
   { id: "shop", label: "🪙 상점 · 경제", keys: ["store_items"] },
   { id: "media", label: "🎬 연출 · 미디어", keys: ["characters", "bgm_tracks"] },
   { id: "system", label: "⚙️ 시스템", keys: ["game_settings", "audit_logs"] },
@@ -353,7 +494,6 @@ export function CmsDashboard() {
   const [categoryId, setCategoryId] = useState<string>("story");
   const [tabKey, setTabKey] = useState<string>("story_chapters");
   const tab = TABS.find((x) => x.key === tabKey) ?? TABS[0]!;
-
 
   if (loading) {
     return (
@@ -369,7 +509,8 @@ export function CmsDashboard() {
         <ShieldAlert className="mx-auto h-8 w-8 text-rose-300" />
         <h1 className="mt-3 text-lg font-bold text-slate-100">관리자 전용 페이지</h1>
         <p className="mt-1 text-sm text-slate-400">
-          이 대시보드는 관리자 계정만 열 수 있습니다. 데이터 접근 자체도 DB 정책(RLS)으로 차단됩니다.
+          이 대시보드는 관리자 계정만 열 수 있습니다. 데이터 접근 자체도 DB 정책(RLS)으로
+          차단됩니다.
         </p>
       </div>
     );
@@ -434,7 +575,6 @@ export function CmsDashboard() {
           })}
         </div>
       </nav>
-
 
       {tabKey === "ugc_hall_of_fame" ? (
         <UgcReviewPanel />
@@ -506,7 +646,10 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
         {previewAll && (
           <div className="mt-3 rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
             <PreviewLegend />
-            <CmsPreviewSurface tab={tab} rows={[...rows, ...(isDraftFilled(tab, draft) ? [draft] : [])]} />
+            <CmsPreviewSurface
+              tab={tab}
+              rows={[...rows, ...(isDraftFilled(tab, draft) ? [draft] : [])]}
+            />
           </div>
         )}
       </section>
@@ -517,16 +660,18 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
           <Plus className="h-4 w-4 text-amber-300" /> 새 항목 추가
         </h2>
         <div className="grid gap-3">
-          {tab.fields.filter((f) => !f.hidden).map((f) => (
-            <FieldInput
-              key={f.key}
-              field={f}
-              value={draft[f.key]}
-              row={draft}
-              onPatch={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-              onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))}
-            />
-          ))}
+          {tab.fields
+            .filter((f) => !f.hidden)
+            .map((f) => (
+              <FieldInput
+                key={f.key}
+                field={f}
+                value={draft[f.key]}
+                row={draft}
+                onPatch={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+                onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))}
+              />
+            ))}
           <PublishToggle
             checked={Boolean(draft["is_published"])}
             onChange={(v) => setDraft((d) => ({ ...d, is_published: v }))}
@@ -545,7 +690,11 @@ function CmsTableEditor({ tab }: { tab: TabDef }) {
           disabled={create.isPending}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
         >
-          {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {create.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
           추가하기
         </button>
       </section>
@@ -616,7 +765,8 @@ function CmsPreviewSurface({ tab, rows }: { tab: TabDef; rows: Record<string, un
 
   if (tab.key === "story_chapters") return <VnNodePreview rows={rows} />;
   if (tab.id === "store_items") return <CmsStoreItems rows={rows as unknown as StoreItem[]} />;
-  if (tab.id === "training_stats") return <CmsTrainingStats rows={rows as unknown as TrainingStat[]} />;
+  if (tab.id === "training_stats")
+    return <CmsTrainingStats rows={rows as unknown as TrainingStat[]} />;
   if (tab.id === "story_nodes") return <CmsStoryNodes rows={rows as unknown as StoryNode[]} />;
 
   // game_settings has no dedicated player component — show the resolved values.
@@ -643,7 +793,10 @@ function VnNodePreview({ rows }: { rows: Record<string, unknown>[] }) {
       {rows.map((r, i) => {
         const options = Array.isArray(r.options) ? (r.options as Record<string, unknown>[]) : [];
         return (
-          <div key={String(r.id ?? i)} className="rounded-xl border border-slate-700/60 bg-slate-950/70 p-3">
+          <div
+            key={String(r.id ?? i)}
+            className="rounded-xl border border-slate-700/60 bg-slate-950/70 p-3"
+          >
             <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300/90">
               {String(r.chapter_id ?? "?")} / {String(r.node_key ?? "?")}
               {r.is_start ? " · START" : ""}
@@ -666,7 +819,9 @@ function VnNodePreview({ rows }: { rows: Record<string, unknown>[] }) {
                 </div>
               ))}
               {options.length === 0 && (
-                <p className="text-[11px] text-slate-500">선택지 없음 — “계속” 버튼으로 진행됩니다.</p>
+                <p className="text-[11px] text-slate-500">
+                  선택지 없음 — “계속” 버튼으로 진행됩니다.
+                </p>
               )}
             </div>
           </div>
@@ -745,7 +900,9 @@ function RowEditor({
   const [form, setForm] = useState<Record<string, unknown>>(() => ({ ...row }));
   const [busy, setBusy] = useState(false);
   const published = Boolean(form["is_published"]);
-  const preview = String(form["image_url"] ?? form["icon_url"] ?? form["background_image_url"] ?? "");
+  const preview = String(
+    form["image_url"] ?? form["icon_url"] ?? form["background_image_url"] ?? "",
+  );
 
   const save = async (patch?: Record<string, unknown>) => {
     const next = { ...form, ...(patch ?? {}) };
@@ -784,7 +941,11 @@ function RowEditor({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <PublishToggle checked={published} onChange={(v) => void save({ is_published: v })} compact />
+          <PublishToggle
+            checked={published}
+            onChange={(v) => void save({ is_published: v })}
+            compact
+          />
           <button
             type="button"
             onClick={() => void onDelete()}
@@ -797,16 +958,18 @@ function RowEditor({
       </div>
 
       <div className="grid gap-3">
-        {tab.fields.filter((f) => !f.hidden).map((f) => (
-          <FieldInput
-            key={f.key}
-            field={f}
-            value={form[f.key]}
-            row={form}
-            onPatch={(patch) => setForm((d) => ({ ...d, ...patch }))}
-            onChange={(v) => setForm((d) => ({ ...d, [f.key]: v }))}
-          />
-        ))}
+        {tab.fields
+          .filter((f) => !f.hidden)
+          .map((f) => (
+            <FieldInput
+              key={f.key}
+              field={f}
+              value={form[f.key]}
+              row={form}
+              onPatch={(patch) => setForm((d) => ({ ...d, ...patch }))}
+              onChange={(v) => setForm((d) => ({ ...d, [f.key]: v }))}
+            />
+          ))}
       </div>
 
       <button
@@ -876,12 +1039,12 @@ function FieldInput({
         ? value
         : JSON.stringify(value ?? null, null, 0)
       : field.kind === "uuidlist"
-      ? Array.isArray(value)
-        ? (value as string[]).join(", ")
-        : String(value ?? "")
-      : value == null
-        ? ""
-        : String(value);
+        ? Array.isArray(value)
+          ? (value as string[]).join(", ")
+          : String(value ?? "")
+        : value == null
+          ? ""
+          : String(value);
 
   return (
     <div>
@@ -970,7 +1133,9 @@ function JsonField({
         }}
       />
       {invalid && (
-        <p className="mt-1 text-[10px] text-rose-300">JSON 형식이 올바르지 않습니다 — 저장되지 않습니다.</p>
+        <p className="mt-1 text-[10px] text-rose-300">
+          JSON 형식이 올바르지 않습니다 — 저장되지 않습니다.
+        </p>
       )}
     </div>
   );
@@ -1019,13 +1184,16 @@ function StoryMarkdownField({
       <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
         <b className="text-slate-400"># 본문</b> 아래에 대사를,{" "}
         <b className="text-slate-400"># 스탯</b> 아래에 <code>Courage +1</code> 형식으로,{" "}
-        <b className="text-slate-400"># 선택지</b> 아래에 <code>- 선택지 문구 -&gt; 다음노드키</code>{" "}
-        형식으로 적으세요. 선택지 아래 줄에 <code>스탯: Courage +1</code>,{" "}
-        <code>퀴즈: UUID (필수, 실패: 노드키)</code>를 덧붙일 수 있습니다.
+        <b className="text-slate-400"># 선택지</b> 아래에{" "}
+        <code>- 선택지 문구 -&gt; 다음노드키</code> 형식으로 적으세요. 선택지 아래 줄에{" "}
+        <code>스탯: Courage +1</code>, <code>퀴즈: UUID (필수, 실패: 노드키)</code>를 덧붙일 수
+        있습니다.
       </p>
       <div className="mt-2 rounded-lg border border-slate-700/60 bg-slate-950/60 p-2 text-[11px] text-slate-300">
         <p className="mb-1 font-bold uppercase tracking-widest text-slate-500">해석 결과</p>
-        <p>본문 {parsed.body_text.length}자 · 선택지 {parsed.options.length}개</p>
+        <p>
+          본문 {parsed.body_text.length}자 · 선택지 {parsed.options.length}개
+        </p>
         <ul className="mt-1 space-y-0.5">
           {parsed.options.map((o, i) => (
             <li key={i} className="text-slate-400">

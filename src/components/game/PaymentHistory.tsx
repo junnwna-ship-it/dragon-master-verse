@@ -43,9 +43,7 @@ export function PaymentHistory() {
         <h2 className="text-lg font-bold text-slate-100">{t("payments.historyTitle")}</h2>
       </div>
 
-      {!user && (
-        <p className="text-xs text-slate-500">{t("payments.loginNeeded")}</p>
-      )}
+      {!user && <p className="text-xs text-slate-500">{t("payments.loginNeeded")}</p>}
 
       {user && rows === null && !error && (
         <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -53,9 +51,7 @@ export function PaymentHistory() {
         </div>
       )}
 
-      {error && (
-        <p className="text-xs text-rose-400">{t("common.loadFailed", { msg: error })}</p>
-      )}
+      {error && <p className="text-xs text-rose-400">{t("common.loadFailed", { msg: error })}</p>}
 
       {rows && rows.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/40 p-4 text-center text-xs text-slate-500">

@@ -24,19 +24,6 @@ export interface ActiveEffect {
   intensity?: number;
 }
 
-/** Element → EffectType 매핑 (공격 타격 시 사용) */
-export function elementToEffect(el: Element | string): EffectType {
-  switch (el) {
-    case "Fire": return "fire";
-    case "Water": return "water";
-    case "Wood": return "wood";
-    case "Earth": return "earth";
-    case "Light":
-    case "Metal": return "metal";
-    default: return "slash";
-  }
-}
-
 /**
  * 카드 위에 absolute로 덮이는 VFX 레이어.
  * `effects` 배열 중 이 카드(target)에 해당하는 것만 렌더링.
@@ -215,7 +202,12 @@ function PoisonStatus() {
           className="absolute h-2 w-2 rounded-full bg-gradient-to-br from-lime-400 to-green-700 shadow-[0_0_8px_rgba(132,204,22,0.8)]"
           style={{ left: `${15 + i * 20}%`, top: `${50 + (i % 2) * 15}%` }}
           animate={{ y: [0, -5, 0], opacity: [0.6, 1, 0.6] }}
-          transition={{ repeat: Infinity, duration: 1.6 + i * 0.2, ease: "easeInOut", delay: i * 0.15 }}
+          transition={{
+            repeat: Infinity,
+            duration: 1.6 + i * 0.2,
+            ease: "easeInOut",
+            delay: i * 0.15,
+          }}
         />
       ))}
     </>
@@ -233,7 +225,12 @@ function BurnStatus() {
           className="absolute bottom-1 h-3 w-3 rounded-full bg-gradient-to-t from-rose-600 via-orange-400 to-yellow-200 shadow-[0_0_10px_rgba(251,146,60,0.9)]"
           style={{ left: `${25 + i * 25}%` }}
           animate={{ y: [0, -8, 0], scale: [0.8, 1.1, 0.8], opacity: [0.7, 1, 0.7] }}
-          transition={{ repeat: Infinity, duration: 1.2 + i * 0.15, ease: "easeInOut", delay: i * 0.1 }}
+          transition={{
+            repeat: Infinity,
+            duration: 1.2 + i * 0.15,
+            ease: "easeInOut",
+            delay: i * 0.1,
+          }}
         />
       ))}
     </>
@@ -476,13 +473,19 @@ function FreezeStatus() {
 export function SpecialEffect({ element }: { element: Element | string }) {
   const el = (element ?? "").toString();
   switch (el) {
-    case "Fire":     return <FireSpecial />;
-    case "Water":    return <WaterSpecial />;
-    case "Wood":     return <WoodSpecial />;
-    case "Earth":    return <SoilSpecial />;
+    case "Fire":
+      return <FireSpecial />;
+    case "Water":
+      return <WaterSpecial />;
+    case "Wood":
+      return <WoodSpecial />;
+    case "Earth":
+      return <SoilSpecial />;
     case "Light":
-    case "Metal":    return <MetalSpecial />;
-    default:         return <DefaultSpecial />;
+    case "Metal":
+      return <MetalSpecial />;
+    default:
+      return <DefaultSpecial />;
   }
 }
 

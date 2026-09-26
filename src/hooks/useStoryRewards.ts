@@ -104,7 +104,7 @@ export function useStoryRewards() {
         inFlight.current.delete(tag);
       }
     },
-    [],
+    [queryClient],
   );
 
   return { claim };

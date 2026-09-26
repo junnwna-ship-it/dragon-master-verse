@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Camera, Check, ImageUp, Loader2, Sparkles, WandSparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  Check,
+  ImageUp,
+  Loader2,
+  Sparkles,
+  WandSparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import creationArt from "@/assets/story/dragon_creation_hatchery.png";
 import defaultDragonArt from "@/assets/dragons/personal-hatchling.png";
@@ -16,11 +25,21 @@ const ELEMENTS: Array<{ value: Element; label: string; color: string }> = [
   { value: "Fire", label: "불", color: "border-rose-400/60 bg-rose-400/10 text-rose-100" },
   { value: "Wood", label: "숲", color: "border-emerald-400/60 bg-emerald-400/10 text-emerald-100" },
   { value: "Light", label: "빛", color: "border-yellow-200/60 bg-yellow-200/10 text-yellow-50" },
-  { value: "Dark", label: "그림자", color: "border-violet-400/60 bg-violet-400/10 text-violet-100" },
+  {
+    value: "Dark",
+    label: "그림자",
+    color: "border-violet-400/60 bg-violet-400/10 text-violet-100",
+  },
 ];
 
 const PERSONALITIES = ["용감한", "다정한", "호기심 많은", "차분한", "장난기 많은", "신중한"];
-const GOALS = ["마음을 나누기", "힘을 조절하기", "용기를 기르기", "친구를 지키기", "새로운 능력 발견하기"];
+const GOALS = [
+  "마음을 나누기",
+  "힘을 조절하기",
+  "용기를 기르기",
+  "친구를 지키기",
+  "새로운 능력 발견하기",
+];
 const APPEARANCES = [
   { id: "pearl", label: "진주빛", filter: "none" },
   { id: "ember", label: "불꽃빛", filter: "sepia(0.35) saturate(1.65) hue-rotate(325deg)" },
@@ -182,7 +201,10 @@ export function DragonOriginBuilder({
 
     setSaving(true);
     try {
-      const imageBlob = await imageToJpeg(aiImage ?? file ?? defaultDragonArt, file ? "none" : appearance.filter);
+      const imageBlob = await imageToJpeg(
+        aiImage ?? file ?? defaultDragonArt,
+        file ? "none" : appearance.filter,
+      );
       const imageUrl = await uploadDragonImage(imageBlob, user.id);
       const stats = ELEMENT_STATS[element];
       const { data, error } = await supabase.rpc("create_personal_dragon", {
@@ -214,12 +236,21 @@ export function DragonOriginBuilder({
   };
 
   return (
-    <section className="dragon-builder overflow-hidden rounded-3xl border border-amber-200/25 bg-slate-900/95 shadow-2xl shadow-black/30" aria-busy={saving || cleaning}>
+    <section
+      className="dragon-builder overflow-hidden rounded-3xl border border-amber-200/25 bg-slate-900/95 shadow-2xl shadow-black/30"
+      aria-busy={saving || cleaning}
+    >
       <div className="relative h-44 overflow-hidden sm:h-56">
-        <img src={creationArt} alt="마법의 부화실에 놓인 드래곤 알" className="h-full w-full object-cover" />
+        <img
+          src={creationArt}
+          alt="마법의 부화실에 놓인 드래곤 알"
+          className="h-full w-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 px-5 pb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-violet-200">나의 드래곤 만들기</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-violet-200">
+            나의 드래곤 만들기
+          </p>
           <h2 className="mt-1 text-2xl font-black text-white">우리만의 첫 장을 준비해요</h2>
         </div>
       </div>
@@ -229,122 +260,258 @@ export function DragonOriginBuilder({
           {["모습", "이름·성격", "성장 약속"].map((label, index) => {
             const number = index + 1;
             return (
-              <li key={label} aria-current={number === step ? "step" : undefined} className={`rounded-xl border px-2 py-2 text-center text-xs ${number === step ? "border-violet-300 bg-violet-400/15 text-violet-100" : number < step ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-white/10 text-slate-400"}`}>
-                <span className="block font-black">{number < step ? "✓" : number}</span>{label}
+              <li
+                key={label}
+                aria-current={number === step ? "step" : undefined}
+                className={`rounded-xl border px-2 py-2 text-center text-xs ${number === step ? "border-violet-300 bg-violet-400/15 text-violet-100" : number < step ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-white/10 text-slate-400"}`}
+              >
+                <span className="block font-black">{number < step ? "✓" : number}</span>
+                {label}
               </li>
             );
           })}
         </ol>
 
-        <div ref={stepPanel} tabIndex={-1} aria-label={`${step}단계`} className="scroll-mt-6 focus:outline-none">
-        {step > 1 && <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200/20 bg-amber-200/5 p-3"><img src={preview} alt="내 드래곤 미리보기" style={{ filter: file ? "none" : appearance.filter }} className="h-16 w-16 shrink-0 rounded-lg object-contain" /><p className="min-w-0 text-sm font-bold text-amber-100">{name.trim() || "이름을 기다리는 나의 드래곤"}</p></div>}
-        {step === 1 && (
-          <div>
-            <h3 className="text-lg font-bold text-white">드래곤의 모습을 정해 주세요</h3>
-            <p className="mt-1 text-sm text-slate-400">기본 드래곤을 꾸미거나, 손그림을 업로드하거나, 카메라로 바로 촬영할 수 있습니다.</p>
-            <div className="mt-5 grid gap-5 sm:grid-cols-2 sm:items-start">
-              <div className="mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-3xl border-2 border-amber-200/40 bg-slate-950 shadow-lg">
-                <img src={preview} alt="내 드래곤 미리보기" style={{ filter: file ? "none" : appearance.filter }} className="h-full w-full object-contain" />
-              </div>
-              <div className="flex flex-1 flex-col justify-center gap-2">
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-300/40 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-100 hover:bg-sky-400/20">
-                  <ImageUp className="h-4 w-4" /> 그림·사진 업로드
-                  <input type="file" accept="image/png,image/jpeg,image/webp" disabled={cleaning} className="sr-only" onChange={chooseFile} />
-                </label>
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100 hover:bg-emerald-400/20">
-                  <Camera className="h-4 w-4" /> 카메라로 손그림 찍기
-                  <input type="file" accept="image/*" capture="environment" disabled={cleaning} className="sr-only" onChange={chooseFile} />
-                </label>
-                {file && (
-                  <>
-                    <button type="button" onClick={() => void cleanWithAi()} disabled={cleaning} className="flex items-center justify-center gap-2 rounded-xl border border-violet-300/50 bg-violet-400/15 px-4 py-3 text-sm font-bold text-violet-100 hover:bg-violet-400/25 disabled:opacity-50">
-                      {cleaning ? <Loader2 className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4" />}
-                      {cleaning ? "AI가 선과 색을 정돈하는 중…" : aiImage ? "AI로 다시 정돈하기" : "손그림을 AI로 정돈하기"}
-                    </button>
-                    {aiImage && (
-                      <button type="button" disabled={cleaning} onClick={() => setAiImage(null)} className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50">
-                        촬영한 원본으로 보기
-                      </button>
-                    )}
-                    <button type="button" disabled={cleaning} onClick={() => { setFile(null); setAiImage(null); }} className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50">
-                      기본 드래곤으로 되돌리기
-                    </button>
-                  </>
-                )}
-                <p className="text-xs leading-relaxed text-slate-500">AI 정돈은 버튼을 누른 경우에만 실행됩니다. 사람 얼굴이 들어간 사진은 사용하지 말고, 종이에 그린 드래곤만 촬영해 주세요.</p>
-              </div>
+        <div
+          ref={stepPanel}
+          tabIndex={-1}
+          aria-label={`${step}단계`}
+          className="scroll-mt-6 focus:outline-none"
+        >
+          {step > 1 && (
+            <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200/20 bg-amber-200/5 p-3">
+              <img
+                src={preview}
+                alt="내 드래곤 미리보기"
+                style={{ filter: file ? "none" : appearance.filter }}
+                className="h-16 w-16 shrink-0 rounded-lg object-contain"
+              />
+              <p className="min-w-0 text-sm font-bold text-amber-100">
+                {name.trim() || "이름을 기다리는 나의 드래곤"}
+              </p>
             </div>
-            {!file && (
-              <div className="mt-4">
-                <p className="text-xs font-bold text-slate-300">비늘의 빛깔</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {APPEARANCES.map((item) => (
-                    <button key={item.id} type="button" aria-pressed={appearance.id === item.id} onClick={() => setAppearance(item)} className={`rounded-full border px-3 py-1.5 text-xs ${appearance.id === item.id ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}>
-                      {item.label}
-                    </button>
-                  ))}
+          )}
+          {step === 1 && (
+            <div>
+              <h3 className="text-lg font-bold text-white">드래곤의 모습을 정해 주세요</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                기본 드래곤을 꾸미거나, 손그림을 업로드하거나, 카메라로 바로 촬영할 수 있습니다.
+              </p>
+              <div className="mt-5 grid gap-5 sm:grid-cols-2 sm:items-start">
+                <div className="mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-3xl border-2 border-amber-200/40 bg-slate-950 shadow-lg">
+                  <img
+                    src={preview}
+                    alt="내 드래곤 미리보기"
+                    style={{ filter: file ? "none" : appearance.filter }}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <div className="flex flex-1 flex-col justify-center gap-2">
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-300/40 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-100 hover:bg-sky-400/20">
+                    <ImageUp className="h-4 w-4" /> 그림·사진 업로드
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      disabled={cleaning}
+                      className="sr-only"
+                      onChange={chooseFile}
+                    />
+                  </label>
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100 hover:bg-emerald-400/20">
+                    <Camera className="h-4 w-4" /> 카메라로 손그림 찍기
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      disabled={cleaning}
+                      className="sr-only"
+                      onChange={chooseFile}
+                    />
+                  </label>
+                  {file && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void cleanWithAi()}
+                        disabled={cleaning}
+                        className="flex items-center justify-center gap-2 rounded-xl border border-violet-300/50 bg-violet-400/15 px-4 py-3 text-sm font-bold text-violet-100 hover:bg-violet-400/25 disabled:opacity-50"
+                      >
+                        {cleaning ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <WandSparkles className="h-4 w-4" />
+                        )}
+                        {cleaning
+                          ? "AI가 선과 색을 정돈하는 중…"
+                          : aiImage
+                            ? "AI로 다시 정돈하기"
+                            : "손그림을 AI로 정돈하기"}
+                      </button>
+                      {aiImage && (
+                        <button
+                          type="button"
+                          disabled={cleaning}
+                          onClick={() => setAiImage(null)}
+                          className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50"
+                        >
+                          촬영한 원본으로 보기
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={cleaning}
+                        onClick={() => {
+                          setFile(null);
+                          setAiImage(null);
+                        }}
+                        className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50"
+                      >
+                        기본 드래곤으로 되돌리기
+                      </button>
+                    </>
+                  )}
+                  <p className="text-xs leading-relaxed text-slate-500">
+                    AI 정돈은 버튼을 누른 경우에만 실행됩니다. 사람 얼굴이 들어간 사진은 사용하지
+                    말고, 종이에 그린 드래곤만 촬영해 주세요.
+                  </p>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+              {!file && (
+                <div className="mt-4">
+                  <p className="text-xs font-bold text-slate-300">비늘의 빛깔</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {APPEARANCES.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        aria-pressed={appearance.id === item.id}
+                        onClick={() => setAppearance(item)}
+                        className={`rounded-full border px-3 py-1.5 text-xs ${appearance.id === item.id ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-        {step === 2 && (
-          <div>
-            <h3 className="text-lg font-bold text-white">이름과 타고난 힘을 정해요</h3>
-            <label htmlFor="dragon-name" className="mt-4 block text-sm font-bold text-slate-300">드래곤 이름</label>
-            <input id="dragon-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={24} placeholder="예: 루미" className="mt-1 w-full rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-300" />
-            <p className="mt-4 text-xs font-bold text-slate-300">원소</p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {ELEMENTS.map((item) => (
-                <button key={item.value} type="button" aria-pressed={element === item.value} onClick={() => setElement(item.value)} className={`rounded-xl border px-3 py-2 text-sm font-bold transition ${element === item.value ? item.color : "border-white/10 bg-white/5 text-slate-400"}`}>
-                  {item.label}
-                </button>
-              ))}
+          {step === 2 && (
+            <div>
+              <h3 className="text-lg font-bold text-white">이름과 타고난 힘을 정해요</h3>
+              <label htmlFor="dragon-name" className="mt-4 block text-sm font-bold text-slate-300">
+                드래곤 이름
+              </label>
+              <input
+                id="dragon-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={24}
+                placeholder="예: 루미"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-300"
+              />
+              <p className="mt-4 text-xs font-bold text-slate-300">원소</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {ELEMENTS.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    aria-pressed={element === item.value}
+                    onClick={() => setElement(item.value)}
+                    className={`rounded-xl border px-3 py-2 text-sm font-bold transition ${element === item.value ? item.color : "border-white/10 bg-white/5 text-slate-400"}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-4 text-xs font-bold text-slate-300">성격</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {PERSONALITIES.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={personality === item}
+                    onClick={() => setPersonality(item)}
+                    className={`rounded-full border px-3 py-1.5 text-xs ${personality === item ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="mt-4 text-xs font-bold text-slate-300">성격</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {PERSONALITIES.map((item) => (
-                <button key={item} type="button" aria-pressed={personality === item} onClick={() => setPersonality(item)} className={`rounded-full border px-3 py-1.5 text-xs ${personality === item ? "border-violet-300 bg-violet-400/20 text-violet-100" : "border-white/10 text-slate-400"}`}>
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          )}
 
-        {step === 3 && (
-          <div>
-            <h3 className="text-lg font-bold text-white">함께 만들 성장서사를 약속해요</h3>
-            <label htmlFor="dragon-origin" className="mt-4 block text-sm font-bold text-slate-300">우리의 첫 만남</label>
-            <textarea id="dragon-origin" value={origin} onChange={(event) => setOrigin(event.target.value)} maxLength={120} rows={3} className="mt-1 w-full resize-none rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-violet-300" />
-            <p className="mt-4 text-xs font-bold text-slate-300">첫 번째 성장 목표</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {GOALS.map((item) => (
-                <button key={item} type="button" aria-pressed={goal === item} onClick={() => setGoal(item)} className={`rounded-full border px-3 py-1.5 text-xs ${goal === item ? "border-amber-300 bg-amber-400/15 text-amber-100" : "border-white/10 text-slate-400"}`}>
-                  {item}
-                </button>
-              ))}
+          {step === 3 && (
+            <div>
+              <h3 className="text-lg font-bold text-white">함께 만들 성장서사를 약속해요</h3>
+              <label
+                htmlFor="dragon-origin"
+                className="mt-4 block text-sm font-bold text-slate-300"
+              >
+                우리의 첫 만남
+              </label>
+              <textarea
+                id="dragon-origin"
+                value={origin}
+                onChange={(event) => setOrigin(event.target.value)}
+                maxLength={120}
+                rows={3}
+                className="mt-1 w-full resize-none rounded-xl border border-white/15 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-violet-300"
+              />
+              <p className="mt-4 text-xs font-bold text-slate-300">첫 번째 성장 목표</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {GOALS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={goal === item}
+                    onClick={() => setGoal(item)}
+                    className={`rounded-full border px-3 py-1.5 text-xs ${goal === item ? "border-amber-300 bg-amber-400/15 text-amber-100" : "border-white/10 text-slate-400"}`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-5 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-4">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-amber-200">
+                  <Sparkles className="h-4 w-4" /> 성장서사 미리보기
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-200">{storyPreview}</p>
+              </div>
             </div>
-            <div className="mt-5 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-4">
-              <p className="flex items-center gap-1.5 text-xs font-bold text-amber-200"><Sparkles className="h-4 w-4" /> 성장서사 미리보기</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-200">{storyPreview}</p>
-            </div>
-          </div>
-        )}
-
+          )}
         </div>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
-          <button type="button" disabled={saving || cleaning} onClick={() => step > 1 ? setStep(step - 1) : onCancel?.()} className="flex items-center gap-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-50">
+          <button
+            type="button"
+            disabled={saving || cleaning}
+            onClick={() => (step > 1 ? setStep(step - 1) : onCancel?.())}
+            className="flex items-center gap-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-50"
+          >
             <ArrowLeft className="h-4 w-4" /> {step === 1 ? "취소" : "이전"}
           </button>
           {step < 3 ? (
-            <button type="button" onClick={() => setStep(step + 1)} disabled={cleaning || (step === 2 && !name.trim())} className="flex items-center gap-1 rounded-xl bg-violet-300 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-violet-200 disabled:opacity-40">
+            <button
+              type="button"
+              onClick={() => setStep(step + 1)}
+              disabled={cleaning || (step === 2 && !name.trim())}
+              className="flex items-center gap-1 rounded-xl bg-violet-300 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-violet-200 disabled:opacity-40"
+            >
               다음 <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
-            <button type="button" onClick={() => void createDragon()} disabled={saving} className="flex items-center gap-2 rounded-xl bg-amber-300 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-amber-200 disabled:opacity-50">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            <button
+              type="button"
+              onClick={() => void createDragon()}
+              disabled={saving}
+              className="flex items-center gap-2 rounded-xl bg-amber-300 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-amber-200 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {saving ? "드래곤을 깨우는 중…" : "만들고 첫 만남 시작"}
             </button>
           )}

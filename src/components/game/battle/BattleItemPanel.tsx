@@ -42,7 +42,11 @@ export function BattleItemPanel({
       await refetch();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      toast.error(msg.includes("OUT_OF_STOCK") ? t("items.outOfStock", { name }) : t("items.useFailed", { msg }));
+      toast.error(
+        msg.includes("OUT_OF_STOCK")
+          ? t("items.outOfStock", { name })
+          : t("items.useFailed", { msg }),
+      );
     } finally {
       setBusy(null);
     }
@@ -59,18 +63,26 @@ export function BattleItemPanel({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end bg-slate-950/80 backdrop-blur-sm" onClick={() => setOpen(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-slate-950/80 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
           <div
             className="max-h-[70vh] w-full overflow-y-auto rounded-t-3xl border-t border-slate-700 bg-slate-900 p-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-100">{t("items.sheetTitle")}</h3>
-              <button onClick={() => setOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-800">
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="mb-3 text-[11px] text-slate-400">{t("items.sheetHint", { n: usesLeft })}</p>
+            <p className="mb-3 text-[11px] text-slate-400">
+              {t("items.sheetHint", { n: usesLeft })}
+            </p>
             <div className="space-y-2">
               {items.map((it) => {
                 const owned = qty(it.item_key);
@@ -82,11 +94,19 @@ export function BattleItemPanel({
                     className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-700/70 bg-slate-800/60 px-3 py-2.5 text-left transition hover:bg-slate-800 disabled:opacity-40"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-slate-100">{it.name}</span>
-                      <span className="block truncate text-[11px] text-slate-400">{it.description}</span>
+                      <span className="block truncate text-sm font-semibold text-slate-100">
+                        {it.name}
+                      </span>
+                      <span className="block truncate text-[11px] text-slate-400">
+                        {it.description}
+                      </span>
                     </span>
                     <span className="shrink-0 text-xs font-bold text-emerald-300">
-                      {busy === it.item_key ? <Loader2 className="h-4 w-4 animate-spin" /> : `x${owned}`}
+                      {busy === it.item_key ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        `x${owned}`
+                      )}
                     </span>
                   </button>
                 );

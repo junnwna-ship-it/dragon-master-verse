@@ -29,7 +29,9 @@ export function CombatItemShop() {
       await Promise.all([refetchInventory(), refetchProfile()]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      toast.error(msg.includes("NOT_ENOUGH_GOLD") ? t("items.noGold") : t("items.buyFailed", { msg }));
+      toast.error(
+        msg.includes("NOT_ENOUGH_GOLD") ? t("items.noGold") : t("items.buyFailed", { msg }),
+      );
     } finally {
       setBusy(null);
     }
@@ -52,14 +54,18 @@ export function CombatItemShop() {
               <div
                 key={it.id}
                 className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${
-                  isTicket ? "border-sky-500/40 bg-sky-500/5" : "border-slate-700/60 bg-slate-900/60"
+                  isTicket
+                    ? "border-sky-500/40 bg-sky-500/5"
+                    : "border-slate-700/60 bg-slate-900/60"
                 }`}
               >
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-slate-100">
                     {isTicket && <Ticket className="h-3.5 w-3.5 text-sky-300" />}
                     {it.name}
-                    <span className="text-[10px] font-normal text-slate-500">x{qty(it.item_key)}</span>
+                    <span className="text-[10px] font-normal text-slate-500">
+                      x{qty(it.item_key)}
+                    </span>
                   </p>
                   <p className="truncate text-[11px] text-slate-400">{it.description}</p>
                 </div>

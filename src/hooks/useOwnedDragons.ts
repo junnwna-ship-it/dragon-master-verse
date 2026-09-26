@@ -26,10 +26,7 @@ export function useOwnedDragons() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
-      .from("owned_dragons")
-      .select("*")
-      .eq("user_id", user.id);
+    const { data, error } = await supabase.from("owned_dragons").select("*").eq("user_id", user.id);
     if (error) {
       console.error("[owned_dragons] fetch failed:", error);
       setRows([]);
@@ -39,7 +36,9 @@ export function useOwnedDragons() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { refetch(); }, [refetch]);
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   return { rows, loading, refetch, isTrainee: rows.length === 0 };
 }

@@ -141,9 +141,7 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
 
         {step === "capture" && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-400">
-              {t("scan.intro")}
-            </p>
+            <p className="text-sm text-slate-400">{t("scan.intro")}</p>
             <input
               ref={cameraRef}
               type="file"
@@ -219,7 +217,10 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
             </div>
             <div className="grid grid-cols-2 gap-2">
               {(["hp", "mp", "atk", "def"] as const).map((k) => (
-                <label key={k} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs">
+                <label
+                  key={k}
+                  className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs"
+                >
                   <span className="font-bold uppercase text-slate-400">{k}</span>
                   <input
                     type="number"
@@ -243,7 +244,11 @@ export function CardScanner({ userId, onClose }: { userId: string; onClose: () =
                 disabled={saving}
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
                 {t("scan.register")}
               </button>
             </div>

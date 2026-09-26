@@ -135,7 +135,9 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
   const total = dragon.maxHp + dragon.mp + dragon.atk + dragon.def;
   return (
     <div className="dragon-card snap-center shrink-0 w-[78vw] max-w-[320px] rounded-3xl border border-white/15 bg-white/5 p-4 shadow-xl shadow-black/20 backdrop-blur-md">
-      <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${tone}`}>
+      <div
+        className={`relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${tone}`}
+      >
         <DragonImage
           dragon={dragon}
           className="absolute inset-0 h-full w-full object-cover"
@@ -146,7 +148,9 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
         />
         {/* 하단 비네팅 — 텍스트 가독성 */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-transparent" />
-        <span className={`absolute left-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}>
+        <span
+          className={`absolute left-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${tone}`}
+        >
           {dragon.element}
         </span>
         {/* 이미지 위에 이름 + 합계 — 글래스 스타일 */}
@@ -162,16 +166,39 @@ export function DragonCard({ dragon }: { dragon: Dragon }) {
         </div>
       </div>
       <div className="mt-3 flex items-baseline justify-between">
-        <span className="text-[10px] font-mono text-slate-500">#{String(dragon.id).padStart(3, "0")}</span>
+        <span className="text-[10px] font-mono text-slate-500">
+          #{String(dragon.id).padStart(3, "0")}
+        </span>
         <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
           {t("dragon.elementClass", { element: dragon.element })}
         </span>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2.5">
-        <StatBar label="ATK" value={dragon.atk} icon={<Sword className="h-3.5 w-3.5" />} color="bg-rose-500" />
-        <StatBar label="DEF" value={dragon.def} icon={<Shield className="h-3.5 w-3.5" />} color="bg-amber-500" />
-        <StatBar label="HP" value={dragon.hp} max={dragon.maxHp} icon={<Heart className="h-3.5 w-3.5" />} color="bg-emerald-500" />
-        <StatBar label="MP" value={dragon.mp} icon={<Droplet className="h-3.5 w-3.5" />} color="bg-sky-500" />
+        <StatBar
+          label="ATK"
+          value={dragon.atk}
+          icon={<Sword className="h-3.5 w-3.5" />}
+          color="bg-rose-500"
+        />
+        <StatBar
+          label="DEF"
+          value={dragon.def}
+          icon={<Shield className="h-3.5 w-3.5" />}
+          color="bg-amber-500"
+        />
+        <StatBar
+          label="HP"
+          value={dragon.hp}
+          max={dragon.maxHp}
+          icon={<Heart className="h-3.5 w-3.5" />}
+          color="bg-emerald-500"
+        />
+        <StatBar
+          label="MP"
+          value={dragon.mp}
+          icon={<Droplet className="h-3.5 w-3.5" />}
+          color="bg-sky-500"
+        />
       </div>
     </div>
   );

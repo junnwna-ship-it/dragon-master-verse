@@ -118,7 +118,9 @@ export function ShopView() {
                     <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-900">
                       <DragonImage dragon={d} className="h-full w-full" />
                     </div>
-                    <span className="line-clamp-1 text-[10px] font-semibold text-slate-200">{d.name}</span>
+                    <span className="line-clamp-1 text-[10px] font-semibold text-slate-200">
+                      {d.name}
+                    </span>
                   </button>
                 );
               })}
@@ -151,7 +153,11 @@ export function ShopView() {
                     disabled={busy || !targetUuid || tooBroke}
                     className="flex shrink-0 items-center gap-1 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
                   >
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Coins className="h-3.5 w-3.5" />}
+                    {busy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Coins className="h-3.5 w-3.5" />
+                    )}
                     {item.cost.toLocaleString()}
                   </button>
                 </div>
@@ -170,12 +176,8 @@ export function ShopView() {
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800/80 ring-1 ring-amber-500/40">
             <Lock className="h-8 w-8 text-amber-300" />
           </div>
-          <p className="mt-4 px-6 text-base font-bold text-slate-100">
-            {t("shop.lockedHeading")}
-          </p>
-          <p className="mt-1 px-6 text-xs text-slate-400">
-            {t("shop.lockedDesc")}
-          </p>
+          <p className="mt-4 px-6 text-base font-bold text-slate-100">{t("shop.lockedHeading")}</p>
+          <p className="mt-1 px-6 text-xs text-slate-400">{t("shop.lockedDesc")}</p>
         </div>
       )}
     </div>

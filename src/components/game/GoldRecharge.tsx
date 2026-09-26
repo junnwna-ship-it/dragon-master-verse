@@ -80,7 +80,9 @@ export function GoldRecharge() {
                   {t("gold.amount", { amount: p.gold.toLocaleString() })}
                 </p>
                 {p.badgeKey && (
-                  <p className="text-[11px] font-semibold text-amber-300">{t(`gold.${p.badgeKey}`)}</p>
+                  <p className="text-[11px] font-semibold text-amber-300">
+                    {t(`gold.${p.badgeKey}`)}
+                  </p>
                 )}
               </div>
               <span className="flex shrink-0 items-center gap-1 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950">
@@ -90,9 +92,7 @@ export function GoldRecharge() {
           );
         })}
       </div>
-      <p className="text-[10px] text-slate-500">
-        {t("gold.footer")}
-      </p>
+      <p className="text-[10px] text-slate-500">{t("gold.footer")}</p>
     </section>
   );
 }

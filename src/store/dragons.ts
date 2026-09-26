@@ -34,7 +34,8 @@ export interface Dragon {
   base?: { maxHp: number; mp: number; atk: number; def: number };
 }
 
-export type View = "lobby" | "story" | "pvp" | "vault" | "shop" | "summon" | "training" | "admin" | "debug";
+export type View =
+  "lobby" | "story" | "pvp" | "vault" | "shop" | "summon" | "training" | "admin" | "debug";
 
 export type BattleOutcome = "win" | "lose" | "draw";
 
@@ -106,7 +107,9 @@ interface GameState {
   /** Inserts a new dragon into Supabase, then re-fetches. Throws on failure. */
   addCustomDragon: (d: Omit<Dragon, "id" | "uuid"> & { lore?: string }) => Promise<void>;
   /** Bulk insert. Used by the Admin grid upload flow. */
-  addCustomDragonsBulk: (dragons: (Omit<Dragon, "id" | "uuid"> & { lore?: string })[]) => Promise<void>;
+  addCustomDragonsBulk: (
+    dragons: (Omit<Dragon, "id" | "uuid"> & { lore?: string })[],
+  ) => Promise<void>;
   /** Admin-only delete (RLS enforces). */
   removeCustomDragon: (id: number) => Promise<void>;
   /** Admin-only update (RLS enforces). */
@@ -191,9 +194,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         .from("owned_dragons")
         .select("dragon_id, level, exp, stat_points, bonus_atk, bonus_max_hp, bonus_def, bonus_mp")
         .eq("user_id", uid);
-      const byDragon = new Map(
-        (owned ?? []).map((o) => [o.dragon_id as string, o]),
-      );
+      const byDragon = new Map((owned ?? []).map((o) => [o.dragon_id as string, o]));
       dragons = dragons.map((d) => {
         const g = d.uuid ? byDragon.get(d.uuid) : undefined;
         if (!g) return { ...d, level: 1, exp: 0, statPoints: 0 };
@@ -220,7 +221,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       loadError: null,
       ownedDragonIds: dragons.map((d) => d.id),
     });
-
   },
   addCustomDragon: async (d) => {
     const { data: auth } = await supabase.auth.getUser();

@@ -9,7 +9,8 @@ export const Route = createFileRoute("/studio")({
       { title: "Creator Studio — Artiati Dragon Masters" },
       {
         name: "description",
-        content: "Write and manage up to five of your own dragon stories, then publish them for other players.",
+        content:
+          "Write and manage up to five of your own dragon stories, then publish them for other players.",
       },
       { property: "og:title", content: "Creator Studio — Artiati Dragon Masters" },
       {

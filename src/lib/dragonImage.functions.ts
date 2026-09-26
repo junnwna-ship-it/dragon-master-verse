@@ -21,7 +21,7 @@ function decodeImage(dataUrl: string) {
  */
 export const cleanDragonDrawing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => CleanDragonDrawingInput.parse(input))
+  .inputValidator((input: unknown) => CleanDragonDrawingInput.parse(input))
   .handler(async ({ data }) => {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("AI 그림 정돈 기능이 아직 서버에 연결되지 않았습니다.");
@@ -29,7 +29,11 @@ export const cleanDragonDrawing = createServerFn({ method: "POST" })
     const { bytes, mime } = decodeImage(data.imageBase64);
     const form = new FormData();
     form.append("model", process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-sunburst");
-    form.append("image", new Blob([bytes], { type: mime }), `dragon-drawing.${mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"}`);
+    form.append(
+      "image",
+      new Blob([bytes], { type: mime }),
+      `dragon-drawing.${mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"}`,
+    );
     form.append(
       "prompt",
       [
@@ -55,7 +59,11 @@ export const cleanDragonDrawing = createServerFn({ method: "POST" })
     if (!response.ok) {
       const detail = await response.text();
       console.error("[dragon-image] OpenAI edit failed:", response.status, detail.slice(0, 1000));
-      throw new Error(response.status === 401 ? "AI 이미지 서버 인증을 확인해 주세요." : "AI가 그림을 정돈하지 못했습니다.");
+      throw new Error(
+        response.status === 401
+          ? "AI 이미지 서버 인증을 확인해 주세요."
+          : "AI가 그림을 정돈하지 못했습니다.",
+      );
     }
 
     const result = (await response.json()) as { data?: Array<{ b64_json?: string }> };

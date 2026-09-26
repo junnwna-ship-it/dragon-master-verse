@@ -59,12 +59,66 @@ const GHOST_TRAINERS: GhostTrainer[] = [
 ];
 
 const GHOST_DRAGONS: Dragon[] = [
-  { id: 201, name: "Vortex", element: "Water", hp: 1160, maxHp: 1160, mp: 1480, atk: 1730, def: 630 },
-  { id: 202, name: "Mossguard", element: "Wood", hp: 1665, maxHp: 1665, mp: 1000, atk: 1110, def: 1225 },
-  { id: 203, name: "Cinder", element: "Fire", hp: 1340, maxHp: 1340, mp: 1340, atk: 1695, def: 625 },
-  { id: 204, name: "Ironscale", element: "Earth", hp: 1665, maxHp: 1665, mp: 835, atk: 1210, def: 1290 },
-  { id: 205, name: "Glimmer", element: "Light", hp: 1320, maxHp: 1320, mp: 1240, atk: 1340, def: 1100 },
-  { id: 206, name: "Nyxshade", element: "Dark", hp: 980, maxHp: 980, mp: 540, atk: 2280, def: 1200 },
+  {
+    id: 201,
+    name: "Vortex",
+    element: "Water",
+    hp: 1160,
+    maxHp: 1160,
+    mp: 1480,
+    atk: 1730,
+    def: 630,
+  },
+  {
+    id: 202,
+    name: "Mossguard",
+    element: "Wood",
+    hp: 1665,
+    maxHp: 1665,
+    mp: 1000,
+    atk: 1110,
+    def: 1225,
+  },
+  {
+    id: 203,
+    name: "Cinder",
+    element: "Fire",
+    hp: 1340,
+    maxHp: 1340,
+    mp: 1340,
+    atk: 1695,
+    def: 625,
+  },
+  {
+    id: 204,
+    name: "Ironscale",
+    element: "Earth",
+    hp: 1665,
+    maxHp: 1665,
+    mp: 835,
+    atk: 1210,
+    def: 1290,
+  },
+  {
+    id: 205,
+    name: "Glimmer",
+    element: "Light",
+    hp: 1320,
+    maxHp: 1320,
+    mp: 1240,
+    atk: 1340,
+    def: 1100,
+  },
+  {
+    id: 206,
+    name: "Nyxshade",
+    element: "Dark",
+    hp: 980,
+    maxHp: 980,
+    mp: 540,
+    atk: 2280,
+    def: 1200,
+  },
 ];
 
 function pickEnemyDeck(): { trainer: GhostTrainer; deck: Dragon[] } {
@@ -99,7 +153,8 @@ export function PvpView() {
   const [detailId, setDetailId] = useState<number | null>(null);
 
   const playerDeck = useMemo(
-    () => selectedDeck.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
+    () =>
+      selectedDeck.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
     [selectedDeck, dragons],
   );
   const enemyDeck = useMemo(
@@ -159,11 +214,27 @@ export function PvpView() {
   }, []);
 
   const tier = useMemo(() => {
-    if (rp >= 1500) return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
-    if (rp >= 1200) return { rank: 4, label: "Platinum", tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10" };
-    if (rp >= 1000) return { rank: 3, label: "Gold", tone: "text-amber-300 border-amber-400/40 bg-amber-500/10" };
-    if (rp >= 800) return { rank: 2, label: "Silver", tone: "text-slate-200 border-slate-400/40 bg-slate-400/10" };
-    return { rank: 1, label: "Bronze", tone: "text-orange-300 border-orange-400/40 bg-orange-500/10" };
+    if (rp >= 1500)
+      return { rank: 5, label: "Diamond", tone: "text-sky-300 border-sky-400/40 bg-sky-500/10" };
+    if (rp >= 1200)
+      return {
+        rank: 4,
+        label: "Platinum",
+        tone: "text-emerald-300 border-emerald-400/40 bg-emerald-500/10",
+      };
+    if (rp >= 1000)
+      return { rank: 3, label: "Gold", tone: "text-amber-300 border-amber-400/40 bg-amber-500/10" };
+    if (rp >= 800)
+      return {
+        rank: 2,
+        label: "Silver",
+        tone: "text-slate-200 border-slate-400/40 bg-slate-400/10",
+      };
+    return {
+      rank: 1,
+      label: "Bronze",
+      tone: "text-orange-300 border-orange-400/40 bg-orange-500/10",
+    };
   }, [rp]);
 
   // ---------------- Battle ----------------
@@ -198,8 +269,7 @@ export function PvpView() {
             const expText = r.exp_delta ? ` · +${r.exp_delta} exp` : "";
             if (goldText) toast.success(t("pvp.rewardSuccess", { gold: goldText, exp: expText }));
           })();
-          const delta =
-            outcome === "win" ? RP_WIN_DELTA : outcome === "lose" ? RP_LOSS_DELTA : 0;
+          const delta = outcome === "win" ? RP_WIN_DELTA : outcome === "lose" ? RP_LOSS_DELTA : 0;
           const before = rp;
           const after = Math.max(0, before + delta);
           setRp(after);
@@ -235,7 +305,11 @@ export function PvpView() {
             <Icon className="h-8 w-8" />
           </div>
           <h3 className="mt-3 text-xl font-bold">
-            {r.outcome === "win" ? t("pvp.winLabel") : r.outcome === "lose" ? t("pvp.loseLabel") : t("pvp.drawLabel")}
+            {r.outcome === "win"
+              ? t("pvp.winLabel")
+              : r.outcome === "lose"
+                ? t("pvp.loseLabel")
+                : t("pvp.drawLabel")}
           </h3>
           <p className="mt-1 text-xs opacity-80">vs {r.trainer}</p>
           <div className="mt-4 flex items-center justify-center gap-2 text-sm">
@@ -251,7 +325,11 @@ export function PvpView() {
                     : "bg-slate-500/20 text-slate-300"
               }`}
             >
-              {r.delta > 0 ? <TrendingUp className="h-3 w-3" /> : r.delta < 0 ? <TrendingDown className="h-3 w-3" /> : null}
+              {r.delta > 0 ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : r.delta < 0 ? (
+                <TrendingDown className="h-3 w-3" />
+              ) : null}
               {r.delta > 0 ? `+${r.delta}` : r.delta}
             </span>
           </div>
@@ -363,30 +441,31 @@ export function PvpView() {
         />
       )}
 
-      {detailId !== null && (() => {
-        const idx = playerDeck.findIndex((d) => d.id === detailId);
-        if (idx < 0) return null;
-        const n = playerDeck.length;
-        const d = playerDeck[idx];
-        if (!d) return null;
-        const goTo = (i: number) => {
-          const wrapped = ((i % n) + n) % n;
-          const target = playerDeck[wrapped];
-          if (target) setDetailId(target.id);
-        };
-        return (
-          <DragonDetailModal
-            dragon={d}
-            nextDragon={n > 1 ? playerDeck[(idx + 1) % n] : undefined}
-            prevDragon={n > 1 ? playerDeck[(idx - 1 + n) % n] : undefined}
-            onClose={() => setDetailId(null)}
-            onNext={n > 1 ? () => goTo(idx + 1) : undefined}
-            onPrev={n > 1 ? () => goTo(idx - 1) : undefined}
-            hasNext={n > 1}
-            hasPrev={n > 1}
-          />
-        );
-      })()}
+      {detailId !== null &&
+        (() => {
+          const idx = playerDeck.findIndex((d) => d.id === detailId);
+          if (idx < 0) return null;
+          const n = playerDeck.length;
+          const d = playerDeck[idx];
+          if (!d) return null;
+          const goTo = (i: number) => {
+            const wrapped = ((i % n) + n) % n;
+            const target = playerDeck[wrapped];
+            if (target) setDetailId(target.id);
+          };
+          return (
+            <DragonDetailModal
+              dragon={d}
+              nextDragon={n > 1 ? playerDeck[(idx + 1) % n] : undefined}
+              prevDragon={n > 1 ? playerDeck[(idx - 1 + n) % n] : undefined}
+              onClose={() => setDetailId(null)}
+              onNext={n > 1 ? () => goTo(idx + 1) : undefined}
+              onPrev={n > 1 ? () => goTo(idx - 1) : undefined}
+              hasNext={n > 1}
+              hasPrev={n > 1}
+            />
+          );
+        })()}
 
       {/* 매칭 */}
       <div className="rounded-2xl border border-white/15 bg-black/50 p-6 text-center backdrop-blur-md">
@@ -394,9 +473,7 @@ export function PvpView() {
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-10 w-10 animate-spin text-amber-400" />
             <p className="text-sm font-bold text-slate-100">{t("pvp.searching")}</p>
-            <p className="text-[11px] text-slate-400">
-              {t("pvp.searchingDesc")}
-            </p>
+            <p className="text-[11px] text-slate-400">{t("pvp.searchingDesc")}</p>
             <button
               onClick={cancelMatchmaking}
               className="mt-1 rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
@@ -420,9 +497,7 @@ export function PvpView() {
               <Search className="h-4 w-4" /> {t("pvp.enterArena")}
             </button>
             {!deckReady && ownedDragonIds.length >= 3 && (
-              <p className="text-[10px] text-amber-300/90">
-                {t("pvp.needDeckHint")}
-              </p>
+              <p className="text-[10px] text-amber-300/90">{t("pvp.needDeckHint")}</p>
             )}
             {ownedDragonIds.length < 3 && (
               <div className="mt-1 w-full rounded-2xl border border-amber-300/30 bg-amber-300/5 p-4 text-center">
@@ -468,7 +543,11 @@ export function PvpView() {
                     </span>
                   </span>
                   <span className="font-bold uppercase">
-                    {r.outcome === "win" ? t("pvp.shortWin") : r.outcome === "lose" ? t("pvp.shortLose") : t("pvp.shortDraw")}
+                    {r.outcome === "win"
+                      ? t("pvp.shortWin")
+                      : r.outcome === "lose"
+                        ? t("pvp.shortLose")
+                        : t("pvp.shortDraw")}
                   </span>
                 </div>
               );
@@ -513,7 +592,10 @@ function DeckDragonCard({ dragon, onClick }: { dragon: Dragon; onClick: () => vo
               <span className="font-mono text-slate-200">{value}</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
-              <div className={`h-full ${color}`} style={{ width: `${Math.min(100, (value / maxStat) * 100)}%` }} />
+              <div
+                className={`h-full ${color}`}
+                style={{ width: `${Math.min(100, (value / maxStat) * 100)}%` }}
+              />
             </div>
           </div>
         ))}
@@ -654,32 +736,46 @@ function DragonPickerModal({
             {filtered.length === 0 ? (
               <p className="py-8 text-center text-xs text-slate-400">{t("pvp.pickerNoMatch")}</p>
             ) : (
-          <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-            {filtered.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => onPick(d.id)}
-                className="rounded-xl border border-slate-700 bg-slate-800/60 p-2 text-left transition hover:border-amber-400 hover:bg-slate-800"
-              >
-                <div className="mb-1.5 flex items-start justify-between gap-1">
-                  <span className="truncate text-[11px] font-bold text-slate-100">{d.name}</span>
-                  <span className="shrink-0 rounded-full border border-slate-600 bg-slate-900 px-1 py-0.5 text-[8px] font-bold uppercase text-slate-300">
-                    {d.element}
-                  </span>
-                </div>
-                <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-slate-700 text-[10px] font-bold text-slate-300">
-                  {d.name}
-                </div>
-                <div className="mt-1.5 grid grid-cols-2 gap-0.5 text-[9px] text-slate-400">
-                  <span className="flex items-center gap-0.5"><Sword className="h-2.5 w-2.5" />{d.atk}</span>
-                  <span className="flex items-center gap-0.5"><Shield className="h-2.5 w-2.5" />{d.def}</span>
-                  <span className="flex items-center gap-0.5"><Heart className="h-2.5 w-2.5" />{d.maxHp}</span>
-                  <span className="flex items-center gap-0.5"><Droplet className="h-2.5 w-2.5" />{d.mp}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+              <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                {filtered.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => onPick(d.id)}
+                    className="rounded-xl border border-slate-700 bg-slate-800/60 p-2 text-left transition hover:border-amber-400 hover:bg-slate-800"
+                  >
+                    <div className="mb-1.5 flex items-start justify-between gap-1">
+                      <span className="truncate text-[11px] font-bold text-slate-100">
+                        {d.name}
+                      </span>
+                      <span className="shrink-0 rounded-full border border-slate-600 bg-slate-900 px-1 py-0.5 text-[8px] font-bold uppercase text-slate-300">
+                        {d.element}
+                      </span>
+                    </div>
+                    <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-slate-700 text-[10px] font-bold text-slate-300">
+                      {d.name}
+                    </div>
+                    <div className="mt-1.5 grid grid-cols-2 gap-0.5 text-[9px] text-slate-400">
+                      <span className="flex items-center gap-0.5">
+                        <Sword className="h-2.5 w-2.5" />
+                        {d.atk}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <Shield className="h-2.5 w-2.5" />
+                        {d.def}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <Heart className="h-2.5 w-2.5" />
+                        {d.maxHp}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <Droplet className="h-2.5 w-2.5" />
+                        {d.mp}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             )}
           </>
         )}

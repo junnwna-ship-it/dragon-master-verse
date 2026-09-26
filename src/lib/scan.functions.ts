@@ -73,8 +73,10 @@ export const recognizeCard = createServerFn({ method: "POST" })
       }),
     });
 
-    if (response.status === 429) throw new Error("AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
-    if (response.status === 402) throw new Error("AI 크레딧이 부족합니다. 워크스페이스 결제를 확인하세요.");
+    if (response.status === 429)
+      throw new Error("AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+    if (response.status === 402)
+      throw new Error("AI 크레딧이 부족합니다. 워크스페이스 결제를 확인하세요.");
     if (!response.ok) {
       const text = await response.text();
       console.error("AI gateway error:", response.status, text);

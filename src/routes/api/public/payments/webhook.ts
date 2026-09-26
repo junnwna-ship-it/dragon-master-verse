@@ -1,11 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { createClient } from '@supabase/supabase-js';
-import { verifyWebhook, EventName, type PaddleEnv } from '@/lib/paddle.server';
+import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+import type { TransactionCompletedEvent } from "@paddle/paddle-node-sdk";
+import { verifyWebhook, EventName, type PaddleEnv } from "@/lib/paddle.server";
 
-let _supabase: ReturnType<typeof createClient> | null = null;
+let _supabase: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
   if (!_supabase) {
-    _supabase = createClient(
+    _supabase = createClient<Database>(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
@@ -13,22 +15,22 @@ function getSupabase() {
   return _supabase;
 }
 
-async function handleTransactionCompleted(data: any, env: PaddleEnv) {
+async function handleTransactionCompleted(data: TransactionCompletedEvent["data"], env: PaddleEnv) {
   const txnId: string = data.id;
-  const userId: string | undefined = data.customData?.userId;
-  if (!userId) {
-    console.warn('[paddle-webhook] transaction missing customData.userId', txnId);
+  const userId = data.customData?.userId;
+  if (typeof userId !== "string" || !userId) {
+    console.warn("[paddle-webhook] transaction missing customData.userId", txnId);
     return;
   }
 
   // Collect human-readable price IDs across all line items.
-  const items: any[] = data.items ?? [];
+  const items = data.items ?? [];
   const priceExternalIds = items
     .map((it) => it?.price?.importMeta?.externalId as string | undefined)
     .filter((v): v is string => Boolean(v));
 
   if (priceExternalIds.length === 0) {
-    console.warn('[paddle-webhook] no externalId on items, skipping', { txnId });
+    console.warn("[paddle-webhook] no externalId on items, skipping", { txnId });
     return;
   }
 
@@ -36,17 +38,17 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
 
   // Look up gold amount per price.
   const { data: pkgs, error: pkgErr } = await supabase
-    .from('gold_packages')
-    .select('price_external_id, gold_amount')
-    .in('price_external_id', priceExternalIds);
+    .from("gold_packages")
+    .select("price_external_id, gold_amount")
+    .in("price_external_id", priceExternalIds);
 
   if (pkgErr) {
-    console.error('[paddle-webhook] gold_packages lookup failed', pkgErr);
+    console.error("[paddle-webhook] gold_packages lookup failed", pkgErr);
     throw pkgErr;
   }
 
   const goldByPrice = new Map<string, number>(
-    (pkgs ?? []).map((p: any) => [p.price_external_id as string, p.gold_amount as number]),
+    (pkgs ?? []).map((p) => [p.price_external_id, p.gold_amount]),
   );
 
   let totalGold = 0;
@@ -55,7 +57,7 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
     if (!ext) continue;
     const per = goldByPrice.get(ext);
     if (!per) {
-      console.warn('[paddle-webhook] price not in gold_packages, skipping', ext);
+      console.warn("[paddle-webhook] price not in gold_packages, skipping", ext);
       continue;
     }
     const qty: number = Number(it.quantity ?? 1);
@@ -63,21 +65,23 @@ async function handleTransactionCompleted(data: any, env: PaddleEnv) {
   }
 
   if (totalGold <= 0) {
-    console.warn('[paddle-webhook] no gold to credit for txn', txnId);
+    console.warn("[paddle-webhook] no gold to credit for txn", txnId);
     return;
   }
 
-  const { data: result, error: rpcErr } = await (supabase.rpc as any)(
-    'credit_gold_from_purchase',
-    { _user_id: userId, _txn_id: txnId, _gold: totalGold, _env: env },
-  );
+  const { data: result, error: rpcErr } = await supabase.rpc("credit_gold_from_purchase", {
+    _user_id: userId,
+    _txn_id: txnId,
+    _gold: totalGold,
+    _env: env,
+  });
 
   if (rpcErr) {
-    console.error('[paddle-webhook] credit_gold_from_purchase failed', rpcErr);
+    console.error("[paddle-webhook] credit_gold_from_purchase failed", rpcErr);
     throw rpcErr;
   }
 
-  console.log('[paddle-webhook] credited gold', { txnId, userId, totalGold, result });
+  console.log("[paddle-webhook] credited gold", { txnId, userId, totalGold, result });
 }
 
 async function handleWebhook(req: Request, env: PaddleEnv) {
@@ -85,25 +89,25 @@ async function handleWebhook(req: Request, env: PaddleEnv) {
 
   switch (event.eventType) {
     case EventName.TransactionCompleted:
-      await handleTransactionCompleted(event.data as any, env);
+      await handleTransactionCompleted(event.data, env);
       break;
     default:
-      console.log('[paddle-webhook] unhandled event:', event.eventType);
+      console.log("[paddle-webhook] unhandled event:", event.eventType);
   }
 }
 
-export const Route = createFileRoute('/api/public/payments/webhook')({
+export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const url = new URL(request.url);
-        const env = (url.searchParams.get('env') || 'sandbox') as PaddleEnv;
+        const env = (url.searchParams.get("env") || "sandbox") as PaddleEnv;
         try {
           await handleWebhook(request, env);
           return Response.json({ received: true });
         } catch (e) {
-          console.error('[paddle-webhook] error:', e);
-          return new Response('Webhook error', { status: 400 });
+          console.error("[paddle-webhook] error:", e);
+          return new Response("Webhook error", { status: 400 });
         }
       },
     },

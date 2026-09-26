@@ -38,7 +38,9 @@ export function useSummonPool() {
     queryFn: async (): Promise<PoolEntry[]> => {
       const { data, error } = await supabase
         .from("dragon_pool")
-        .select("id, dragon_id, rarity, weight, shard_cost, dragon:dragons(id, name, element, image_url)")
+        .select(
+          "id, dragon_id, rarity, weight, shard_cost, dragon:dragons(id, name, element, image_url)",
+        )
         .eq("is_active", true);
       if (error) throw error;
       return (data ?? []) as unknown as PoolEntry[];
@@ -59,7 +61,10 @@ export function rarityRates(pool: PoolEntry[]): { rarity: Rarity; pct: number }[
     .filter((r) => r.pct > 0);
 }
 
-export async function summonDragons(count: 1 | 10, pay: "gold" | "ticket"): Promise<SummonResponse> {
+export async function summonDragons(
+  count: 1 | 10,
+  pay: "gold" | "ticket",
+): Promise<SummonResponse> {
   const { data, error } = await supabase.rpc("summon_dragon", { _count: count, _pay: pay });
   if (error) throw error;
   emitInventoryChanged();
@@ -73,7 +78,10 @@ export async function exchangeShards(dragonUuid: string) {
   return data as unknown as { ok: boolean; shards: number; cost: number };
 }
 
-export const RARITY_STYLE: Record<Rarity, { label: string; ring: string; text: string; glow: string }> = {
+export const RARITY_STYLE: Record<
+  Rarity,
+  { label: string; ring: string; text: string; glow: string }
+> = {
   common: {
     label: "Common",
     ring: "border-slate-600/70",

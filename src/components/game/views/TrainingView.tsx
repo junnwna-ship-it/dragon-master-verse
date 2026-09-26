@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Lock, Dumbbell, Sparkles, Coins, Heart, Swords, Shield, Zap, Flame, ArrowRight, ArrowLeft, Wand2 } from "lucide-react";
+import {
+  Lock,
+  Dumbbell,
+  Sparkles,
+  Coins,
+  Heart,
+  Swords,
+  Shield,
+  Zap,
+  Flame,
+  ArrowRight,
+  ArrowLeft,
+  Wand2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -26,10 +39,7 @@ export function TrainingView() {
   const { resolve } = useOwnedGrowth();
 
   // Only cloud-synced dragons can be trained (RPC needs a UUID).
-  const trainable = useMemo(
-    () => dragons.filter((d) => d.uuid).map(resolve),
-    [dragons, resolve],
-  );
+  const trainable = useMemo(() => dragons.filter((d) => d.uuid).map(resolve), [dragons, resolve]);
 
   const [pickedId, setPickedId] = useState<number | null>(null);
   // Auto-select the first dragon when the list arrives or the picked one
@@ -93,9 +103,7 @@ export function TrainingView() {
                         <span className="line-clamp-1 w-full text-center text-[11px] font-semibold text-slate-100">
                           {d.name}
                         </span>
-                        <span className="text-[10px] text-slate-400">
-                          Lv.{d.level ?? 1}
-                        </span>
+                        <span className="text-[10px] text-slate-400">Lv.{d.level ?? 1}</span>
                         {sp > 0 && (
                           <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950 shadow">
                             {sp}
@@ -123,9 +131,7 @@ export function TrainingView() {
           <p className="mt-4 px-6 text-base font-bold text-slate-100">
             {t("training.lockedHeading")}
           </p>
-          <p className="mt-1 px-6 text-xs text-slate-400">
-            {t("training.lockedDesc")}
-          </p>
+          <p className="mt-1 px-6 text-xs text-slate-400">{t("training.lockedDesc")}</p>
         </div>
       )}
     </div>
@@ -149,7 +155,9 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
 
   return (
     <section className="grid gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4 md:grid-cols-2 md:p-6">
-      <div className="md:col-span-2"><GoldTrainingSection dragon={dragon} /></div>
+      <div className="md:col-span-2">
+        <GoldTrainingSection dragon={dragon} />
+      </div>
 
       {/* Hero */}
       <div className="flex gap-3 md:col-span-2">
@@ -226,7 +234,9 @@ function DetailPanel({ dragon }: { dragon: Dragon }) {
           <div className="rounded-lg border border-amber-800/60 bg-amber-500/5 px-3 py-2">
             <div className="flex items-center gap-1.5">
               <Flame className="h-3.5 w-3.5 text-amber-300" />
-              <span className="text-[11px] font-bold text-amber-200">{t("training.specialSkill")}</span>
+              <span className="text-[11px] font-bold text-amber-200">
+                {t("training.specialSkill")}
+              </span>
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
               {t("training.specialSkillDesc")}
@@ -281,16 +291,16 @@ type ElementMeta = {
   weakTo: Dragon["element"];
 };
 const ELEMENT_INFO: Record<Dragon["element"], ElementMeta> = {
-  Wood:  { kr: "목", icon: "🌳", tint: "text-emerald-300", strongVs: "Earth", weakTo: "Light" },
-  Earth: { kr: "토", icon: "🪨", tint: "text-amber-300",   strongVs: "Water", weakTo: "Wood"  },
-  Water: { kr: "수", icon: "💧", tint: "text-sky-300",     strongVs: "Fire",  weakTo: "Earth" },
-  Fire:  { kr: "화", icon: "🔥", tint: "text-rose-300",    strongVs: "Light", weakTo: "Water" },
-  Light: { kr: "금", icon: "✨", tint: "text-yellow-200",  strongVs: "Wood",  weakTo: "Fire"  },
-  Dark:  { kr: "토(암)", icon: "🌑", tint: "text-violet-300", strongVs: "Water", weakTo: "Wood" },
+  Wood: { kr: "목", icon: "🌳", tint: "text-emerald-300", strongVs: "Earth", weakTo: "Light" },
+  Earth: { kr: "토", icon: "🪨", tint: "text-amber-300", strongVs: "Water", weakTo: "Wood" },
+  Water: { kr: "수", icon: "💧", tint: "text-sky-300", strongVs: "Fire", weakTo: "Earth" },
+  Fire: { kr: "화", icon: "🔥", tint: "text-rose-300", strongVs: "Light", weakTo: "Water" },
+  Light: { kr: "금", icon: "✨", tint: "text-yellow-200", strongVs: "Wood", weakTo: "Fire" },
+  Dark: { kr: "토(암)", icon: "🌑", tint: "text-violet-300", strongVs: "Water", weakTo: "Wood" },
 };
 
 const PASSIVES: Record<string, { name: string; desc: string }> = {
-  Comi:      { name: "강철의 인내",   desc: "피격 시 받는 데미지가 일정 비율 경감됩니다." },
-  Snowy:     { name: "빙결의 신중함", desc: "짝수 턴에 30% 회피, 자신의 공격은 20% 약화됩니다." },
-  Caminont:  { name: "맹독의 송곳니", desc: "공격 시 적에게 지속 독 데미지를 부여합니다." },
+  Comi: { name: "강철의 인내", desc: "피격 시 받는 데미지가 일정 비율 경감됩니다." },
+  Snowy: { name: "빙결의 신중함", desc: "짝수 턴에 30% 회피, 자신의 공격은 20% 약화됩니다." },
+  Caminont: { name: "맹독의 송곳니", desc: "공격 시 적에게 지속 독 데미지를 부여합니다." },
 };

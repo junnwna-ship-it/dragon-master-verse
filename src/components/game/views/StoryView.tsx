@@ -1,6 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Swords, Flower2, Crown, Heart, Droplet, ChevronRight, Skull, RotateCcw, Sparkles, Lock, Trophy, Handshake, Settings2, Save, Check } from "lucide-react";
+import {
+  Map as MapIcon,
+  Swords,
+  Flower2,
+  Crown,
+  Heart,
+  Droplet,
+  ChevronRight,
+  Skull,
+  RotateCcw,
+  Sparkles,
+  Lock,
+  Trophy,
+  Handshake,
+  Settings2,
+  Save,
+  Check,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { useGameStore, type Dragon } from "@/store/dragons";
@@ -31,7 +48,16 @@ function buildNodes(): MapNode[] {
       subtitle: i18n.t("story.nodeBossSub"),
       kind: "boss",
       enemyName: "Puri",
-      enemy: { id: 9003, name: "Puri", element: "Wood", hp: 90, maxHp: 90, mp: 60, atk: 60, def: 55 },
+      enemy: {
+        id: 9003,
+        name: "Puri",
+        element: "Wood",
+        hp: 90,
+        maxHp: 90,
+        mp: 60,
+        atk: 60,
+        def: 55,
+      },
       x: 50,
       y: 12,
     },
@@ -49,7 +75,16 @@ function buildNodes(): MapNode[] {
       subtitle: i18n.t("story.nodeBattleSub"),
       kind: "battle",
       enemyName: "Spike",
-      enemy: { id: 9001, name: "Spike", element: "Water", hp: 70, maxHp: 70, mp: 90, atk: 80, def: 20 },
+      enemy: {
+        id: 9001,
+        name: "Spike",
+        element: "Water",
+        hp: 70,
+        maxHp: 70,
+        mp: 90,
+        atk: 80,
+        def: 20,
+      },
       x: 70,
       y: 88,
     },
@@ -136,8 +171,7 @@ function BattleResultBanner({
         ? "border-slate-500/40 bg-slate-500/10 text-slate-200"
         : "border-rose-500/40 bg-rose-500/10 text-rose-200";
 
-  const Icon =
-    shown?.outcome === "win" ? Trophy : shown?.outcome === "draw" ? Handshake : Skull;
+  const Icon = shown?.outcome === "win" ? Trophy : shown?.outcome === "draw" ? Handshake : Skull;
   const iconTone =
     shown?.outcome === "win"
       ? "text-emerald-300"
@@ -210,10 +244,11 @@ export function StoryView() {
   const [selectedDragon, setSelectedDragon] = useState<Dragon | null>(null);
   const [activeBattleNode, setActiveBattleNode] = useState<MapNode | null>(null);
   const [eventMessage, setEventMessage] = useState<string | null>(null);
-  const [battleResult, setBattleResult] = useState<
-    | { outcome: "win" | "draw" | "lose"; nodeTitle: string; enemyName?: string }
-    | null
-  >(null);
+  const [battleResult, setBattleResult] = useState<{
+    outcome: "win" | "draw" | "lose";
+    nodeTitle: string;
+    enemyName?: string;
+  } | null>(null);
   const [defeated, setDefeated] = useState(false);
   const [defeatStats, setDefeatStats] = useState<{ hp: number; mp: number } | null>(null);
   const [bannerDuration, setBannerDuration] = useState<BannerDuration>(() => loadBannerDuration());
@@ -309,11 +344,7 @@ export function StoryView() {
    * the latest run (avoids stale-closure bugs and guarantees the map gauges
    * reflect the freshest values regardless of which node type triggered it).
    */
-  const applyRunUpdate = (update: {
-    hp?: number;
-    mp?: number;
-    clearNodeId?: number;
-  }) => {
+  const applyRunUpdate = (update: { hp?: number; mp?: number; clearNodeId?: number }) => {
     setRun((prev) => {
       if (!prev) return prev;
       const nextHp = update.hp ?? prev.playerHp;
@@ -338,7 +369,9 @@ export function StoryView() {
     return (
       <MerlinStageView
         onComplete={() => setStage1Done(true)}
-        refetchOwned={async () => { await refetchOwned(); }}
+        refetchOwned={async () => {
+          await refetchOwned();
+        }}
       />
     );
   }
@@ -402,7 +435,8 @@ export function StoryView() {
                 <Heart className="h-3 w-3 text-emerald-400" /> HP
               </div>
               <p className="mt-0.5 font-mono text-sm text-slate-100">
-                {finalHp}<span className="text-slate-500">/{selectedDragon.maxHp}</span>
+                {finalHp}
+                <span className="text-slate-500">/{selectedDragon.maxHp}</span>
               </p>
             </div>
             <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2">
@@ -410,7 +444,8 @@ export function StoryView() {
                 <Droplet className="h-3 w-3 text-sky-400" /> MP
               </div>
               <p className="mt-0.5 font-mono text-sm text-slate-100">
-                {finalMp}<span className="text-slate-500">/{selectedDragon.mp}</span>
+                {finalMp}
+                <span className="text-slate-500">/{selectedDragon.mp}</span>
               </p>
             </div>
           </div>
@@ -552,7 +587,9 @@ export function StoryView() {
       {showBannerSettings && (
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-slate-200">{t("story.bannerDurationTitle")}</p>
+            <p className="text-[11px] font-semibold text-slate-200">
+              {t("story.bannerDurationTitle")}
+            </p>
             <button
               onClick={() => setShowBannerSettings(false)}
               className="rounded px-1 text-[10px] text-slate-500 hover:text-slate-300"
@@ -585,9 +622,7 @@ export function StoryView() {
               );
             })}
           </div>
-          <p className="mt-2 text-[10px] text-slate-500">
-            {t("story.bannerManualHint")}
-          </p>
+          <p className="mt-2 text-[10px] text-slate-500">{t("story.bannerManualHint")}</p>
         </div>
       )}
 
@@ -597,13 +632,18 @@ export function StoryView() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-slate-100">{selectedDragon.name}</span>
             <span className="text-[10px] uppercase tracking-widest text-slate-500">
-              {t("story.progress", { cur: Math.min(run.visited.length, TOTAL_NODES), total: TOTAL_NODES })}
+              {t("story.progress", {
+                cur: Math.min(run.visited.length, TOTAL_NODES),
+                total: TOTAL_NODES,
+              })}
             </span>
           </div>
           <div key={gaugePulseKey} className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
             <div>
               <div className="flex items-center justify-between text-slate-400">
-                <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
+                <span className="flex items-center gap-1">
+                  <Heart className="h-3 w-3 text-emerald-400" /> HP
+                </span>
                 <span className="font-mono text-slate-200 transition-colors animate-in fade-in duration-300">
                   {run.playerHp}/{selectedDragon.maxHp}
                 </span>
@@ -617,7 +657,9 @@ export function StoryView() {
             </div>
             <div>
               <div className="flex items-center justify-between text-slate-400">
-                <span className="flex items-center gap-1"><Droplet className="h-3 w-3 text-sky-400" /> MP</span>
+                <span className="flex items-center gap-1">
+                  <Droplet className="h-3 w-3 text-sky-400" /> MP
+                </span>
                 <span className="font-mono text-slate-200 transition-colors animate-in fade-in duration-300">
                   {Math.max(0, run.playerMp)}/{selectedDragon.mp}
                 </span>
@@ -625,7 +667,9 @@ export function StoryView() {
               <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
                 <div
                   className="h-full bg-sky-500 transition-[width] duration-500 ease-out"
-                  style={{ width: `${Math.max(0, Math.min(100, (run.playerMp / Math.max(1, selectedDragon.mp)) * 100))}%` }}
+                  style={{
+                    width: `${Math.max(0, Math.min(100, (run.playerMp / Math.max(1, selectedDragon.mp)) * 100))}%`,
+                  }}
                 />
               </div>
             </div>
@@ -702,7 +746,6 @@ export function StoryView() {
           {save ? t("story.startNewJourney") : t("story.startJourney")}
         </button>
       )}
-
 
       {/* Vertical scroll node map */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-gradient-to-b from-slate-900 via-slate-900/80 to-slate-950 p-2">
@@ -906,9 +949,7 @@ export function StoryView() {
         </div>
       </div>
 
-      <p className="text-center text-[10px] text-slate-500">
-        {t("story.footerHint")}
-      </p>
+      <p className="text-center text-[10px] text-slate-500">{t("story.footerHint")}</p>
     </div>
   );
 }

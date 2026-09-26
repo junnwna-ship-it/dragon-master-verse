@@ -33,7 +33,6 @@ export interface VnOption {
   requires?: Record<string, number> | null;
 }
 
-
 export interface VnNode {
   id: string;
   chapter_id: string;
@@ -74,7 +73,6 @@ interface VnStore extends VnRunState {
   hydrate: (snapshot: VnRunState) => void;
   reset: () => void;
 }
-
 
 const EMPTY: VnRunState = {
   chapterId: null,
@@ -147,7 +145,6 @@ export const useStoryEngine = create<VnStore>()(
       hydrate: (snapshot) => set({ ...snapshot }),
 
       reset: () => set({ ...EMPTY }),
-
     }),
     { name: "story.vn.run", version: 1 },
   ),

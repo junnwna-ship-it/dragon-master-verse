@@ -96,11 +96,17 @@ export const fetchQuizzesByIds = createServerFn({ method: "POST" })
       .in("id", data.ids);
     if (error) throw new Error(error.message);
     const byId = new Map((rows ?? []).map((r) => [r.id, r]));
-    const ordered = data.ids.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r);
+    const ordered = data.ids
+      .map((id) => byId.get(id))
+      .filter((r): r is NonNullable<typeof r> => !!r);
     const answerKey: Record<string, number> = {};
     for (const q of ordered) answerKey[q.id] = q.answer_index;
     return {
-      quizzes: ordered.map((q) => ({ id: q.id, question: q.question, choices: q.choices as string[] })),
+      quizzes: ordered.map((q) => ({
+        id: q.id,
+        question: q.question,
+        choices: q.choices as string[],
+      })),
       answerKey,
     };
   });

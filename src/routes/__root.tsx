@@ -36,7 +36,11 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "google-site-verification", content: "QT5aLYeZpyBB60PrI4ULzMVmqTCpLSq5XnPX4g8M86o" },
       { title: "Artiati Dragon Masters" },
-      { name: "description", content: "Collect, train and battle mystical dragons, then play branching story chapters in Artiati Dragon Masters." },
+      {
+        name: "description",
+        content:
+          "Collect, train and battle mystical dragons, then play branching story chapters in Artiati Dragon Masters.",
+      },
       { property: "og:site_name", content: "Artiati Dragon Masters" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -69,7 +73,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { i18n } = useTranslation();
-  useEffect(() => { document.documentElement.lang = i18n.language; }, [i18n.language]);
+  useEffect(() => {
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
   const [queryClient] = useState(
     () =>
       new QueryClient({

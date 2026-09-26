@@ -1,10 +1,7 @@
 // Text templates that teach the node → choice → quiz flow used by the
 // story player. Users fill in the blanks instead of inventing a format.
 
-import {
-  DRAGON_MASTER_CHAPTER,
-  chapterTemplateToStudioText,
-} from "@/lib/chapterTemplates";
+import { DRAGON_MASTER_CHAPTER, chapterTemplateToStudioText } from "@/lib/chapterTemplates";
 
 export type StoryTemplate = {
   id: string;

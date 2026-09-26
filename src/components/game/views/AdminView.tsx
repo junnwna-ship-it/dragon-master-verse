@@ -1,5 +1,20 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Trash2, Upload, Plus, Pencil, X, Layers, ShieldAlert, Cloud, ToggleRight, Settings2, HelpCircle, Loader2, FileUp, Download } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  Trash2,
+  Upload,
+  Plus,
+  Pencil,
+  X,
+  Layers,
+  ShieldAlert,
+  Cloud,
+  ToggleRight,
+  Settings2,
+  HelpCircle,
+  Loader2,
+  FileUp,
+  Download,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
@@ -25,11 +40,11 @@ import { useAppSettings, type AppSettings } from "@/hooks/useAppSettings";
 
 const ELEMENTS: { value: Element; label: string }[] = [
   { value: "Water", label: "Water" },
-  { value: "Fire",  label: "Fire" },
-  { value: "Wood",  label: "Wood" },
+  { value: "Fire", label: "Fire" },
+  { value: "Wood", label: "Wood" },
   { value: "Light", label: "Metal/Light" },
   { value: "Earth", label: "Earth" },
-  { value: "Dark",  label: "Dark" },
+  { value: "Dark", label: "Dark" },
 ];
 
 const MAX_DIM = 400;
@@ -388,9 +403,7 @@ export function AdminView() {
         <div className="flex items-center gap-2 font-bold">
           <ShieldAlert className="h-4 w-4" /> {t("admin.loginNeeded")}
         </div>
-        <p className="text-xs text-amber-300/80">
-          {t("admin.loginNeededHint")}
-        </p>
+        <p className="text-xs text-amber-300/80">{t("admin.loginNeededHint")}</p>
       </div>
     );
   }
@@ -400,9 +413,7 @@ export function AdminView() {
       <div>
         <h2 className="text-xl font-bold text-slate-100">{t("admin.title")}</h2>
         <p className="text-xs text-slate-400">
-          {isAdmin
-            ? t("admin.subtitleAdmin")
-            : t("admin.subtitleUser")}
+          {isAdmin ? t("admin.subtitleAdmin") : t("admin.subtitleUser")}
         </p>
         {adminLoading ? null : isAdmin ? (
           <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
@@ -483,8 +494,8 @@ export function AdminView() {
           {[
             { label: "Max HP", value: maxHp, set: setMaxHp },
             { label: "Max MP", value: maxMp, set: setMaxMp },
-            { label: "ATK",    value: atk,   set: setAtk },
-            { label: "DEF",    value: def,   set: setDef },
+            { label: "ATK", value: atk, set: setAtk },
+            { label: "DEF", value: def, set: setDef },
           ].map((f) => (
             <label key={f.label} className="block text-xs">
               <span className="mb-1 block text-slate-400">{f.label}</span>
@@ -571,9 +582,7 @@ export function AdminView() {
         </div>
 
         {bulkRows.length === 0 ? (
-          <p className="text-center text-[11px] text-slate-500">
-            {t("admin.bulkHint")}
-          </p>
+          <p className="text-center text-[11px] text-slate-500">{t("admin.bulkHint")}</p>
         ) : (
           <ul className="space-y-2">
             {bulkRows.map((r) => (
@@ -595,9 +604,7 @@ export function AdminView() {
                   />
                   <select
                     value={r.element}
-                    onChange={(e) =>
-                      updateBulk(r.key, { element: e.target.value as Element })
-                    }
+                    onChange={(e) => updateBulk(r.key, { element: e.target.value as Element })}
                     className="rounded-md border border-slate-700 bg-slate-900 px-1 py-1 text-xs text-slate-100"
                   >
                     {ELEMENTS.map((el) => (
@@ -650,7 +657,10 @@ export function AdminView() {
             <Cloud className="h-4 w-4" />
             {bulkBusy
               ? bulkProgress
-                ? t("admin.bulkSubmitProgress", { done: bulkProgress.done, total: bulkProgress.total })
+                ? t("admin.bulkSubmitProgress", {
+                    done: bulkProgress.done,
+                    total: bulkProgress.total,
+                  })
                 : t("admin.uploading")
               : t("admin.bulkSubmit", { n: bulkRows.length })}
           </button>
@@ -730,7 +740,9 @@ export function AdminView() {
                   </div>
                 ) : (
                   <span className="text-[9px] uppercase tracking-wider text-slate-600">
-                    {isCustom ? t("story.lockedNode") : t("common.default", { defaultValue: "Default" })}
+                    {isCustom
+                      ? t("story.lockedNode")
+                      : t("common.default", { defaultValue: "Default" })}
                   </span>
                 )}
               </li>
@@ -772,13 +784,20 @@ function parseCsvLine(line: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-      else if (ch === '"') { inQuotes = false; }
-      else { cur += ch; }
+      if (ch === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        cur += ch;
+      }
     } else {
       if (ch === '"') inQuotes = true;
-      else if (ch === ",") { out.push(cur); cur = ""; }
-      else cur += ch;
+      else if (ch === ",") {
+        out.push(cur);
+        cur = "";
+      } else cur += ch;
     }
   }
   out.push(cur);
@@ -825,9 +844,12 @@ function parseQuizJson(text: string): ParsedQuiz[] {
   const data = JSON.parse(text);
   if (!Array.isArray(data)) throw new Error(i18n.t("quizAdmin.jsonNotArray"));
   return data.map((row, i) => {
-    if (!row || typeof row !== "object") throw new Error(i18n.t("quizAdmin.jsonBadRow", { n: i + 1 }));
+    if (!row || typeof row !== "object")
+      throw new Error(i18n.t("quizAdmin.jsonBadRow", { n: i + 1 }));
     const question = String(row.question ?? "").trim();
-    const choices = Array.isArray(row.choices) ? row.choices.map((c: unknown) => String(c ?? "").trim()) : [];
+    const choices = Array.isArray(row.choices)
+      ? row.choices.map((c: unknown) => String(c ?? "").trim())
+      : [];
     let answer_index = -1;
     if (typeof row.answer_index === "number") answer_index = row.answer_index;
     else if (typeof row.answer === "string") {
@@ -836,7 +858,13 @@ function parseQuizJson(text: string): ParsedQuiz[] {
       else if (/^[0-3]$/.test(a)) answer_index = Number(a);
     }
     const category = String(row.category ?? "general").trim() || "general";
-    if (!question || choices.length !== 4 || choices.some((c: string) => !c) || answer_index < 0 || answer_index > 3) {
+    if (
+      !question ||
+      choices.length !== 4 ||
+      choices.some((c: string) => !c) ||
+      answer_index < 0 ||
+      answer_index > 3
+    ) {
       throw new Error(i18n.t("quizAdmin.jsonBadFields", { n: i + 1 }));
     }
     return { question, choices, answer_index, category };
@@ -844,7 +872,7 @@ function parseQuizJson(text: string): ParsedQuiz[] {
 }
 
 const CSV_TEMPLATE =
-  'question,choice_a,choice_b,choice_c,choice_d,answer,category\n' +
+  "question,choice_a,choice_b,choice_c,choice_d,answer,category\n" +
   '"What egg do dragons hatch from?","Stone","Fire","Water","Wind",B,general\n';
 
 function QuizManager() {
@@ -858,41 +886,67 @@ function QuizManager() {
   const [answerIdx, setAnswerIdx] = useState(0);
   const [category, setCategory] = useState("general");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("quizzes")
       .select("id, question, choices, answer_index, category")
       .order("created_at", { ascending: false });
     setLoading(false);
-    if (error) { toast.error(t("quizAdmin.loadFailed", { msg: error.message })); return; }
-    setRows((data ?? []).map((r) => ({
-      id: r.id, question: r.question, choices: r.choices as string[],
-      answer_index: r.answer_index, category: r.category,
-    })));
-  };
+    if (error) {
+      toast.error(t("quizAdmin.loadFailed", { msg: error.message }));
+      return;
+    }
+    setRows(
+      (data ?? []).map((r) => ({
+        id: r.id,
+        question: r.question,
+        choices: r.choices as string[],
+        answer_index: r.answer_index,
+        category: r.category,
+      })),
+    );
+  }, [t]);
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const reset = () => {
-    setEditingId(null); setQuestion(""); setChoices(["", "", "", ""]);
-    setAnswerIdx(0); setCategory("general");
+    setEditingId(null);
+    setQuestion("");
+    setChoices(["", "", "", ""]);
+    setAnswerIdx(0);
+    setCategory("general");
   };
 
   const startEdit = (q: QuizRow) => {
-    setEditingId(q.id); setQuestion(q.question);
+    setEditingId(q.id);
+    setQuestion(q.question);
     const c = [...q.choices, "", "", "", ""].slice(0, 4) as [string, string, string, string];
-    setChoices(c); setAnswerIdx(q.answer_index); setCategory(q.category || "general");
+    setChoices(c);
+    setAnswerIdx(q.answer_index);
+    setCategory(q.category || "general");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    if (!question.trim()) { toast.error(t("quizAdmin.needQuestion")); return; }
-    if (choices.some((c) => !c.trim())) { toast.error(t("quizAdmin.needChoices")); return; }
-    if (answerIdx < 0 || answerIdx > 3) { toast.error(t("quizAdmin.badAnswer")); return; }
+    if (!question.trim()) {
+      toast.error(t("quizAdmin.needQuestion"));
+      return;
+    }
+    if (choices.some((c) => !c.trim())) {
+      toast.error(t("quizAdmin.needChoices"));
+      return;
+    }
+    if (answerIdx < 0 || answerIdx > 3) {
+      toast.error(t("quizAdmin.badAnswer"));
+      return;
+    }
     if (!editingId && rows.length >= MAX_QUIZZES) {
-      toast.error(t("quizAdmin.limitReached", { max: MAX_QUIZZES })); return;
+      toast.error(t("quizAdmin.limitReached", { max: MAX_QUIZZES }));
+      return;
     }
     setBusy(true);
     const payload = {
@@ -905,16 +959,24 @@ function QuizManager() {
       ? await supabase.from("quizzes").update(payload).eq("id", editingId)
       : await supabase.from("quizzes").insert(payload);
     setBusy(false);
-    if (error) { toast.error(t("admin.saveFailed", { msg: error.message })); return; }
+    if (error) {
+      toast.error(t("admin.saveFailed", { msg: error.message }));
+      return;
+    }
     toast.success(editingId ? t("quizAdmin.saved") : t("quizAdmin.savedNew"));
-    reset(); await load();
+    reset();
+    await load();
   };
 
   const remove = async (id: string) => {
     if (!confirm(t("quizAdmin.confirmDelete"))) return;
     const { error } = await supabase.from("quizzes").delete().eq("id", id);
-    if (error) { toast.error(t("admin.saveFailed", { msg: error.message })); return; }
-    toast.success(t("quizAdmin.deleted")); await load();
+    if (error) {
+      toast.error(t("admin.saveFailed", { msg: error.message }));
+      return;
+    }
+    toast.success(t("quizAdmin.deleted"));
+    await load();
     if (editingId === id) reset();
   };
 
@@ -955,8 +1017,11 @@ function QuizManager() {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "quizzes-template.csv";
-    document.body.appendChild(a); a.click(); a.remove();
+    a.href = url;
+    a.download = "quizzes-template.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     URL.revokeObjectURL(url);
   };
 
@@ -964,11 +1029,15 @@ function QuizManager() {
     <section className="space-y-3 rounded-2xl border border-purple-500/40 bg-slate-900/60 p-4">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-300">
-          <HelpCircle className="h-3 w-3" /> {t("quizAdmin.title", { n: rows.length, max: MAX_QUIZZES })}
+          <HelpCircle className="h-3 w-3" />{" "}
+          {t("quizAdmin.title", { n: rows.length, max: MAX_QUIZZES })}
         </p>
         {editingId && (
-          <button type="button" onClick={reset}
-            className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-700">
+          <button
+            type="button"
+            onClick={reset}
+            className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-700"
+          >
             <X className="h-3 w-3" /> {t("quizAdmin.cancel")}
           </button>
         )}
@@ -980,19 +1049,31 @@ function QuizManager() {
           {t("quizAdmin.bulkTitle")}
         </p>
         <p className="text-[11px] leading-relaxed text-slate-400">
-          {t("quizAdmin.bulkCsvHint")} <code className="text-slate-300">question, choice_a, choice_b, choice_c, choice_d, answer, category</code>
+          {t("quizAdmin.bulkCsvHint")}{" "}
+          <code className="text-slate-300">
+            question, choice_a, choice_b, choice_c, choice_d, answer, category
+          </code>
           <br />
-          {t("quizAdmin.bulkJsonHint")} <code className="text-slate-300">{`[{ question, choices:[a,b,c,d], answer_index:0–3, category? }]`}</code>
+          {t("quizAdmin.bulkJsonHint")}{" "}
+          <code className="text-slate-300">{`[{ question, choices:[a,b,c,d], answer_index:0–3, category? }]`}</code>
         </p>
         <div className="flex flex-wrap gap-2">
           <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-500/20 px-3 py-2 text-xs font-semibold text-purple-200 transition hover:bg-purple-500/30">
             <FileUp className="h-3.5 w-3.5" />
             {t("quizAdmin.pickFile")}
-            <input type="file" accept=".csv,.json,text/csv,application/json"
-              onChange={handleBulkFile} disabled={busy} className="hidden" />
+            <input
+              type="file"
+              accept=".csv,.json,text/csv,application/json"
+              onChange={handleBulkFile}
+              disabled={busy}
+              className="hidden"
+            />
           </label>
-          <button type="button" onClick={downloadTemplate}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+          <button
+            type="button"
+            onClick={downloadTemplate}
+            className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+          >
             <Download className="h-3.5 w-3.5" />
             {t("quizAdmin.template")}
           </button>
@@ -1002,41 +1083,69 @@ function QuizManager() {
       <form onSubmit={save} className="space-y-2">
         <label className="block text-xs">
           <span className="mb-1 block text-slate-400">{t("quizAdmin.question")}</span>
-          <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={2}
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            rows={2}
             placeholder={t("quizAdmin.questionPlaceholder")}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500" />
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500"
+          />
         </label>
         <div className="grid grid-cols-1 gap-2">
           {choices.map((c, i) => (
             <label key={i} className="flex items-center gap-2 text-xs">
-              <input type="radio" name="answer" checked={answerIdx === i}
+              <input
+                type="radio"
+                name="answer"
+                checked={answerIdx === i}
                 onChange={() => setAnswerIdx(i)}
-                className="h-4 w-4 accent-emerald-500" aria-label={t("quizAdmin.selectAnswerAria", { letter: String.fromCharCode(65 + i) })} />
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                answerIdx === i ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400"
-              }`}>{String.fromCharCode(65 + i)}</span>
-              <input value={c} onChange={(e) => {
-                const next = [...choices] as [string, string, string, string];
-                next[i] = e.target.value; setChoices(next);
-              }} placeholder={t("quizAdmin.choicePlaceholder", { n: i + 1 })}
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 outline-none focus:border-purple-500" />
+                className="h-4 w-4 accent-emerald-500"
+                aria-label={t("quizAdmin.selectAnswerAria", {
+                  letter: String.fromCharCode(65 + i),
+                })}
+              />
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                  answerIdx === i ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400"
+                }`}
+              >
+                {String.fromCharCode(65 + i)}
+              </span>
+              <input
+                value={c}
+                onChange={(e) => {
+                  const next = [...choices] as [string, string, string, string];
+                  next[i] = e.target.value;
+                  setChoices(next);
+                }}
+                placeholder={t("quizAdmin.choicePlaceholder", { n: i + 1 })}
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 outline-none focus:border-purple-500"
+              />
             </label>
           ))}
         </div>
         <label className="block text-xs">
           <span className="mb-1 block text-slate-400">{t("quizAdmin.category")}</span>
-          <input value={category} onChange={(e) => setCategory(e.target.value)}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500" />
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-purple-500"
+          />
         </label>
-        <button type="submit" disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-400 disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-400 disabled:opacity-50"
+        >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           {editingId ? t("quizAdmin.saveChanges") : t("quizAdmin.create")}
         </button>
       </form>
 
       {loading ? (
-        <div className="flex justify-center py-4 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
+        <div className="flex justify-center py-4 text-slate-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
       ) : rows.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-700 px-3 py-4 text-center text-xs text-slate-500">
           {t("quizAdmin.empty")}
@@ -1044,25 +1153,39 @@ function QuizManager() {
       ) : (
         <ul className="space-y-1.5">
           {rows.map((q) => (
-            <li key={q.id}
-              className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-2">
+            <li
+              key={q.id}
+              className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-2"
+            >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-100">{q.question}</p>
                 <p className="truncate text-[10px] text-slate-400">
-                  {t("quizAdmin.correctAnswer")} <span className="font-bold text-emerald-300">{String.fromCharCode(65 + q.answer_index)}. {q.choices[q.answer_index]}</span>
-                  {" · "}{q.category}
+                  {t("quizAdmin.correctAnswer")}{" "}
+                  <span className="font-bold text-emerald-300">
+                    {String.fromCharCode(65 + q.answer_index)}. {q.choices[q.answer_index]}
+                  </span>
+                  {" · "}
+                  {q.category}
                 </p>
               </div>
-              <button type="button" onClick={() => startEdit(q)}
+              <button
+                type="button"
+                onClick={() => startEdit(q)}
                 aria-label={t("quizAdmin.edit")}
                 className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-                  editingId === q.id ? "bg-amber-500/20 text-amber-300" : "bg-sky-500/10 text-sky-400 hover:bg-sky-500/20"
-                }`}>
+                  editingId === q.id
+                    ? "bg-amber-500/20 text-amber-300"
+                    : "bg-sky-500/10 text-sky-400 hover:bg-sky-500/20"
+                }`}
+              >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
-              <button type="button" onClick={() => remove(q.id)}
+              <button
+                type="button"
+                onClick={() => remove(q.id)}
                 aria-label={t("quizAdmin.delete")}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </li>

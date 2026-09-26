@@ -37,10 +37,10 @@ import {
   EffectOverlay,
   StatusOverlay,
   SpecialEffect,
-  elementToEffect,
   type ActiveEffect,
   type EffectType,
 } from "./EffectOverlay";
+import { elementToEffect } from "./effectTypes";
 
 /** UI HP는 0..base.maxHp 범위로 매핑하기 위해 엔진 비율로 환산. */
 function uiHp(c: Combatant): number {
@@ -58,8 +58,8 @@ const elementTone: Record<string, string> = {
 
 /** 한 진영의 3:3 상태. activeIdx는 현재 필드에 나와 있는 드래곤 인덱스. */
 interface Team {
-  members: Combatant[];      // 항상 길이 3 (KO된 드래곤도 포함; engineHp=0)
-  activeIdx: number;         // 현재 필드 인덱스 (members[i].engineHp>0 보장)
+  members: Combatant[]; // 항상 길이 3 (KO된 드래곤도 포함; engineHp=0)
+  activeIdx: number; // 현재 필드 인덱스 (members[i].engineHp>0 보장)
 }
 
 function buildTeam(deck: Dragon[]): Team {
@@ -110,8 +110,8 @@ function setActive(t: Team, idx: number, value: Combatant): Team {
 }
 
 interface TagBattleEngineProps {
-  playerDeck: Dragon[];   // 정확히 3
-  enemyDeck: Dragon[];    // 정확히 3
+  playerDeck: Dragon[]; // 정확히 3
+  enemyDeck: Dragon[]; // 정확히 3
   context?: "story" | "pvp";
   onExit?: () => void;
   onResolved?: (outcome: "win" | "lose" | "draw") => void;
@@ -164,7 +164,9 @@ function MiniBenchCard({
           <motion.div
             className={`h-full ${c.exhausted ? "bg-rose-500" : "bg-sky-500"}`}
             initial={false}
-            animate={{ width: `${Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100))}%` }}
+            animate={{
+              width: `${Math.max(0, Math.min(100, (c.mp / Math.max(1, c.maxMp)) * 100))}%`,
+            }}
             transition={{ type: "spring", stiffness: 180, damping: 24 }}
           />
         </div>
@@ -228,11 +230,7 @@ function ActivePanel({
         <motion.div
           className="absolute inset-0"
           // Idle: 둥둥 floating; Attacking: 돌진 후 복귀
-          animate={
-            attacking
-              ? { y: [0, lungeY, 0] }
-              : { y: [0, -10, 0] }
-          }
+          animate={attacking ? { y: [0, lungeY, 0] } : { y: [0, -10, 0] }}
           transition={
             attacking
               ? { duration: 0.45, ease: "easeOut" }
@@ -303,7 +301,9 @@ function ActivePanel({
         </span>
       </div>
 
-      <div className={`relative z-20 flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
+      <div
+        className={`relative z-20 flex flex-wrap items-center gap-1 ${side === "enemy" ? "flex-row-reverse" : ""}`}
+      >
         <h3 className="text-sm font-extrabold text-slate-100">{c.base.name}</h3>
         {c.exhausted && (
           <span className="flex items-center gap-0.5 rounded-full border border-rose-500/50 bg-rose-500/15 px-1 py-0 text-[9px] font-bold text-rose-300">
@@ -324,8 +324,12 @@ function ActivePanel({
       <div className="relative z-20 mt-2 space-y-1.5">
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
-            <span className="font-mono text-slate-200">{uiHp(c)}/{c.base.maxHp}</span>
+            <span className="flex items-center gap-1">
+              <Heart className="h-3 w-3 text-emerald-400" /> HP
+            </span>
+            <span className="font-mono text-slate-200">
+              {uiHp(c)}/{c.base.maxHp}
+            </span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
             <motion.div
@@ -338,8 +342,12 @@ function ActivePanel({
         </div>
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><Droplet className="h-3 w-3 text-sky-400" /> MP</span>
-            <span className="font-mono text-slate-200">{Math.max(0, c.mp)}/{c.maxMp}</span>
+            <span className="flex items-center gap-1">
+              <Droplet className="h-3 w-3 text-sky-400" /> MP
+            </span>
+            <span className="font-mono text-slate-200">
+              {Math.max(0, c.mp)}/{c.maxMp}
+            </span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
             <motion.div
@@ -351,14 +359,22 @@ function ActivePanel({
           </div>
         </div>
       </div>
-      <div className={`relative z-20 mt-1.5 flex flex-wrap gap-2 text-[10px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
+      <div
+        className={`relative z-20 mt-1.5 flex flex-wrap gap-2 text-[10px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}
+      >
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
           <Sword className="h-3 w-3" /> {stats.atk}
         </span>
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
           <Shield className="h-3 w-3" />
           {c.defDebuffStacks > 0 ? (
-            <span title={t("battle.defTooltip", { base: c.base.def, cur: c.engineDef, pct: c.defDebuffStacks * 10 })}>
+            <span
+              title={t("battle.defTooltip", {
+                base: c.base.def,
+                cur: c.engineDef,
+                pct: c.defDebuffStacks * 10,
+              })}
+            >
               <span className="line-through text-slate-500 mr-1">{c.base.def}</span>
               <span className="text-rose-300 font-semibold">{stats.def}</span>
             </span>
@@ -374,7 +390,10 @@ function ActivePanel({
         {c.defDebuffStacks > 0 && (
           <span
             className="flex items-center gap-1 rounded-full border border-rose-400/40 bg-rose-500/10 px-1.5 py-0.5 text-rose-200"
-            title={t("battle.defStackTooltip", { n: c.defDebuffStacks, remaining: 3 - c.defDebuffStacks })}
+            title={t("battle.defStackTooltip", {
+              n: c.defDebuffStacks,
+              remaining: 3 - c.defDebuffStacks,
+            })}
           >
             <Shield className="h-3 w-3" />
             DEF -{c.defDebuffStacks * 10}% ({c.defDebuffStacks}/3)
@@ -477,7 +496,11 @@ export function TagBattleEngine({
   const [dimming, setDimming] = useState(false);
   const [specialElement, setSpecialElement] = useState<string | null>(null);
   const [screenShakeKey, setScreenShakeKey] = useState(0);
-  interface Onomatopoeia { id: number; text: string; tone: "boom" | "hiss" | "crit"; }
+  interface Onomatopoeia {
+    id: number;
+    text: string;
+    tone: "boom" | "hiss" | "crit";
+  }
   const [onomats, setOnomats] = useState<Onomatopoeia[]>([]);
   const onoIdRef = useRef(1);
   const popOno = (text: string, tone: Onomatopoeia["tone"] = "boom") => {
@@ -504,7 +527,11 @@ export function TagBattleEngine({
   };
 
   /** -dmg 텍스트 파티클을 한쪽에 띄우고 1.1초 후 제거. */
-  const popDamage = (target: "player" | "enemy", value: number, variant: DamagePop["variant"] = "damage") => {
+  const popDamage = (
+    target: "player" | "enemy",
+    value: number,
+    variant: DamagePop["variant"] = "damage",
+  ) => {
     if (value <= 0) return;
     const id = popIdRef.current++;
     const entry: DamagePop = { id, value, variant };
@@ -650,8 +677,14 @@ export function TagBattleEngine({
     let nextSelfTeam = setActive(selfTeam, selfTeam.activeIdx, drained.self);
     let nextOppTeam = setActive(oppTeam, oppTeam.activeIdx, drained.opponent);
 
-    nextSelfTeam = advanceIfDead(nextSelfTeam, actor === "player" ? t("battle.sideMine") : t("battle.sideEnemy"));
-    nextOppTeam = advanceIfDead(nextOppTeam, actor === "player" ? t("battle.sideEnemy") : t("battle.sideMine"));
+    nextSelfTeam = advanceIfDead(
+      nextSelfTeam,
+      actor === "player" ? t("battle.sideMine") : t("battle.sideEnemy"),
+    );
+    nextOppTeam = advanceIfDead(
+      nextOppTeam,
+      actor === "player" ? t("battle.sideEnemy") : t("battle.sideMine"),
+    );
 
     {
       const r1 = tickBenchMp(nextSelfTeam);
@@ -732,7 +765,13 @@ export function TagBattleEngine({
     const target = curP.members[idx];
     if (!target || target.engineHp <= 0) return;
     pushLogs([
-      { text: t("battle.swap", { from: curP.members[curP.activeIdx].base.name, to: target.base.name }), tone: "system" },
+      {
+        text: t("battle.swap", {
+          from: curP.members[curP.activeIdx].base.name,
+          to: target.base.name,
+        }),
+        tone: "system",
+      },
     ]);
     setPickingSwap(false);
     const swapped: Team = { ...curP, activeIdx: idx };
@@ -741,6 +780,10 @@ export function TagBattleEngine({
 
   // ----- 적 턴 -----
   const enemyTurnRanRef = useRef<number | null>(null);
+  const enemyActionsRef = useRef({ finishTurn, playAttackFx });
+  useEffect(() => {
+    enemyActionsRef.current = { finishTurn, playAttackFx };
+  });
   useEffect(() => {
     if (turn !== "enemy" || winner) return;
     if (enemyTurnRanRef.current === turnNumber) return;
@@ -759,6 +802,7 @@ export function TagBattleEngine({
     }
 
     const attackTimer = setTimeout(() => {
+      const { finishTurn, playAttackFx } = enemyActionsRef.current;
       const curP = pTeamRef.current;
       const curE = eTeamRef.current;
       const a = curE.members[curE.activeIdx];
@@ -794,7 +838,11 @@ export function TagBattleEngine({
     <motion.div
       key={`shake-${screenShakeKey}`}
       className="relative flex h-full flex-col gap-3"
-      animate={screenShakeKey > 0 ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 2, -2, 0, 0, 0] } : { x: 0, y: 0 }}
+      animate={
+        screenShakeKey > 0
+          ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 2, -2, 0, 0, 0] }
+          : { x: 0, y: 0 }
+      }
       transition={{ duration: 0.4 }}
     >
       {/* Color Isolation — 시네마틱 동안 배경 채도를 0으로 (공격자 카드 + SpecialEffect만 컬러) */}
@@ -862,7 +910,9 @@ export function TagBattleEngine({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100">
           {t("battle.headerTag")}
-          <span className="ml-2 text-xs font-normal text-slate-400">{t("battle.turn", { n: turnNumber })}</span>
+          <span className="ml-2 text-xs font-normal text-slate-400">
+            {t("battle.turn", { n: turnNumber })}
+          </span>
         </h2>
         {onExit && (
           <button
@@ -954,70 +1004,75 @@ export function TagBattleEngine({
         </p>
       )}
 
-      {!winner && (() => {
-        const skillCost = pActive ? Math.floor(pActive.maxMp * MP_SKILL_COST_PCT) : 0;
-        const canSkill =
-          !!pActive &&
-          pActive.engineHp > 0 &&
-          pActive.mp >= pActive.maxMp * MP_SKILL_THRESHOLD_PCT &&
-          turn === "player" &&
-          !pickingSwap;
-        // 액션 도크 — 화면 하단에 sticky로 고정해 스크롤해도 가려지지 않음.
-        return (
-          <div className="sticky bottom-0 z-20 -mx-4 flex items-center justify-center gap-3 border-t border-slate-700 bg-slate-900/95 px-4 py-3 backdrop-blur shadow-lg shadow-black/40">
-            <motion.button
-              onClick={handleAttack}
-              disabled={turn !== "player" || pickingSwap}
-              whileTap={{ scale: 0.92 }}
-              aria-label={t("battle.ariaAttack")}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-900/50 transition hover:bg-rose-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
-            >
-              <Sword className="h-7 w-7" />
-            </motion.button>
-            <motion.button
-              onClick={handleSkill}
-              disabled={!canSkill}
-              whileTap={{ scale: 0.92 }}
-              title={t("battle.skillTitle", { cost: skillCost })}
-              aria-label={t("battle.ariaSkill", { cost: skillCost })}
-              className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white shadow-xl shadow-violet-900/50 transition hover:from-violet-400 hover:to-fuchsia-500 active:scale-95 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:shadow-none"
-            >
-              <Wand2 className="h-8 w-8" />
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-slate-950/90 px-1.5 py-0 font-mono text-[9px] font-bold text-violet-200 ring-1 ring-violet-400/40">
-                -{skillCost}
-              </span>
-            </motion.button>
-            <motion.button
-              onClick={() => setPickingSwap((v) => !v)}
-              disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
-              whileTap={{ scale: 0.92 }}
-              aria-label={t("battle.ariaSwap")}
-              className={`flex h-16 w-16 items-center justify-center rounded-full transition active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 ${
-                pickingSwap
-                  ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-900/50 ring-2 ring-amber-200"
-                  : "bg-sky-600 text-white shadow-lg shadow-sky-900/50 hover:bg-sky-500"
-              }`}
-            >
-              <Repeat className="h-7 w-7" />
-            </motion.button>
-            <motion.button
-              onClick={handlePass}
-              disabled={turn !== "player" || pickingSwap}
-              whileTap={{ scale: 0.92 }}
-              aria-label={t("battle.ariaPass")}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-slate-100 transition hover:bg-slate-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
-            >
-              <Zap className="h-7 w-7" />
-            </motion.button>
-          </div>
-        );
-      })()}
+      {!winner &&
+        (() => {
+          const skillCost = pActive ? Math.floor(pActive.maxMp * MP_SKILL_COST_PCT) : 0;
+          const canSkill =
+            !!pActive &&
+            pActive.engineHp > 0 &&
+            pActive.mp >= pActive.maxMp * MP_SKILL_THRESHOLD_PCT &&
+            turn === "player" &&
+            !pickingSwap;
+          // 액션 도크 — 화면 하단에 sticky로 고정해 스크롤해도 가려지지 않음.
+          return (
+            <div className="sticky bottom-0 z-20 -mx-4 flex items-center justify-center gap-3 border-t border-slate-700 bg-slate-900/95 px-4 py-3 backdrop-blur shadow-lg shadow-black/40">
+              <motion.button
+                onClick={handleAttack}
+                disabled={turn !== "player" || pickingSwap}
+                whileTap={{ scale: 0.92 }}
+                aria-label={t("battle.ariaAttack")}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-900/50 transition hover:bg-rose-500 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+              >
+                <Sword className="h-7 w-7" />
+              </motion.button>
+              <motion.button
+                onClick={handleSkill}
+                disabled={!canSkill}
+                whileTap={{ scale: 0.92 }}
+                title={t("battle.skillTitle", { cost: skillCost })}
+                aria-label={t("battle.ariaSkill", { cost: skillCost })}
+                className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white shadow-xl shadow-violet-900/50 transition hover:from-violet-400 hover:to-fuchsia-500 active:scale-95 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:shadow-none"
+              >
+                <Wand2 className="h-8 w-8" />
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-slate-950/90 px-1.5 py-0 font-mono text-[9px] font-bold text-violet-200 ring-1 ring-violet-400/40">
+                  -{skillCost}
+                </span>
+              </motion.button>
+              <motion.button
+                onClick={() => setPickingSwap((v) => !v)}
+                disabled={turn !== "player" || playerBench.every(({ m }) => m.engineHp <= 0)}
+                whileTap={{ scale: 0.92 }}
+                aria-label={t("battle.ariaSwap")}
+                className={`flex h-16 w-16 items-center justify-center rounded-full transition active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 ${
+                  pickingSwap
+                    ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-900/50 ring-2 ring-amber-200"
+                    : "bg-sky-600 text-white shadow-lg shadow-sky-900/50 hover:bg-sky-500"
+                }`}
+              >
+                <Repeat className="h-7 w-7" />
+              </motion.button>
+              <motion.button
+                onClick={handlePass}
+                disabled={turn !== "player" || pickingSwap}
+                whileTap={{ scale: 0.92 }}
+                aria-label={t("battle.ariaPass")}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-slate-100 transition hover:bg-slate-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+              >
+                <Zap className="h-7 w-7" />
+              </motion.button>
+            </div>
+          );
+        })()}
 
       <div className="rounded-2xl border border-slate-700/60 bg-slate-950/60 p-2 opacity-80">
         <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-slate-500">
           <span>{t("battle.battleLog")}</span>
           <span className={turn === "player" ? "text-emerald-400" : "text-rose-400"}>
-            {winner ? t("battle.battleEnded") : turn === "player" ? t("battle.myTurn") : t("battle.enemyTurn")}
+            {winner
+              ? t("battle.battleEnded")
+              : turn === "player"
+                ? t("battle.myTurn")
+                : t("battle.enemyTurn")}
           </span>
         </div>
         <div className="max-h-32 space-y-0.5 overflow-y-auto pr-1 text-xs leading-snug">
@@ -1079,20 +1134,28 @@ export function TagBattleEngine({
 
             <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 p-2 text-left">
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">{t("battle.myTeam")}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">
+                  {t("battle.myTeam")}
+                </p>
                 <p className="font-mono text-sm text-emerald-300">
                   {t("battle.survivors", { n: pTeam.members.filter((m) => m.engineHp > 0).length })}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">{t("battle.enemyTeam")}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">
+                  {t("battle.enemyTeam")}
+                </p>
                 <p className="font-mono text-sm text-rose-300">
                   {t("battle.survivors", { n: eTeam.members.filter((m) => m.engineHp > 0).length })}
                 </p>
               </div>
               <div className="col-span-2">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">{t("battle.turnsPlayed")}</p>
-                <p className="font-mono text-sm text-slate-200">{t("battle.turnsPlayedVal", { n: turnNumber })}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">
+                  {t("battle.turnsPlayed")}
+                </p>
+                <p className="font-mono text-sm text-slate-200">
+                  {t("battle.turnsPlayedVal", { n: turnNumber })}
+                </p>
               </div>
             </div>
 

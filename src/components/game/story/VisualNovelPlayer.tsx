@@ -17,16 +17,15 @@ import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronLeft, Sparkles, Play, Home } from "lucide-react";
 import { resolveResume } from "@/lib/storyResume";
 import { visibleOptions } from "@/lib/storyChoices";
-import {
-  sceneArt,
-  introArtFor,
-  CHAPTER_TITLES,
-  CHAPTER_TAGLINES,
-} from "@/data/storyArt";
+import { sceneArt, introArtFor, CHAPTER_TITLES, CHAPTER_TAGLINES } from "@/data/storyArt";
 
 function asStringList(v: unknown): string[] {
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x.trim());
-  if (typeof v === "string" && v.trim()) return v.split(",").map((s) => s.trim()).filter(Boolean);
+  if (typeof v === "string" && v.trim())
+    return v
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   return [];
 }
 
@@ -66,7 +65,6 @@ function parseOptions(raw: unknown): VnOption[] {
       } satisfies VnOption;
     });
 }
-
 
 function useChapterNodes(chapterId: string) {
   return useQuery({
@@ -111,7 +109,6 @@ function useChapterNodes(chapterId: string) {
   });
 }
 
-
 /** Typewriter output with click-to-skip. */
 function Typewriter({ text, speed = 28 }: { text: string; speed?: number }) {
   const [shown, setShown] = useState("");
@@ -154,10 +151,14 @@ export function VisualNovelPlayer({
   const { nodeKey, stats, visited, applied, finished, start, choose, enter, reset, hydrate } =
     useStoryEngine();
   const selectedDragon = useGameStore((state) =>
-    companionId != null ? state.dragons.find((d) => d.id === companionId) ?? null : null,
+    companionId != null ? (state.dragons.find((d) => d.id === companionId) ?? null) : null,
   );
-  const dragonJourneyChapter = chapterId === "my_dragon" || chapterId === "dragon_master" || chapterId === "dragon_growth";
-  const runId = dragonJourneyChapter && selectedDragon?.uuid ? `${chapterId}:${selectedDragon.uuid}` : chapterId;
+  const dragonJourneyChapter =
+    chapterId === "my_dragon" || chapterId === "dragon_master" || chapterId === "dragon_growth";
+  const runId =
+    dragonJourneyChapter && selectedDragon?.uuid
+      ? `${chapterId}:${selectedDragon.uuid}`
+      : chapterId;
   const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(runId);
   const hydratedRef = useRef(false);
   const [quizOption, setQuizOption] = useState<VnOption | null>(null);
@@ -206,9 +207,7 @@ export function VisualNovelPlayer({
     }
   }, [saveLoading, remote, byKey, startKey, runId, start, hydrate]);
 
-
-
-  const node = nodeKey ? byKey.get(nodeKey) ?? null : null;
+  const node = nodeKey ? (byKey.get(nodeKey) ?? null) : null;
 
   useEffect(() => {
     if (node) enter(node);
@@ -224,7 +223,9 @@ export function VisualNovelPlayer({
     const picked = companionId ?? (dragonJourneyChapter ? null : state.selectedDeck[0]);
     const target =
       (picked != null ? state.dragons.find((d) => d.id === picked) : undefined) ??
-      (dragonJourneyChapter ? undefined : state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-")));
+      (dragonJourneyChapter
+        ? undefined
+        : state.dragons.find((d) => d.uuid && !d.uuid.startsWith("local-")));
     return target?.uuid ?? null;
   });
   useEffect(() => {
@@ -289,9 +290,17 @@ export function VisualNovelPlayer({
             }
             try {
               if (chapterId === "my_dragon" && companionId != null) {
-                await navigate({ to: "/story/play/$chapterId", params: { chapterId: "dragon_master" }, search: { dragon: companionId } });
+                await navigate({
+                  to: "/story/play/$chapterId",
+                  params: { chapterId: "dragon_master" },
+                  search: { dragon: companionId },
+                });
               } else if (chapterId === "dragon_master" && companionId != null) {
-                await navigate({ to: "/story/play/$chapterId", params: { chapterId: "dragon_growth" }, search: { dragon: companionId } });
+                await navigate({
+                  to: "/story/play/$chapterId",
+                  params: { chapterId: "dragon_growth" },
+                  search: { dragon: companionId },
+                });
               } else {
                 await navigate({ to: "/app" });
               }
@@ -414,11 +423,12 @@ export function VisualNovelPlayer({
     .map(([k]) => PATH_LABELS[k] ?? k.replace(/_/g, " "));
   const visibleStats = Object.entries(stats).filter(([k]) => !isPathStat(k));
 
-
-
-
   if (isLoading || saveLoading) {
-    return <Shell><p className="text-slate-300">Loading…</p></Shell>;
+    return (
+      <Shell>
+        <p className="text-slate-300">Loading…</p>
+      </Shell>
+    );
   }
   if (!schemaReady) {
     return (
@@ -453,8 +463,8 @@ export function VisualNovelPlayer({
       <Shell>
         <p className="text-slate-100">이어할 장면이 현재 비공개 상태입니다.</p>
         <p className="mt-2 max-w-md text-sm text-slate-400">
-          저장된 진행 지점({remote?.nodeKey})이 관리자에 의해 비공개로 전환되어 이어하기를 할 수 없습니다. 저장
-          데이터는 그대로 보관되니, 다시 공개되면 이어서 진행할 수 있습니다.
+          저장된 진행 지점({remote?.nodeKey})이 관리자에 의해 비공개로 전환되어 이어하기를 할 수
+          없습니다. 저장 데이터는 그대로 보관되니, 다시 공개되면 이어서 진행할 수 있습니다.
         </p>
         <Button variant="secondary" onClick={restart}>
           <RotateCcw className="mr-2 h-4 w-4" />
@@ -465,12 +475,14 @@ export function VisualNovelPlayer({
     );
   }
 
-
   const personalize = (value: string) => {
     const dragonName = companion?.name ?? "내 드래곤";
     return value
       .replaceAll("{dragon}", dragonName)
-      .replaceAll("{dragon_story}", companion?.lore ?? `${dragonName}과(와)의 성장 이야기가 시작됩니다.`)
+      .replaceAll(
+        "{dragon_story}",
+        companion?.lore ?? `${dragonName}과(와)의 성장 이야기가 시작됩니다.`,
+      )
       .replace(/\bThe Worm\b/g, () => dragonName)
       .replace(/\bthe worm\b/g, () => dragonName)
       .replace(/\bWorm\b/g, () => dragonName)
@@ -529,14 +541,19 @@ export function VisualNovelPlayer({
             )}
             <Button className="mt-6 w-full" size="lg" onClick={() => setIntroDone(true)}>
               <Play className="mr-2 h-4 w-4" />
-              {remote?.nodeKey && !remote.finished ? (ko ? "이야기 이어하기" : "Continue your story") : (ko ? "이야기 시작하기" : "Begin the story")}
+              {remote?.nodeKey && !remote.finished
+                ? ko
+                  ? "이야기 이어하기"
+                  : "Continue your story"
+                : ko
+                  ? "이야기 시작하기"
+                  : "Begin the story"}
             </Button>
           </motion.div>
         </div>
       </div>
     );
   }
-
 
   return (
     <div className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-slate-950">
@@ -586,12 +603,21 @@ export function VisualNovelPlayer({
             </span>
           ))}
           <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
-            {signedIn ? (saving ? (ko ? "저장 중…" : "Saving…") : (ko ? "클라우드 저장" : "Saved to cloud")) : (ko ? "로그인하면 진행 기록을 저장해요" : "Sign in to save your progress")}
+            {signedIn
+              ? saving
+                ? ko
+                  ? "저장 중…"
+                  : "Saving…"
+                : ko
+                  ? "클라우드 저장"
+                  : "Saved to cloud"
+              : ko
+                ? "로그인하면 진행 기록을 저장해요"
+                : "Sign in to save your progress"}
           </span>
           <Button size="sm" variant="secondary" onClick={restart}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> {ko ? "다시 시작" : "Restart"}
           </Button>
-
         </div>
       </div>
 
@@ -634,9 +660,7 @@ export function VisualNovelPlayer({
               )}
               {visibleStats.length > 0 && (
                 <div className="mt-4">
-                  <p className="text-[10px] uppercase tracking-widest text-slate-400">
-                    Your run
-                  </p>
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400">Your run</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {visibleStats
                       .sort((a, b) => b[1] - a[1])
@@ -682,7 +706,6 @@ export function VisualNovelPlayer({
                   </Link>
                 </Button>
               </div>
-
             </div>
           ) : (
             <>
@@ -721,7 +744,6 @@ export function VisualNovelPlayer({
                   );
                 })()}
               </motion.div>
-
 
               <div className="grid gap-3 sm:grid-cols-2">
                 {visibleOptions(node.options, stats).map((opt, i) => (
@@ -792,10 +814,14 @@ function BackLink() {
       <Link to="/app" search={{}} onClick={() => setView("lobby")} className={cls}>
         <ChevronLeft className="h-3.5 w-3.5" /> {ko ? "로비" : "Back"}
       </Link>
-      <Link to="/" onClick={() => setView("lobby")} className={cls} aria-label="Exit story mode and go home">
+      <Link
+        to="/"
+        onClick={() => setView("lobby")}
+        className={cls}
+        aria-label="Exit story mode and go home"
+      >
         <Home className="h-3.5 w-3.5" /> {ko ? "홈" : "Home"}
       </Link>
     </div>
   );
 }
-

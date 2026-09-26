@@ -35,12 +35,18 @@ export const DRAGON_MASTER_SEED: SeedNode[] = [
     node_key: "Node_1",
     stage_number: 1,
     title: "The Dragon Master's Call",
-    description: "While you work in your family's onion field, King Roland's soldier arrives and takes you to the castle as a newly chosen Dragon Master.",
-    body_text: "While you work in your family's onion field, King Roland's soldier arrives and takes you to the castle as a newly chosen Dragon Master.",
+    description:
+      "While you work in your family's onion field, King Roland's soldier arrives and takes you to the castle as a newly chosen Dragon Master.",
+    body_text:
+      "While you work in your family's onion field, King Roland's soldier arrives and takes you to the castle as a newly chosen Dragon Master.",
     speaker: "Narrator",
     is_start: true,
     options: [
-      { label: "Follow the soldier without protest", next_node: "Node_2", state_changes: { Courage: 0 } },
+      {
+        label: "Follow the soldier without protest",
+        next_node: "Node_2",
+        state_changes: { Courage: 0 },
+      },
       { label: "Show your fear and resist", next_node: "Node_2", state_changes: { Courage: 5 } },
     ],
     state_changes: {},
@@ -52,8 +58,10 @@ export const DRAGON_MASTER_SEED: SeedNode[] = [
     node_key: "Node_2",
     stage_number: 2,
     title: "Meeting Vulcan",
-    description: "You arrive at the castle and witness Rori's giant red dragon, Vulcan, unleash a torrent of flame.",
-    body_text: "You arrive at the castle and witness Rori's giant red dragon, Vulcan, unleash a torrent of flame.",
+    description:
+      "You arrive at the castle and witness Rori's giant red dragon, Vulcan, unleash a torrent of flame.",
+    body_text:
+      "You arrive at the castle and witness Rori's giant red dragon, Vulcan, unleash a torrent of flame.",
     speaker: "Narrator",
     is_start: false,
     options: [
@@ -79,7 +87,11 @@ export const DRAGON_MASTER_SEED: SeedNode[] = [
         next_node: "Node_19",
         state_changes: { Worm_Affinity: -10, Courage: 5 },
       },
-      { label: "Leave the worm behind and go alone", next_node: "Node_19", state_changes: { Worm_Affinity: 5 } },
+      {
+        label: "Leave the worm behind and go alone",
+        next_node: "Node_19",
+        state_changes: { Worm_Affinity: 5 },
+      },
     ],
     state_changes: {},
     node_type: "story",
@@ -90,13 +102,23 @@ export const DRAGON_MASTER_SEED: SeedNode[] = [
     node_key: "Node_19",
     stage_number: 19,
     title: "Earth Magic",
-    description: "The worm uses earth magic — the power of mind — to grind the fallen boulders into dust.",
-    body_text: "The worm uses earth magic — the power of mind — to grind the fallen boulders into dust.",
+    description:
+      "The worm uses earth magic — the power of mind — to grind the fallen boulders into dust.",
+    body_text:
+      "The worm uses earth magic — the power of mind — to grind the fallen boulders into dust.",
     speaker: "Narrator",
     is_start: false,
     options: [
-      { label: "Hug the worm with pride", next_node: "Node_20", state_changes: { Worm_Affinity: 20 } },
-      { label: "Sink to your knees at the sight", next_node: "Node_20", state_changes: { Courage: -5 } },
+      {
+        label: "Hug the worm with pride",
+        next_node: "Node_20",
+        state_changes: { Worm_Affinity: 20 },
+      },
+      {
+        label: "Sink to your knees at the sight",
+        next_node: "Node_20",
+        state_changes: { Courage: -5 },
+      },
     ],
     state_changes: {},
     node_type: "story",
@@ -107,8 +129,10 @@ export const DRAGON_MASTER_SEED: SeedNode[] = [
     node_key: "Node_20",
     stage_number: 20,
     title: "A True Master",
-    description: "Griffith catches you, but acknowledges the worm's power — and hints at a new threat.",
-    body_text: "Griffith catches you, but acknowledges the worm's power — and hints at a new threat.",
+    description:
+      "Griffith catches you, but acknowledges the worm's power — and hints at a new threat.",
+    body_text:
+      "Griffith catches you, but acknowledges the worm's power — and hints at a new threat.",
     speaker: "Narrator",
     is_start: false,
     options: [{ label: "See the ending", next_node: null, state_changes: {} }],

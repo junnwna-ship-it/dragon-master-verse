@@ -221,7 +221,8 @@ export function parseStudioStory(text: string | null | undefined): ParsedUgcStor
       if (!q.question) errors.push(`${n.key}: 퀴즈 질문이 비어 있습니다.`);
       const filled = q.choices.filter((c) => c && c.trim());
       if (filled.length < 2) errors.push(`${n.key}: 퀴즈 보기를 2개 이상 입력해 주세요.`);
-      if (!q.choices[q.answerIndex]) errors.push(`${n.key}: 퀴즈 정답 번호가 보기 범위를 벗어났습니다.`);
+      if (!q.choices[q.answerIndex])
+        errors.push(`${n.key}: 퀴즈 정답 번호가 보기 범위를 벗어났습니다.`);
       for (const [labelKr, target] of [
         ["성공", q.successNode],
         ["실패", q.failNode],

@@ -37,24 +37,41 @@ const eff = (over: Partial<ResolvedItemEffect>): ResolvedItemEffect => ({
 
 describe("battle items", () => {
   it("heals HP as a percentage of max HP", () => {
-    let [self, foe] = pair();
+    const [initialSelf, foe] = pair();
+    let self = initialSelf;
     self = { ...self, engineHp: 100 };
-    const r = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "heal_hp", effect_value: 40 }));
+    const r = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "heal_hp", effect_value: 40 }),
+    );
     expect(r.applied).toBe(true);
     expect(r.self.engineHp).toBe(100 + Math.round(self.engineMaxHp * 0.4));
     expect(r.state.usesLeft).toBe(2);
   });
 
   it("caps MP restore at max MP", () => {
-    let [self, foe] = pair();
+    const [initialSelf, foe] = pair();
+    let self = initialSelf;
     self = { ...self, mp: 90 };
-    const r = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "heal_mp", effect_value: 30 }));
+    const r = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "heal_mp", effect_value: 30 }),
+    );
     expect(r.self.mp).toBe(100);
   });
 
   it("applies then reverts a timed attack buff", () => {
     const [self, foe] = pair();
-    const up = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "buff_atk", effect_value: 50, duration_turns: 1 }));
+    const up = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "buff_atk", effect_value: 50, duration_turns: 1 }),
+    );
     expect(up.self.engineAtk).toBe(150);
     const down = tickItemBuffs(up.state, up.self, up.enemy);
     expect(down.self.engineAtk).toBe(100);
@@ -63,7 +80,12 @@ describe("battle items", () => {
 
   it("keeps a 2-turn defense buff for one extra turn", () => {
     const [self, foe] = pair();
-    const up = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "buff_def", effect_value: 50, duration_turns: 2 }));
+    const up = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "buff_def", effect_value: 50, duration_turns: 2 }),
+    );
     expect(up.self.engineDef).toBe(60);
     const t1 = tickItemBuffs(up.state, up.self, up.enemy);
     expect(t1.self.engineDef).toBe(60);
@@ -73,7 +95,12 @@ describe("battle items", () => {
 
   it("weakens the enemy and restores its attack on expiry", () => {
     const [self, foe] = pair();
-    const up = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "debuff_atk", effect_value: 30, duration_turns: 1 }));
+    const up = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "debuff_atk", effect_value: 30, duration_turns: 1 }),
+    );
     expect(up.enemy.engineAtk).toBe(70);
     const t1 = tickItemBuffs(up.state, up.self, up.enemy);
     expect(t1.enemy.engineAtk).toBe(100);
@@ -81,21 +108,37 @@ describe("battle items", () => {
 
   it("deals fixed damage in engine scale", () => {
     const [self, foe] = pair();
-    const r = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "damage", effect_value: 80 }));
+    const r = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "damage", effect_value: 80 }),
+    );
     expect(foe.engineHp - r.enemy.engineHp).toBe(240);
   });
 
   it("blocks exactly one hit per shield charge", () => {
     const [self, foe] = pair();
-    const r = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "shield", effect_value: 1 }));
+    const r = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "shield", effect_value: 1 }),
+    );
     const first = consumeShield(r.state);
     expect(first.blocked).toBe(true);
     expect(consumeShield(first.state).blocked).toBe(false);
   });
 
   it("revives once at the configured percentage", () => {
-    let [self, foe] = pair();
-    const r = applyItemEffect(createItemBattleState(), self, foe, eff({ effect_type: "revive", effect_value: 30 }));
+    const [initialSelf, foe] = pair();
+    let self = initialSelf;
+    const r = applyItemEffect(
+      createItemBattleState(),
+      self,
+      foe,
+      eff({ effect_type: "revive", effect_value: 30 }),
+    );
     self = { ...r.self, engineHp: 0 };
     const rev = tryRevive(r.state, self);
     expect(rev.revived).toBe(true);

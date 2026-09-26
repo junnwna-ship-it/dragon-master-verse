@@ -22,8 +22,7 @@ const DEFAULT_SHARE: ChapterShare = {
 export const CHAPTER_SHARE: Record<string, ChapterShare> = {
   dragon_master: {
     title: "드래곤 마스터 · 1권 각색 — Artiati Dragon Masters",
-    description:
-      "내가 만든 드래곤과 함께 양파밭에서 성으로 향하는 1권 기반 이야기.",
+    description: "내가 만든 드래곤과 함께 양파밭에서 성으로 향하는 1권 기반 이야기.",
     image: `${SITE_ORIGIN}/og/player_meets_dragon.png`,
   },
   my_dragon: {
@@ -33,8 +32,7 @@ export const CHAPTER_SHARE: Record<string, ChapterShare> = {
   },
   dragon_growth: {
     title: "내 드래곤의 성장 이야기 — Artiati Dragon Masters",
-    description:
-      "선택한 드래곤과 연습하고 작은 실패를 넘으며 함께 성장합니다.",
+    description: "선택한 드래곤과 연습하고 작은 실패를 넘으며 함께 성장합니다.",
     image: `${SITE_ORIGIN}/og/player_dragon_growth.png`,
   },
 };

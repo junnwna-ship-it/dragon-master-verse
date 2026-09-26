@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Package, Sparkles, ScanLine, LogOut, ScrollText, ChevronRight, Dumbbell } from "lucide-react";
+import {
+  Package,
+  Sparkles,
+  ScanLine,
+  LogOut,
+  ScrollText,
+  ChevronRight,
+  Dumbbell,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useGameStore, type Dragon } from "@/store/dragons";
@@ -286,21 +294,20 @@ export function LobbyView() {
         className="dragon-roster -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 py-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         <ul role="list" className="contents">
-        {dragons.map((d) => {
-          const isCentered = centeredId === d.id;
-          const isSelected = selectedId === d.id;
-          const isSnapped = snappedId === d.id;
-          // While a swipe is active, the centered card gets a quick,
-          // springy micro-hover. This MUST NOT override an existing tap
-          // selection — selectedId always wins visually.
-          const liveHover = isScrolling && isCentered && !isSelected;
-          // After the gesture ends, the snapped card keeps a soft persistent
-          // highlight (only when the user hasn't already tapped one).
-          const settledSnap = !isScrolling && isSnapped && !isSelected;
-          // Descriptive label so AT users hear name, element, and core
-          // stats when focus reaches the card without opening the modal.
-          const cardLabel =
-            t("lobby.cardLabel", {
+          {dragons.map((d) => {
+            const isCentered = centeredId === d.id;
+            const isSelected = selectedId === d.id;
+            const isSnapped = snappedId === d.id;
+            // While a swipe is active, the centered card gets a quick,
+            // springy micro-hover. This MUST NOT override an existing tap
+            // selection — selectedId always wins visually.
+            const liveHover = isScrolling && isCentered && !isSelected;
+            // After the gesture ends, the snapped card keeps a soft persistent
+            // highlight (only when the user hasn't already tapped one).
+            const settledSnap = !isScrolling && isSnapped && !isSelected;
+            // Descriptive label so AT users hear name, element, and core
+            // stats when focus reaches the card without opening the modal.
+            const cardLabel = t("lobby.cardLabel", {
               name: d.name,
               element: d.element,
               atk: d.atk,
@@ -310,73 +317,85 @@ export function LobbyView() {
               mp: d.mp,
               selectedSuffix: isSelected ? t("lobby.currentlySelected") : "",
             });
-          return (
-            <li
-              key={d.id}
-              data-dragon-id={d.id}
-              ref={(el) => {
-                if (el) cardRefs.current.set(d.id, el);
-                else cardRefs.current.delete(d.id);
-              }}
-              aria-label={cardLabel}
-              aria-current={isSelected ? "true" : undefined}
-              // Transition timing differs by phase:
-              //  • live swipe → short 180ms ease-out (springy follow)
-              //  • settled    → calmer 300ms ease-out (locks in place)
-              // snap-always = `scroll-snap-stop: always`. Without this, a
-              // single fast flick can blow past 2-3 cards before the snap
-              // engine engages, making the resulting "centered" selection
-              // feel random. With it, every card becomes a hard stop so
-              // slow drags and fast flicks both land on the next card.
-              className={`group block cursor-pointer snap-always rounded-3xl list-none will-change-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-                isScrolling ? "transition-all duration-[180ms] ease-out" : "transition-all duration-300 ease-out"
-              } ${
-                isSelected
-                  ? "opacity-100 ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30 brightness-105"
-                  : liveHover
-                    ? "opacity-100 shadow-xl shadow-black/40 brightness-110"
-                    : settledSnap
-                      ? "opacity-100 shadow-lg shadow-black/40 ring-1 ring-slate-300/20"
-                      : isCentered
-                        ? "opacity-95 shadow-lg shadow-black/30"
-                        : "opacity-90 hover:opacity-100"
-              }`}
-            >
-              <DragonCard dragon={d} />
-              <button type="button" aria-label={`${d.name} 자세히 보기`} onClick={() => { setPvpSelectedDragonId(d.id); setDetailOpen(true); }} className="mt-2 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700">자세히 보기</button>
-              {/* Take THIS dragon into the story: the chapter player receives
+            return (
+              <li
+                key={d.id}
+                data-dragon-id={d.id}
+                ref={(el) => {
+                  if (el) cardRefs.current.set(d.id, el);
+                  else cardRefs.current.delete(d.id);
+                }}
+                aria-label={cardLabel}
+                aria-current={isSelected ? "true" : undefined}
+                // Transition timing differs by phase:
+                //  • live swipe → short 180ms ease-out (springy follow)
+                //  • settled    → calmer 300ms ease-out (locks in place)
+                // snap-always = `scroll-snap-stop: always`. Without this, a
+                // single fast flick can blow past 2-3 cards before the snap
+                // engine engages, making the resulting "centered" selection
+                // feel random. With it, every card becomes a hard stop so
+                // slow drags and fast flicks both land on the next card.
+                className={`group block cursor-pointer snap-always rounded-3xl list-none will-change-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                  isScrolling
+                    ? "transition-all duration-[180ms] ease-out"
+                    : "transition-all duration-300 ease-out"
+                } ${
+                  isSelected
+                    ? "opacity-100 ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30 brightness-105"
+                    : liveHover
+                      ? "opacity-100 shadow-xl shadow-black/40 brightness-110"
+                      : settledSnap
+                        ? "opacity-100 shadow-lg shadow-black/40 ring-1 ring-slate-300/20"
+                        : isCentered
+                          ? "opacity-95 shadow-lg shadow-black/30"
+                          : "opacity-90 hover:opacity-100"
+                }`}
+              >
+                <DragonCard dragon={d} />
+                <button
+                  type="button"
+                  aria-label={`${d.name} 자세히 보기`}
+                  onClick={() => {
+                    setPvpSelectedDragonId(d.id);
+                    setDetailOpen(true);
+                  }}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+                >
+                  자세히 보기
+                </button>
+                {/* Take THIS dragon into the story: the chapter player receives
                   the dragon id and attributes scenes/rewards to it. */}
-              <Link
-                to="/story/play/$chapterId"
-                params={{ chapterId: "my_dragon" }}
-                search={{ dragon: d.id }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPvpSelectedDragonId(d.id);
-                }}
-                className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-violet-400/40 bg-violet-500/15 px-3 py-2 text-[11px] font-bold text-violet-100 hover:bg-violet-500/25"
-              >
-                <ScrollText className="h-3.5 w-3.5" />
-                {t("lobby.dragonStoryCta", { name: d.name })}
-              </Link>
-              {/* Growth chapter: enhancement / training / bonding scenes whose
+                <Link
+                  to="/story/play/$chapterId"
+                  params={{ chapterId: "my_dragon" }}
+                  search={{ dragon: d.id }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPvpSelectedDragonId(d.id);
+                  }}
+                  className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-violet-400/40 bg-violet-500/15 px-3 py-2 text-[11px] font-bold text-violet-100 hover:bg-violet-500/25"
+                >
+                  <ScrollText className="h-3.5 w-3.5" />
+                  {t("lobby.dragonStoryCta", { name: d.name })}
+                </Link>
+                {/* Growth chapter: enhancement / training / bonding scenes whose
                   rewards are recorded on this player's own dragon row. */}
-              <Link
-                to="/story/play/$chapterId"
-                params={{ chapterId: "dragon_growth" }}
-                search={{ dragon: d.id }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPvpSelectedDragonId(d.id);
-                }}
-                className="mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-100 hover:bg-amber-500/20"
-              >
-                <Dumbbell className="h-3.5 w-3.5" />
-                {d.name} 성장 이야기
-              </Link>
-            </li>
-          );
-        })}
+                <Link
+                  to="/story/play/$chapterId"
+                  params={{ chapterId: "dragon_growth" }}
+                  search={{ dragon: d.id }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPvpSelectedDragonId(d.id);
+                  }}
+                  className="mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-100 hover:bg-amber-500/20"
+                >
+                  <Dumbbell className="h-3.5 w-3.5" />
+                  {d.name} 성장 이야기
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </div>
       {selectedId !== null && (
@@ -387,7 +406,9 @@ export function LobbyView() {
       <div className="space-y-2 pt-2">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-lg font-bold text-slate-100">{t("lobby.inventoryTitle")}</h2>
-          <span className="text-[10px] font-mono text-slate-500">{t("lobby.inventoryItems", { count: inventory.length })}</span>
+          <span className="text-[10px] font-mono text-slate-500">
+            {t("lobby.inventoryItems", { count: inventory.length })}
+          </span>
         </div>
         {inventory.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-700/60 bg-slate-800/30 px-4 py-6 text-center text-xs text-slate-500">
@@ -423,39 +444,38 @@ export function LobbyView() {
         )}
       </div>
       {showAuth && <AuthDialog onClose={() => setShowAuth(false)} />}
-      {showScan && user && (
-        <CardScanner userId={user.id} onClose={() => setShowScan(false)} />
-      )}
-      {detailOpen && (() => {
-        // Derived: always show the currently globally-selected dragon, and
-        // expose navigation hooks so the user can swipe / arrow-key through
-        // the roster without closing the modal. Navigation cycles wrap
-        // around for a smooth carousel feel.
-        const idx = dragons.findIndex((x) => x.id === pvpSelectedDragonId);
-        if (idx < 0) return null;
-        const d = dragons[idx];
-        const n = dragons.length;
-        const nextDragon = n > 1 ? dragons[(idx + 1) % n] : undefined;
-        const prevDragon = n > 1 ? dragons[(idx - 1 + n) % n] : undefined;
-        const goTo = (nextIdx: number) => {
-          if (n === 0) return;
-          const wrapped = ((nextIdx % n) + n) % n;
-          const target = dragons[wrapped];
-          if (target) setPvpSelectedDragonId(target.id);
-        };
-        return (
-          <DragonDetailModal
-            dragon={d}
-            nextDragon={nextDragon}
-            prevDragon={prevDragon}
-            onClose={() => setDetailOpen(false)}
-            onNext={dragons.length > 1 ? () => goTo(idx + 1) : undefined}
-            onPrev={dragons.length > 1 ? () => goTo(idx - 1) : undefined}
-            hasNext={dragons.length > 1}
-            hasPrev={dragons.length > 1}
-          />
-        );
-      })()}
+      {showScan && user && <CardScanner userId={user.id} onClose={() => setShowScan(false)} />}
+      {detailOpen &&
+        (() => {
+          // Derived: always show the currently globally-selected dragon, and
+          // expose navigation hooks so the user can swipe / arrow-key through
+          // the roster without closing the modal. Navigation cycles wrap
+          // around for a smooth carousel feel.
+          const idx = dragons.findIndex((x) => x.id === pvpSelectedDragonId);
+          if (idx < 0) return null;
+          const d = dragons[idx];
+          const n = dragons.length;
+          const nextDragon = n > 1 ? dragons[(idx + 1) % n] : undefined;
+          const prevDragon = n > 1 ? dragons[(idx - 1 + n) % n] : undefined;
+          const goTo = (nextIdx: number) => {
+            if (n === 0) return;
+            const wrapped = ((nextIdx % n) + n) % n;
+            const target = dragons[wrapped];
+            if (target) setPvpSelectedDragonId(target.id);
+          };
+          return (
+            <DragonDetailModal
+              dragon={d}
+              nextDragon={nextDragon}
+              prevDragon={prevDragon}
+              onClose={() => setDetailOpen(false)}
+              onNext={dragons.length > 1 ? () => goTo(idx + 1) : undefined}
+              onPrev={dragons.length > 1 ? () => goTo(idx - 1) : undefined}
+              hasNext={dragons.length > 1}
+              hasPrev={dragons.length > 1}
+            />
+          );
+        })()}
     </div>
   );
 }

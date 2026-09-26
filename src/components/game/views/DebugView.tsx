@@ -59,23 +59,30 @@ function runSimulation(a: Dragon, b: Dragon, maxTurns = 30, skillEvery = 0): Tur
       rawDamage: parsed.raw,
       cap: parsed.cap,
       appliedDamage: parsed.applied,
-      aHp: A.engineHp, aMaxHp: A.engineMaxHp,
-      bHp: B.engineHp, bMaxHp: B.engineMaxHp,
-      aMp: A.mp, aMaxMp: A.maxMp,
-      bMp: B.mp, bMaxMp: B.maxMp,
+      aHp: A.engineHp,
+      aMaxHp: A.engineMaxHp,
+      bHp: B.engineHp,
+      bMaxHp: B.engineMaxHp,
+      aMp: A.mp,
+      aMaxMp: A.maxMp,
+      bMp: B.mp,
+      bMaxMp: B.maxMp,
       logs: logs.map((l) => l.text),
     });
   };
   while (A.engineHp > 0 && B.engineHp > 0 && turn <= maxTurns) {
     // A의 턴
-    const startA = onTurnStart(A); A = startA.next;
+    const startA = onTurnStart(A);
+    A = startA.next;
     const skill = skillEvery > 0 && turn % skillEvery === 0;
     const atkA = performAttack(A, B, { turnNumber: turn, skill });
-    A = atkA.attacker; B = atkA.defender;
+    A = atkA.attacker;
+    B = atkA.defender;
     const parsedA = parseDamage(atkA.logs);
     if (B.engineHp > 0) {
       const ed = endTurnDrain(A, B, { turnNumber: turn });
-      A = ed.self; B = ed.opponent;
+      A = ed.self;
+      B = ed.opponent;
       snap("A", A.base.name, parsedA, [...startA.logs, ...atkA.logs, ...ed.logs]);
     } else {
       snap("A", A.base.name, parsedA, [...startA.logs, ...atkA.logs]);
@@ -84,13 +91,16 @@ function runSimulation(a: Dragon, b: Dragon, maxTurns = 30, skillEvery = 0): Tur
     turn++;
     if (turn > maxTurns) break;
     // B의 턴
-    const startB = onTurnStart(B); B = startB.next;
+    const startB = onTurnStart(B);
+    B = startB.next;
     const atkB = performAttack(B, A, { turnNumber: turn });
-    B = atkB.attacker; A = atkB.defender;
+    B = atkB.attacker;
+    A = atkB.defender;
     const parsedB = parseDamage(atkB.logs);
     if (A.engineHp > 0) {
       const ed2 = endTurnDrain(B, A, { turnNumber: turn });
-      B = ed2.self; A = ed2.opponent;
+      B = ed2.self;
+      A = ed2.opponent;
       snap("B", B.base.name, parsedB, [...startB.logs, ...atkB.logs, ...ed2.logs]);
     } else {
       snap("B", B.base.name, parsedB, [...startB.logs, ...atkB.logs]);
@@ -117,28 +127,40 @@ function LineChart({
 }) {
   const { t } = useTranslation();
   const w = 560;
-  const padL = 38, padR = 8, padT = 8, padB = 22;
+  const padL = 38,
+    padR = 8,
+    padT = 8,
+    padB = 22;
   const innerW = w - padL - padR;
   const innerH = height - padT - padB;
   const max = yMax ?? Math.max(1, ...rows.flatMap((r) => series.map((s) => Number(r[s.key]) || 0)));
   const xStep = rows.length > 1 ? innerW / (rows.length - 1) : 0;
   const path = (key: keyof TurnRow) =>
-    rows.map((r, i) => {
-      const x = padL + i * xStep;
-      const y = padT + innerH - ((Number(r[key]) || 0) / max) * innerH;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
+    rows
+      .map((r, i) => {
+        const x = padL + i * xStep;
+        const y = padT + innerH - ((Number(r[key]) || 0) / max) * innerH;
+        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => Math.round(max * t));
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60 p-2">
-      <svg viewBox={`0 0 ${w} ${height}`} className="w-full" role="img" aria-label={t("debug2.chartLabel", { label: yLabel })}>
+      <svg
+        viewBox={`0 0 ${w} ${height}`}
+        className="w-full"
+        role="img"
+        aria-label={t("debug2.chartLabel", { label: yLabel })}
+      >
         {/* grid */}
         {ticks.map((t, i) => {
           const y = padT + innerH - (i / (ticks.length - 1)) * innerH;
           return (
             <g key={i}>
               <line x1={padL} x2={w - padR} y1={y} y2={y} stroke="#1e293b" strokeWidth={1} />
-              <text x={4} y={y + 3} fontSize="9" fill="#64748b">{t}</text>
+              <text x={4} y={y + 3} fontSize="9" fill="#64748b">
+                {t}
+              </text>
             </g>
           );
         })}
@@ -154,7 +176,13 @@ function LineChart({
         })}
         {/* series */}
         {series.map((s) => (
-          <path key={s.key as string} d={path(s.key)} stroke={s.color} strokeWidth={1.6} fill="none" />
+          <path
+            key={s.key as string}
+            d={path(s.key)}
+            stroke={s.color}
+            strokeWidth={1.6}
+            fill="none"
+          />
         ))}
         {/* dots */}
         {series.map((s) =>
@@ -162,7 +190,7 @@ function LineChart({
             const x = padL + i * xStep;
             const y = padT + innerH - ((Number(r[s.key]) || 0) / max) * innerH;
             return <circle key={`${s.key as string}-${i}`} cx={x} cy={y} r={1.8} fill={s.color} />;
-          })
+          }),
         )}
       </svg>
       <div className="mt-1 flex flex-wrap gap-3 px-2 text-[10px] text-slate-300">
@@ -197,10 +225,13 @@ export function DebugView() {
   );
 
   const winner =
-    rows.length === 0 ? null
-    : rows[rows.length - 1].aHp <= 0 ? t("debug2.winner", { name: b?.name })
-    : rows[rows.length - 1].bHp <= 0 ? t("debug2.winner", { name: a?.name })
-    : t("debug.timeout");
+    rows.length === 0
+      ? null
+      : rows[rows.length - 1].aHp <= 0
+        ? t("debug2.winner", { name: b?.name })
+        : rows[rows.length - 1].bHp <= 0
+          ? t("debug2.winner", { name: a?.name })
+          : t("debug.timeout");
 
   return (
     <div className="space-y-4">
@@ -213,25 +244,58 @@ export function DebugView() {
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs">
         <label className="flex flex-col gap-1">
           <span className="text-slate-400">{t("debug.playerA")}</span>
-          <select value={aId} onChange={(e) => setAId(+e.target.value)} className="rounded bg-slate-800 px-2 py-1.5">
-            {dragons.map((d) => <option key={d.id} value={d.id}>{d.name} [{d.element}]</option>)}
+          <select
+            value={aId}
+            onChange={(e) => setAId(+e.target.value)}
+            className="rounded bg-slate-800 px-2 py-1.5"
+          >
+            {dragons.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} [{d.element}]
+              </option>
+            ))}
           </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-slate-400">{t("debug.playerB")}</span>
-          <select value={bId} onChange={(e) => setBId(+e.target.value)} className="rounded bg-slate-800 px-2 py-1.5">
-            {dragons.map((d) => <option key={d.id} value={d.id}>{d.name} [{d.element}]</option>)}
+          <select
+            value={bId}
+            onChange={(e) => setBId(+e.target.value)}
+            className="rounded bg-slate-800 px-2 py-1.5"
+          >
+            {dragons.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} [{d.element}]
+              </option>
+            ))}
           </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-slate-400">{t("debug.maxTurns")}</span>
-          <input type="number" min={1} max={100} value={maxTurns} onChange={(e) => setMaxTurns(+e.target.value || 1)} className="rounded bg-slate-800 px-2 py-1.5" />
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={maxTurns}
+            onChange={(e) => setMaxTurns(+e.target.value || 1)}
+            className="rounded bg-slate-800 px-2 py-1.5"
+          />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-slate-400">{t("debug.skillEvery")}</span>
-          <input type="number" min={0} max={20} value={skillEvery} onChange={(e) => setSkillEvery(+e.target.value || 0)} className="rounded bg-slate-800 px-2 py-1.5" />
+          <input
+            type="number"
+            min={0}
+            max={20}
+            value={skillEvery}
+            onChange={(e) => setSkillEvery(+e.target.value || 0)}
+            className="rounded bg-slate-800 px-2 py-1.5"
+          />
         </label>
-        <button onClick={() => setSeed((s) => s + 1)} className="col-span-2 mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 font-semibold text-slate-950 hover:bg-amber-400">
+        <button
+          onClick={() => setSeed((s) => s + 1)}
+          className="col-span-2 mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 font-semibold text-slate-950 hover:bg-amber-400"
+        >
           <Play className="h-4 w-4" /> {t("debug.rerun")}
         </button>
       </div>
@@ -246,7 +310,14 @@ export function DebugView() {
               <div key={i} className="rounded-xl border border-slate-800 bg-slate-900/60 p-2">
                 <p className="text-[10px] uppercase text-slate-500">{i === 0 ? "A" : "B"}</p>
                 <p className="font-bold">{d.name}</p>
-                <p className="text-slate-400">{t("debug2.initStats", { hp: c.engineMaxHp, atk: s.atk, def: s.def, mp: c.maxMp })}</p>
+                <p className="text-slate-400">
+                  {t("debug2.initStats", {
+                    hp: c.engineMaxHp,
+                    atk: s.atk,
+                    def: s.def,
+                    mp: c.maxMp,
+                  })}
+                </p>
               </div>
             );
           })}
@@ -287,11 +358,18 @@ export function DebugView() {
 
       {/* Summary */}
       <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-100">
-        <p>{t("debug.summary", { n: rows.length })}<b>{winner ?? "-"}</b></p>
+        <p>
+          {t("debug.summary", { n: rows.length })}
+          <b>{winner ?? "-"}</b>
+        </p>
         <p className="text-amber-200/80">
           {t("debug2.summaryAvg", {
-            raw: rows.length ? Math.round(rows.reduce((a, r) => a + r.rawDamage, 0) / rows.length) : 0,
-            applied: rows.length ? Math.round(rows.reduce((a, r) => a + r.appliedDamage, 0) / rows.length) : 0,
+            raw: rows.length
+              ? Math.round(rows.reduce((a, r) => a + r.rawDamage, 0) / rows.length)
+              : 0,
+            applied: rows.length
+              ? Math.round(rows.reduce((a, r) => a + r.appliedDamage, 0) / rows.length)
+              : 0,
           })}
         </p>
       </div>
@@ -318,14 +396,26 @@ export function DebugView() {
               {rows.map((r, i) => (
                 <tr key={i} className={i % 2 ? "bg-slate-900/40" : "bg-slate-900/20"}>
                   <td className="px-2 py-1">{r.turn}</td>
-                  <td className={`px-2 py-1 ${r.actor === "A" ? "text-emerald-300" : "text-rose-300"}`}>
+                  <td
+                    className={`px-2 py-1 ${r.actor === "A" ? "text-emerald-300" : "text-rose-300"}`}
+                  >
                     {r.actor}·{r.actorName}
                   </td>
-                  <td className="px-2 py-1 text-right font-mono text-amber-200">{r.rawDamage || "-"}</td>
+                  <td className="px-2 py-1 text-right font-mono text-amber-200">
+                    {r.rawDamage || "-"}
+                  </td>
                   <td className="px-2 py-1 text-right font-mono text-slate-400">{r.cap || "-"}</td>
-                  <td className="px-2 py-1 text-right font-mono text-rose-300">{r.appliedDamage || "-"}</td>
-                  <td className="px-2 py-1 text-right font-mono">{r.aHp}<span className="text-slate-500">/{r.aMaxHp}</span></td>
-                  <td className="px-2 py-1 text-right font-mono">{r.bHp}<span className="text-slate-500">/{r.bMaxHp}</span></td>
+                  <td className="px-2 py-1 text-right font-mono text-rose-300">
+                    {r.appliedDamage || "-"}
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono">
+                    {r.aHp}
+                    <span className="text-slate-500">/{r.aMaxHp}</span>
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono">
+                    {r.bHp}
+                    <span className="text-slate-500">/{r.bMaxHp}</span>
+                  </td>
                   <td className="px-2 py-1 text-right font-mono text-sky-300">{r.aMp}</td>
                   <td className="px-2 py-1 text-right font-mono text-violet-300">{r.bMp}</td>
                 </tr>
@@ -341,8 +431,15 @@ export function DebugView() {
         <div className="max-h-[300px] space-y-2 overflow-auto rounded-xl border border-slate-800 bg-slate-950/70 p-2 font-mono text-[11px] leading-relaxed">
           {rows.map((r, i) => (
             <div key={i}>
-              <p className="text-slate-500">— Turn {r.turn} ({r.actor}·{r.actorName}) —</p>
-              {r.logs.map((l, j) => <p key={j} className="text-slate-300">  {l}</p>)}
+              <p className="text-slate-500">
+                — Turn {r.turn} ({r.actor}·{r.actorName}) —
+              </p>
+              {r.logs.map((l, j) => (
+                <p key={j} className="text-slate-300">
+                  {" "}
+                  {l}
+                </p>
+              ))}
             </div>
           ))}
         </div>

@@ -26,7 +26,8 @@ export function VaultView() {
     [ownedIds, dragons],
   );
   const deck = useMemo(
-    () => selectedDeck.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
+    () =>
+      selectedDeck.map((id) => dragons.find((d) => d.id === id)).filter((d): d is Dragon => !!d),
     [selectedDeck, dragons],
   );
 
@@ -75,7 +76,9 @@ export function VaultView() {
                   <span
                     key={i}
                     className={`block h-2 w-2 rounded-full transition-colors ${
-                      filled ? "vault-dot-fill bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.7)]" : "bg-slate-700"
+                      filled
+                        ? "vault-dot-fill bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.7)]"
+                        : "bg-slate-700"
                     }`}
                   />
                 );
@@ -130,14 +133,18 @@ export function VaultView() {
                     <X className="h-3 w-3 text-white" />
                   </span>
                   <span className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950/95 via-slate-950/70 to-transparent px-1.5 py-1 text-left">
-                    <span className="block truncate text-[11px] font-bold text-slate-100">{d.name}</span>
+                    <span className="block truncate text-[11px] font-bold text-slate-100">
+                      {d.name}
+                    </span>
                     <span className="block text-[9px] text-slate-400">{d.element}</span>
                   </span>
                 </button>
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-600">
                   <Plus className="h-5 w-5" />
-                  <span className="text-[9px] font-semibold uppercase tracking-wider">{t("vault.empty")}</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-wider">
+                    {t("vault.empty")}
+                  </span>
                 </div>
               )}
             </div>
@@ -160,16 +167,20 @@ export function VaultView() {
         {owned.length === 0 && (
           <div className="mb-4 rounded-2xl border border-dashed border-slate-600 p-6 text-center">
             <p className="text-sm text-slate-300">{t("vault.emptyRoster")}</p>
-            <Link to="/story/play/$chapterId" params={{ chapterId: "my_dragon" }} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-slate-950">{t("lobby.storyCtaSub")}</Link>
+            <Link
+              to="/story/play/$chapterId"
+              params={{ chapterId: "my_dragon" }}
+              className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-slate-950"
+            >
+              {t("lobby.storyCtaSub")}
+            </Link>
           </div>
         )}
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
             {t("vault.ownedTitle", { count: owned.length })}
           </p>
-          {full && (
-            <p className="text-[10px] text-amber-300">{t("vault.deckFullHint")}</p>
-          )}
+          {full && <p className="text-[10px] text-amber-300">{t("vault.deckFullHint")}</p>}
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {owned.map((d) => {

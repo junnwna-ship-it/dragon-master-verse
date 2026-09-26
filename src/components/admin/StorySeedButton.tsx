@@ -30,7 +30,9 @@ export function StorySeedButton() {
         };
       };
 
-      const { data, error } = await table.select("id, node_key").eq("chapter_id", DRAGON_MASTER_CHAPTER_ID);
+      const { data, error } = await table
+        .select("id, node_key")
+        .eq("chapter_id", DRAGON_MASTER_CHAPTER_ID);
       if (error) throw new Error(error.message);
 
       const existing = new Map<string, string>();
@@ -75,8 +77,8 @@ export function StorySeedButton() {
         <Sprout className="h-4 w-4 text-emerald-300" /> 초기 스토리 데이터 주입
       </h2>
       <p className="mt-0.5 text-[11px] text-slate-400">
-        “{DRAGON_MASTER_CHAPTER_ID}” 챕터의 기본 노드 {DRAGON_MASTER_SEED.length}개를 공개 상태로 넣습니다.
-        같은 노드 키는 덮어쓰기 되므로 여러 번 눌러도 중복되지 않습니다.
+        “{DRAGON_MASTER_CHAPTER_ID}” 챕터의 기본 노드 {DRAGON_MASTER_SEED.length}개를 공개 상태로
+        넣습니다. 같은 노드 키는 덮어쓰기 되므로 여러 번 눌러도 중복되지 않습니다.
       </p>
       <button
         type="button"

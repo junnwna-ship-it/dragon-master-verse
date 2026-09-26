@@ -2,7 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildUgcChapterPayloads, ugcChapterId } from "@/lib/ugcImport";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Trash2, Map as MapIcon, X, HelpCircle, Wand2, ScrollText } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Save,
+  Trash2,
+  Map as MapIcon,
+  X,
+  HelpCircle,
+  Wand2,
+  ScrollText,
+} from "lucide-react";
 import { CHAPTER_TEMPLATES, type ChapterTemplate } from "@/lib/chapterTemplates";
 import { supabase } from "@/integrations/supabase/client";
 import { useCmsList, useCmsMutations, type StoryNode } from "@/hooks/useCms";
@@ -100,7 +110,8 @@ function nodeToDraft(node: StoryNode): NodeDraft {
     is_published: Boolean(n.is_published),
     stats: statsToRows(n.state_changes),
     reward_gold: Number((n.rewards as Record<string, unknown> | null)?.gold ?? 0) || 0,
-    reward_stat_points: Number((n.rewards as Record<string, unknown> | null)?.stat_points ?? 0) || 0,
+    reward_stat_points:
+      Number((n.rewards as Record<string, unknown> | null)?.stat_points ?? 0) || 0,
     reward_items: statsToRows((n.rewards as Record<string, unknown> | null)?.items),
     options: rawOptions.length
       ? rawOptions.map((o) => ({
@@ -138,13 +149,18 @@ export function StoryMapEditor() {
   const chapterNodes = useMemo(
     () =>
       nodes
-        .filter((n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === chapterId)
+        .filter(
+          (n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === chapterId,
+        )
         .sort((a, b) => Number(a.stage_number) - Number(b.stage_number)),
     [nodes, chapterId],
   );
 
   const nodeKeys = useMemo(
-    () => chapterNodes.map((n) => String((n as StoryNode & { node_key?: string }).node_key ?? "")).filter(Boolean),
+    () =>
+      chapterNodes
+        .map((n) => String((n as StoryNode & { node_key?: string }).node_key ?? ""))
+        .filter(Boolean),
     [chapterNodes],
   );
 
@@ -194,10 +210,19 @@ export function StoryMapEditor() {
     }
     const existing = new Map(
       nodes
-        .filter((n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === target)
-        .map((n) => [String((n as StoryNode & { node_key?: string }).node_key ?? ""), n.id] as const),
+        .filter(
+          (n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === target,
+        )
+        .map(
+          (n) => [String((n as StoryNode & { node_key?: string }).node_key ?? ""), n.id] as const,
+        ),
     );
-    if (existing.size && !window.confirm(`"${target}" 챕터의 같은 노드 키 ${existing.size}개를 템플릿 내용으로 덮어씁니다. 계속할까요?`)) {
+    if (
+      existing.size &&
+      !window.confirm(
+        `"${target}" 챕터의 같은 노드 키 ${existing.size}개를 템플릿 내용으로 덮어씁니다. 계속할까요?`,
+      )
+    ) {
       return;
     }
     setBuilding(true);
@@ -222,7 +247,8 @@ export function StoryMapEditor() {
           options: n.options.map((o) => ({
             label: o.label,
             next_node: o.next_node,
-            state_changes: o.state_changes && Object.keys(o.state_changes).length ? o.state_changes : null,
+            state_changes:
+              o.state_changes && Object.keys(o.state_changes).length ? o.state_changes : null,
             ...(o.quiz_ids?.length
               ? {
                   quiz_ids: o.quiz_ids,
@@ -305,9 +331,7 @@ export function StoryMapEditor() {
   const { data: studioStories } = useQuery({
     queryKey: ["admin", "user_stories", "map"],
     queryFn: async () => {
-      const { data: rows, error: sErr } = await (
-        supabase as unknown as { from: (t: string) => any }
-      )
+      const { data: rows, error: sErr } = await supabase
         .from("user_stories")
         .select("id,title,body,is_published,updated_at,user_id")
         .order("updated_at", { ascending: false })
@@ -330,7 +354,11 @@ export function StoryMapEditor() {
     async (story: { id: string; title: string; body: string | null }, silent = false) => {
       setSyncingId(story.id);
       try {
-        const { chapterId: target, payloads, errors } = await buildUgcChapterPayloads({
+        const {
+          chapterId: target,
+          payloads,
+          errors,
+        } = await buildUgcChapterPayloads({
           storyId: story.id,
           title: story.title || "무제 스토리",
           body: story.body,
@@ -342,8 +370,13 @@ export function StoryMapEditor() {
         }
         const existing = new Map(
           nodes
-            .filter((n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === target)
-            .map((n) => [String((n as StoryNode & { node_key?: string }).node_key ?? ""), n.id] as const),
+            .filter(
+              (n) => String((n as StoryNode & { chapter_id?: string }).chapter_id ?? "") === target,
+            )
+            .map(
+              (n) =>
+                [String((n as StoryNode & { node_key?: string }).node_key ?? ""), n.id] as const,
+            ),
         );
         for (const payload of payloads) {
           const id = existing.get(String(payload.node_key));
@@ -403,7 +436,9 @@ export function StoryMapEditor() {
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <label className="flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">챕터</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              챕터
+            </span>
             <input
               list="story-chapters"
               value={chapterId}
@@ -432,8 +467,9 @@ export function StoryMapEditor() {
           <ScrollText className="h-4 w-4 text-sky-300" /> 스튜디오 창작 스토리
         </h3>
         <p className="mt-0.5 text-[11px] text-sky-200/70">
-          유저가 스튜디오에서 만든 스토리는 <code>ugc_…</code> 챕터로 자동 등록되어 아래 편집기에서 장면·선택지·퀴즈를
-          바로 수정할 수 있습니다. 본문을 수정한 스토리는 "다시 등록"으로 갱신하세요.
+          유저가 스튜디오에서 만든 스토리는 <code>ugc_…</code> 챕터로 자동 등록되어 아래 편집기에서
+          장면·선택지·퀴즈를 바로 수정할 수 있습니다. 본문을 수정한 스토리는 "다시 등록"으로
+          갱신하세요.
         </p>
         {!studioStories?.length ? (
           <p className="mt-3 text-[11px] text-slate-400">등록된 창작 스토리가 없습니다.</p>
@@ -448,9 +484,12 @@ export function StoryMapEditor() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-700/60 bg-slate-950/60 px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-slate-100">{s.title || "무제 스토리"}</p>
+                    <p className="truncate text-xs font-bold text-slate-100">
+                      {s.title || "무제 스토리"}
+                    </p>
                     <p className="text-[10px] font-mono text-slate-500">
-                      {target} · {registered ? "등록됨" : "미등록"} · {s.is_published ? "공개" : "비공개"}
+                      {target} · {registered ? "등록됨" : "미등록"} ·{" "}
+                      {s.is_published ? "공개" : "비공개"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -486,12 +525,14 @@ export function StoryMapEditor() {
           <Wand2 className="h-4 w-4 text-amber-300" /> 템플릿으로 챕터 빌드
         </h3>
         <p className="mt-0.5 text-[11px] text-amber-200/70">
-          완성된 챕터 템플릿을 story_nodes에 생성합니다. 빌드 후에는 아래 편집기에서 장면·선택지·퀴즈를
-          그대로 수정할 수 있습니다.
+          완성된 챕터 템플릿을 story_nodes에 생성합니다. 빌드 후에는 아래 편집기에서
+          장면·선택지·퀴즈를 그대로 수정할 수 있습니다.
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <label>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">템플릿</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              템플릿
+            </span>
             <select
               value={templateId}
               onChange={(e) => {
@@ -539,8 +580,14 @@ export function StoryMapEditor() {
             disabled={building}
             className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50"
           >
-            {building ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-            {building ? "빌드 중…" : `${CHAPTER_TEMPLATES.find((t) => t.id === templateId)?.nodes.length ?? 0}개 장면 빌드`}
+            {building ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="h-4 w-4" />
+            )}
+            {building
+              ? "빌드 중…"
+              : `${CHAPTER_TEMPLATES.find((t) => t.id === templateId)?.nodes.length ?? 0}개 장면 빌드`}
           </button>
         </div>
       </section>
@@ -654,7 +701,11 @@ export function StoryMapEditor() {
           </div>
 
           <Field label="장면 제목">
-            <input value={draft.title} onChange={(e) => patch({ title: e.target.value })} className={inputCls} />
+            <input
+              value={draft.title}
+              onChange={(e) => patch({ title: e.target.value })}
+              className={inputCls}
+            />
           </Field>
           <Field label="화자">
             <input
@@ -759,7 +810,10 @@ export function StoryMapEditor() {
             </div>
 
             {draft.options.map((o, i) => (
-              <div key={i} className="space-y-2 rounded-xl border border-slate-700/70 bg-slate-950/60 p-3">
+              <div
+                key={i}
+                className="space-y-2 rounded-xl border border-slate-700/70 bg-slate-950/60 p-3"
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     선택지 {i + 1}
@@ -808,7 +862,10 @@ export function StoryMapEditor() {
                     {(quizzes ?? []).map((q) => {
                       const checked = o.quiz_ids.includes(q.id);
                       return (
-                        <label key={q.id} className="flex items-start gap-2 text-[11px] text-slate-300">
+                        <label
+                          key={q.id}
+                          className="flex items-start gap-2 text-[11px] text-slate-300"
+                        >
                           <input
                             type="checkbox"
                             checked={checked}
@@ -903,7 +960,9 @@ function StatRows({
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-2">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{title}</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          {title}
+        </span>
         <button
           type="button"
           onClick={() => onChange([...rows, { key: "", value: 0 }])}
@@ -927,7 +986,9 @@ function StatRows({
             type="number"
             value={r.value}
             onChange={(e) =>
-              onChange(rows.map((x, idx) => (idx === i ? { ...x, value: Number(e.target.value) } : x)))
+              onChange(
+                rows.map((x, idx) => (idx === i ? { ...x, value: Number(e.target.value) } : x)),
+              )
             }
             className="w-20 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100"
           />

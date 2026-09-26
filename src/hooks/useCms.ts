@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
+import { insertCmsRow, type CmsTable } from "@/lib/cmsWrites";
+export type { CmsTable } from "@/lib/cmsWrites";
 
 /**
  * Text-based CMS data layer.
@@ -14,17 +16,6 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase
  * security. We still pass `publishedOnly` for admin previews / player screens
  * to make the intent explicit.
  */
-export type CmsTable =
-  | "store_items"
-  | "story_nodes"
-  | "training_stats"
-  | "game_settings"
-  | "characters"
-  | "bgm_tracks"
-  | "battle_skills"
-  | "combat_items"
-  | "dragon_pool";
-
 export type StoreItem = Tables<"store_items">;
 export type StoryNode = Tables<"story_nodes">;
 export type TrainingStat = Tables<"training_stats">;
@@ -52,7 +43,10 @@ export function cmsKey(table: CmsTable, publishedOnly: boolean) {
 }
 
 /** Generic list hook for any CMS table. */
-export function useCmsList<T>(table: CmsTable, opts?: { publishedOnly?: boolean; enabled?: boolean }) {
+export function useCmsList<T>(
+  table: CmsTable,
+  opts?: { publishedOnly?: boolean; enabled?: boolean },
+) {
   const publishedOnly = opts?.publishedOnly ?? false;
   return useQuery({
     queryKey: cmsKey(table, publishedOnly),
@@ -61,7 +55,10 @@ export function useCmsList<T>(table: CmsTable, opts?: { publishedOnly?: boolean;
       // `dragon_pool` uses `is_active` instead of `is_published`.
       let q = supabase.from(table).select("*") as unknown as {
         eq: (col: string, val: unknown) => typeof q;
-        order: (col: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }>;
+        order: (
+          col: string,
+          o: { ascending: boolean },
+        ) => Promise<{ data: unknown; error: unknown }>;
       };
       if (publishedOnly && table !== "dragon_pool") q = q.eq("is_published", true);
       const ord = ORDER_BY[table];
@@ -97,11 +94,7 @@ export function useCmsMutations(table: CmsTable) {
 
   const create = useMutation({
     mutationFn: async (row: Record<string, unknown>) => {
-      const { data, error } = await supabase
-        .from(table)
-        .insert(row as TablesInsert<CmsTable>)
-        .select()
-        .single();
+      const { data, error } = await insertCmsRow(table, row);
       if (error) throw error;
       return data;
     },

@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Heart, Droplet, Sword, Shield, Zap, BatteryWarning, Flag, Sparkles, Skull, Flame } from "lucide-react";
+import {
+  Heart,
+  Droplet,
+  Sword,
+  Shield,
+  Zap,
+  BatteryWarning,
+  Flag,
+  Sparkles,
+  Skull,
+  Flame,
+} from "lucide-react";
 import type { Dragon } from "@/store/dragons";
 import {
   type Combatant,
@@ -65,7 +76,9 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
         side === "enemy" ? "text-right" : ""
       }`}
     >
-      <div className={`flex flex-wrap items-center gap-1.5 ${side === "enemy" ? "flex-row-reverse" : ""}`}>
+      <div
+        className={`flex flex-wrap items-center gap-1.5 ${side === "enemy" ? "flex-row-reverse" : ""}`}
+      >
         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${tone}`}>
           {c.base.element}
         </span>
@@ -89,8 +102,12 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
       <div className="mt-2 space-y-1.5">
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-emerald-400" /> HP</span>
-            <span className="font-mono text-slate-200">{uiHp(c)}/{c.base.maxHp}</span>
+            <span className="flex items-center gap-1">
+              <Heart className="h-3 w-3 text-emerald-400" /> HP
+            </span>
+            <span className="font-mono text-slate-200">
+              {uiHp(c)}/{c.base.maxHp}
+            </span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
             <div className="h-full bg-emerald-500 transition-all" style={{ width: `${hpPct}%` }} />
@@ -98,15 +115,21 @@ function CombatantPanel({ c, side }: { c: Combatant; side: "player" | "enemy" })
         </div>
         <div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><Droplet className="h-3 w-3 text-sky-400" /> MP</span>
-            <span className="font-mono text-slate-200">{Math.max(0, c.mp)}/{c.maxMp}</span>
+            <span className="flex items-center gap-1">
+              <Droplet className="h-3 w-3 text-sky-400" /> MP
+            </span>
+            <span className="font-mono text-slate-200">
+              {Math.max(0, c.mp)}/{c.maxMp}
+            </span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
             <div className="h-full bg-sky-500 transition-all" style={{ width: `${mpPct}%` }} />
           </div>
         </div>
       </div>
-      <div className={`mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}>
+      <div
+        className={`mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300 ${side === "enemy" ? "justify-end" : ""}`}
+      >
         <span className={`flex items-center gap-1 ${c.exhausted ? "text-rose-400" : ""}`}>
           <Sword className="h-3 w-3" /> {stats.atk}
         </span>
@@ -142,9 +165,7 @@ export function BattleEngine({
   const [pState, setPState] = useState<Combatant>(() => {
     const c = makeCombatant(player);
     // initialPlayerHp/Mp는 UI 단위. 엔진으로 변환.
-    const eng = initialPlayerHp != null
-      ? 5000 + Math.max(0, initialPlayerHp) * 5
-      : c.engineHp;
+    const eng = initialPlayerHp != null ? 5000 + Math.max(0, initialPlayerHp) * 5 : c.engineHp;
     const mp = initialPlayerMp ?? c.mp;
     return {
       ...c,
@@ -159,7 +180,9 @@ export function BattleEngine({
   const [logs, setLogs] = useState<LogEntry[]>([
     {
       id: 0,
-      text: t("battle.openLog", { context: context === "pvp" ? t("battle.openLogPvp") : t("battle.openLogStory") }),
+      text: t("battle.openLog", {
+        context: context === "pvp" ? t("battle.openLogPvp") : t("battle.openLogStory"),
+      }),
       tone: "system",
     },
   ]);
@@ -228,8 +251,6 @@ export function BattleEngine({
     setTurn("enemy");
   };
 
-
-
   useEffect(() => {
     if (!winner || reportedRef.current) return;
     reportedRef.current = true;
@@ -296,6 +317,13 @@ export function BattleEngine({
   const enemyDrainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const enemyTurnRanRef = useRef<number | null>(null);
 
+  // Read the latest combat state when the timer fires, without restarting the
+  // enemy turn whenever HP, item buffs, or the UI language changes.
+  const enemySnapshotRef = useRef({ pState, eState, itemState, t });
+  useEffect(() => {
+    enemySnapshotRef.current = { pState, eState, itemState, t };
+  }, [pState, eState, itemState, t]);
+
   useEffect(() => {
     if (turn !== "enemy" || winner) return;
     if (enemyTurnRanRef.current === turnNumber) return;
@@ -309,6 +337,7 @@ export function BattleEngine({
     });
 
     const attackTimer = setTimeout(() => {
+      const { pState, eState, itemState, t } = enemySnapshotRef.current;
       // 함수형 업데이트로 stale state 방지. 상호 의존이 있어 한쪽에서
       // 양쪽 다 갱신.
       let nextEnemy: Combatant | null = null;
@@ -321,25 +350,25 @@ export function BattleEngine({
         nextEnemy = eState;
         nextPlayer = pState;
       } else
-      setEState((curEnemy) => {
-        if (curEnemy.engineHp <= 0) {
-          nextEnemy = curEnemy;
-          return curEnemy;
-        }
-        setPState((curPlayer) => {
-          if (curPlayer.engineHp <= 0) {
-            nextPlayer = curPlayer;
+        setEState((curEnemy) => {
+          if (curEnemy.engineHp <= 0) {
             nextEnemy = curEnemy;
-            return curPlayer;
+            return curEnemy;
           }
-          const r = performAttack(curEnemy, curPlayer, { turnNumber });
-          pushLogs(r.logs);
-          nextEnemy = r.attacker;
-          nextPlayer = r.defender;
-          return r.defender;
+          setPState((curPlayer) => {
+            if (curPlayer.engineHp <= 0) {
+              nextPlayer = curPlayer;
+              nextEnemy = curEnemy;
+              return curPlayer;
+            }
+            const r = performAttack(curEnemy, curPlayer, { turnNumber });
+            pushLogs(r.logs);
+            nextEnemy = r.attacker;
+            nextPlayer = r.defender;
+            return r.defender;
+          });
+          return nextEnemy ?? curEnemy;
         });
-        return nextEnemy ?? curEnemy;
-      });
 
       const drainTimer = setTimeout(() => {
         if (!nextEnemy || !nextPlayer) {
@@ -381,7 +410,9 @@ export function BattleEngine({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100">
           {context === "pvp" ? t("battle.header1v1Pvp") : t("battle.header1v1Story")}
-          <span className="ml-2 text-xs font-normal text-slate-400">{t("battle.turnOfMax", { n: turnNumber, max: 15 })}</span>
+          <span className="ml-2 text-xs font-normal text-slate-400">
+            {t("battle.turnOfMax", { n: turnNumber, max: 15 })}
+          </span>
         </h2>
         {onExit && (
           <button
@@ -402,7 +433,11 @@ export function BattleEngine({
       {winner ? (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 text-center">
           <p className="text-sm font-bold text-amber-300">
-            {winner === "draw" ? t("battle.draw") : winner === "player" ? t("battle.win") : t("battle.lose")}
+            {winner === "draw"
+              ? t("battle.draw")
+              : winner === "player"
+                ? t("battle.win")
+                : t("battle.lose")}
           </p>
           {onExit && (
             <div className="mt-2 flex flex-col items-center gap-1.5">
@@ -457,7 +492,11 @@ export function BattleEngine({
         <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-slate-500">
           <span>{t("battle.battleLog")}</span>
           <span className={turn === "player" ? "text-emerald-400" : "text-rose-400"}>
-            {winner ? t("battle.battleEnded") : turn === "player" ? t("battle.myTurn") : t("battle.enemyTurn")}
+            {winner
+              ? t("battle.battleEnded")
+              : turn === "player"
+                ? t("battle.myTurn")
+                : t("battle.enemyTurn")}
           </span>
         </div>
         <div className="max-h-32 space-y-0.5 overflow-y-auto pr-1 text-xs leading-snug">

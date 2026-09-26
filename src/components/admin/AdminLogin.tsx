@@ -5,7 +5,12 @@ import { toast } from "sonner";
 import { ArrowLeft, Loader2, LogIn, ShieldCheck, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { claimFirstAdmin, getAdminStatus, grantAdminByEmail, recordAdminLogin } from "@/lib/admin.functions";
+import {
+  claimFirstAdmin,
+  getAdminStatus,
+  grantAdminByEmail,
+  recordAdminLogin,
+} from "@/lib/admin.functions";
 
 type Status = { isAdmin: boolean; adminExists: boolean; canBootstrap: boolean };
 
@@ -137,7 +142,10 @@ export function AdminLogin() {
           <Loader2 className="h-4 w-4 animate-spin" /> 확인 중…
         </p>
       ) : !user ? (
-        <form onSubmit={submit} className="space-y-3 rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <form
+          onSubmit={submit}
+          className="space-y-3 rounded-2xl border border-slate-700 bg-slate-900/70 p-4"
+        >
           <p className="text-xs text-slate-400">
             {mode === "signin"
               ? "관리자 계정 이메일로 로그인하세요."
@@ -218,7 +226,10 @@ export function AdminLogin() {
               >
                 관리자 대시보드로 이동
               </button>
-              <form onSubmit={promote} className="space-y-2 rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+              <form
+                onSubmit={promote}
+                className="space-y-2 rounded-2xl border border-slate-700 bg-slate-900/70 p-4"
+              >
                 <p className="text-xs font-bold text-slate-200">다른 계정에 관리자 권한 부여</p>
                 <input
                   type="email"

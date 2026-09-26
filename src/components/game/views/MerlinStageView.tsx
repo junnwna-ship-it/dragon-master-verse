@@ -64,39 +64,66 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-900/40 via-slate-900 to-slate-950 p-4 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-purple-300">{t("merlin.stage")}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-purple-300">
+          {t("merlin.stage")}
+        </p>
         <h2 className="mt-1 text-xl font-extrabold text-purple-100">{t("merlin.title")}</h2>
       </div>
 
       <AnimatePresence mode="wait">
         {phase === "intro" && (
-          <motion.div key="intro" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex flex-col items-center gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-6">
+          <motion.div
+            key="intro"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-6"
+          >
             <MerlinAvatar />
             <Bubble>
               <span dangerouslySetInnerHTML={{ __html: t("merlin.introBubble") }} />
             </Bubble>
-            <button onClick={() => setPhase("items")}
-              className="rounded-xl bg-purple-500 px-6 py-3 text-sm font-extrabold text-white hover:bg-purple-400">
+            <button
+              onClick={() => setPhase("items")}
+              className="rounded-xl bg-purple-500 px-6 py-3 text-sm font-extrabold text-white hover:bg-purple-400"
+            >
               {t("merlin.continue")} <ChevronRight className="ml-1 inline h-4 w-4" />
             </button>
           </motion.div>
         )}
 
         {phase === "items" && (
-          <motion.div key="items" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex flex-col items-center gap-4 rounded-2xl border border-amber-500/40 bg-slate-900/70 p-6">
-            <p className="text-xs font-bold uppercase tracking-widest text-amber-300">{t("merlin.giftHeading")}</p>
+          <motion.div
+            key="items"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-4 rounded-2xl border border-amber-500/40 bg-slate-900/70 p-6"
+          >
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-300">
+              {t("merlin.giftHeading")}
+            </p>
             <div className="grid grid-cols-2 gap-3">
-              <ItemCard icon={<Egg className="h-10 w-10 text-amber-300" />} name={t("merlin.egg")} />
-              <ItemCard icon={<Wand2 className="h-10 w-10 text-purple-300" />} name={t("merlin.wand")} />
+              <ItemCard
+                icon={<Egg className="h-10 w-10 text-amber-300" />}
+                name={t("merlin.egg")}
+              />
+              <ItemCard
+                icon={<Wand2 className="h-10 w-10 text-purple-300" />}
+                name={t("merlin.wand")}
+              />
             </div>
-            <InventoryBadge label={t("merlin.bondToken")} count={invLoading ? null : bondingTokens} />
+            <InventoryBadge
+              label={t("merlin.bondToken")}
+              count={invLoading ? null : bondingTokens}
+            />
             <Bubble>
               <span dangerouslySetInnerHTML={{ __html: t("merlin.itemsBubble") }} />
             </Bubble>
-            <button onClick={() => setPhase("quiz")}
-              className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-extrabold text-slate-950 hover:bg-amber-400">
+            <button
+              onClick={() => setPhase("quiz")}
+              className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-extrabold text-slate-950 hover:bg-amber-400"
+            >
               {t("merlin.startQuiz")}
             </button>
           </motion.div>
@@ -118,13 +145,24 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
         )}
 
         {phase === "contract" && (
-          <motion.div key="contract" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-            className="space-y-4 rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-900/30 to-slate-950 p-5">
+          <motion.div
+            key="contract"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-4 rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-900/30 to-slate-950 p-5"
+          >
             <div className="text-center">
               <Sparkles className="mx-auto h-10 w-10 text-amber-300" />
-              <h3 className="mt-2 text-lg font-extrabold text-amber-200">{t("merlin.pickDragon")}</h3>
+              <h3 className="mt-2 text-lg font-extrabold text-amber-200">
+                {t("merlin.pickDragon")}
+              </h3>
               <p className="mt-1 text-xs text-slate-400">{t("merlin.pickHint")}</p>
-              <InventoryBadge label={t("merlin.bondToken")} count={invLoading ? null : bondingTokens} className="mx-auto mt-2" />
+              <InventoryBadge
+                label={t("merlin.bondToken")}
+                count={invLoading ? null : bondingTokens}
+                className="mx-auto mt-2"
+              />
             </div>
             <div className="grid grid-cols-3 gap-2">
               {candidates.map((d) => (
@@ -151,8 +189,13 @@ export function MerlinStageView({ onComplete, refetchOwned }: Props) {
         )}
 
         {phase === "done" && (
-          <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-8 text-center">
+          <motion.div
+            key="done"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-8 text-center"
+          >
             <Sparkles className="mx-auto h-16 w-16 text-emerald-300 animate-pulse" />
             <p className="mt-3 text-lg font-extrabold text-emerald-200">{t("merlin.doneTitle")}</p>
             <p className="mt-1 text-xs text-slate-400">{t("merlin.doneSubtitle")}</p>

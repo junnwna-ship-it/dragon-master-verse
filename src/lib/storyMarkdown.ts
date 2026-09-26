@@ -39,7 +39,10 @@ const STAT_HEADS = ["스탯", "스탯 변화", "stats", "state_changes"];
 const OPTION_HEADS = ["선택지", "options", "choices"];
 
 function headingKind(line: string): "body" | "stats" | "options" | null {
-  const name = line.replace(/^#+\s*/, "").trim().toLowerCase();
+  const name = line
+    .replace(/^#+\s*/, "")
+    .trim()
+    .toLowerCase();
   if (BODY_HEADS.includes(name)) return "body";
   if (STAT_HEADS.includes(name)) return "stats";
   if (OPTION_HEADS.includes(name)) return "options";
@@ -60,7 +63,9 @@ export function parseStatList(raw: string): Record<string, number> | null {
   return Object.keys(out).length ? out : null;
 }
 
-function parseQuizLine(raw: string): Pick<StoryMdOption, "quiz_ids" | "quiz_required" | "quiz_fail_node"> {
+function parseQuizLine(
+  raw: string,
+): Pick<StoryMdOption, "quiz_ids" | "quiz_required" | "quiz_fail_node"> {
   let rest = raw.trim();
   let required = false;
   let failNode: string | null = null;

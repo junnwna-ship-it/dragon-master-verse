@@ -95,7 +95,9 @@ export function AuthDialog({ onClose }: { onClose: () => void }) {
         </form>
         <div className="my-3 flex items-center gap-2">
           <div className="h-px flex-1 bg-slate-700" />
-          <span className="text-[10px] uppercase tracking-widest text-slate-500">{t("auth.orDivider")}</span>
+          <span className="text-[10px] uppercase tracking-widest text-slate-500">
+            {t("auth.orDivider")}
+          </span>
           <div className="h-px flex-1 bg-slate-700" />
         </div>
         <button
@@ -105,7 +107,10 @@ export function AuthDialog({ onClose }: { onClose: () => void }) {
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-700 disabled:opacity-50"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.7 3.4 14.6 2.4 12 2.4 6.8 2.4 2.6 6.6 2.6 11.9S6.8 21.4 12 21.4c6.9 0 9.5-4.8 9.5-7.3 0-.5 0-.9-.1-1.3H12z"/>
+            <path
+              fill="#EA4335"
+              d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.7 3.4 14.6 2.4 12 2.4 6.8 2.4 2.6 6.6 2.6 11.9S6.8 21.4 12 21.4c6.9 0 9.5-4.8 9.5-7.3 0-.5 0-.9-.1-1.3H12z"
+            />
           </svg>
           {googleBusy ? t("auth.submitting") : t("auth.google")}
         </button>

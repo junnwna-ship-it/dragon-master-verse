@@ -34,7 +34,9 @@ async function currentUserId(): Promise<string | null> {
   return data.user?.id ?? null;
 }
 
-export async function fetchUgcProgress(storyId: string | null | undefined): Promise<UgcProgress | null> {
+export async function fetchUgcProgress(
+  storyId: string | null | undefined,
+): Promise<UgcProgress | null> {
   if (!storyId) return null;
   try {
     const userId = await currentUserId();
@@ -84,7 +86,11 @@ export async function deleteUgcProgress(storyId: string | null | undefined): Pro
   try {
     const userId = await currentUserId();
     if (!userId) return;
-    await supabase.from("ugc_story_progress").delete().eq("user_id", userId).eq("story_id", storyId);
+    await supabase
+      .from("ugc_story_progress")
+      .delete()
+      .eq("user_id", userId)
+      .eq("story_id", storyId);
   } catch {
     /* best effort */
   }

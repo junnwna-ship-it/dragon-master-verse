@@ -35,16 +35,19 @@ export function QuizModal({ title = "지혜의 시련", count = 3, quizIds, onCl
   const [step, setStep] = useState(0);
   const [feedback, setFeedback] = useState<"right" | "wrong" | null>(null);
   const [grading, setGrading] = useState(false);
-  const [result, setResult] = useState<{ correct: number; total: number; rewarded: boolean } | null>(null);
+  const [result, setResult] = useState<{
+    correct: number;
+    total: number;
+    rewarded: boolean;
+  } | null>(null);
   const [answerKey, setAnswerKey] = useState<Record<string, number>>({});
 
   const idsKey = (quizIds ?? []).join(",");
   useEffect(() => {
     let cancelled = false;
     const ids = idsKey ? idsKey.split(",") : [];
-    const req = ids.length > 0
-      ? fetchQuizzesByIds({ data: { ids } })
-      : fetchQuizSet({ data: { count } });
+    const req =
+      ids.length > 0 ? fetchQuizzesByIds({ data: { ids } }) : fetchQuizSet({ data: { count } });
     req
       .then((r) => {
         if (cancelled) return;
@@ -56,9 +59,10 @@ export function QuizModal({ title = "지혜의 시련", count = 3, quizIds, onCl
         toast.error(t("quiz.loadFailed", { msg: err.message ?? err }));
         setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [count, idsKey, t]);
-
 
   const cur = quizzes[step];
 
@@ -102,12 +106,22 @@ export function QuizModal({ title = "지혜의 시련", count = 3, quizIds, onCl
       <Backdrop>
         <div className="relative w-full max-w-md rounded-3xl border border-amber-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-6 text-center shadow-2xl">
           {allRight && <FireworksVFX />}
-          <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
-            allRight ? "bg-amber-500/20 ring-4 ring-amber-500/40" : "bg-rose-500/20 ring-4 ring-rose-500/40"
-          }`}>
-            {allRight ? <Sparkles className="h-8 w-8 text-amber-300" /> : <XCircle className="h-8 w-8 text-rose-300" />}
+          <div
+            className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
+              allRight
+                ? "bg-amber-500/20 ring-4 ring-amber-500/40"
+                : "bg-rose-500/20 ring-4 ring-rose-500/40"
+            }`}
+          >
+            {allRight ? (
+              <Sparkles className="h-8 w-8 text-amber-300" />
+            ) : (
+              <XCircle className="h-8 w-8 text-rose-300" />
+            )}
           </div>
-          <h3 className={`mt-3 text-2xl font-extrabold ${allRight ? "text-amber-200" : "text-rose-200"}`}>
+          <h3
+            className={`mt-3 text-2xl font-extrabold ${allRight ? "text-amber-200" : "text-rose-200"}`}
+          >
             {allRight ? t("quiz.perfect") : t("quiz.imperfect")}
           </h3>
           <p className="mt-1 text-sm text-slate-300">
@@ -147,8 +161,10 @@ export function QuizModal({ title = "지혜의 시련", count = 3, quizIds, onCl
         <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 text-center text-slate-300">
           <p className="font-bold">{t("quiz.noQuizzes")}</p>
           <p className="mt-1 text-xs text-slate-500">{t("quiz.noQuizzesHint")}</p>
-          <button onClick={() => onClose({ correct: 0, total: 0, rewarded: false })}
-            className="mt-4 w-full rounded-xl bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600">
+          <button
+            onClick={() => onClose({ correct: 0, total: 0, rewarded: false })}
+            className="mt-4 w-full rounded-xl bg-slate-700 px-4 py-2 text-sm text-slate-100 hover:bg-slate-600"
+          >
             {t("common.close")}
           </button>
         </div>
@@ -160,8 +176,12 @@ export function QuizModal({ title = "지혜의 시련", count = 3, quizIds, onCl
     <Backdrop>
       <div className="relative w-full max-w-md rounded-3xl border border-slate-700/60 bg-slate-900 p-5 shadow-2xl">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">{resolvedTitle}</p>
-          <p className="text-[10px] text-slate-400">{t("quiz.questionOf", { cur: step + 1, total: quizzes.length })}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+            {resolvedTitle}
+          </p>
+          <p className="text-[10px] text-slate-400">
+            {t("quiz.questionOf", { cur: step + 1, total: quizzes.length })}
+          </p>
         </div>
         <div className="h-1 overflow-hidden rounded-full bg-slate-800">
           <motion.div

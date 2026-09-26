@@ -16,9 +16,7 @@ export type UgcStory = {
   created_at: string;
 };
 
-const db = () => (supabase as unknown as { from: (t: string) => any }).from("user_stories");
-const rpc = (fn: string, args: Record<string, unknown>) =>
-  (supabase as unknown as { rpc: (f: string, a: Record<string, unknown>) => any }).rpc(fn, args);
+const db = () => supabase.from("user_stories");
 
 /** Admin review queue for user-generated stories + Hall of Fame promotion. */
 export function UgcReviewPanel() {
@@ -29,7 +27,9 @@ export function UgcReviewPanel() {
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await db()
-      .select("id,user_id,title,summary,cover_image_url,body,is_published,is_hall_of_fame,is_lobby_visible,created_at")
+      .select(
+        "id,user_id,title,summary,cover_image_url,body,is_published,is_hall_of_fame,is_lobby_visible,created_at",
+      )
       .order("is_hall_of_fame", { ascending: false })
       .order("created_at", { ascending: false });
     if (error) toast.error(`불러오기 실패: ${error.message}`);
@@ -44,7 +44,7 @@ export function UgcReviewPanel() {
   const toggleVisibility = async (story: UgcStory) => {
     setBusyId(story.id);
     const next = !story.is_lobby_visible;
-    const { error } = await rpc("set_story_lobby_visibility", {
+    const { error } = await supabase.rpc("set_story_lobby_visibility", {
       _story_id: story.id,
       _visible: next,
     });
@@ -54,14 +54,14 @@ export function UgcReviewPanel() {
       return;
     }
     toast.success(next ? "로비에 노출됩니다." : "로비에서 숨겼습니다.");
-    setRows((prev) =>
-      prev.map((r) => (r.id === story.id ? { ...r, is_lobby_visible: next } : r)),
-    );
+    setRows((prev) => prev.map((r) => (r.id === story.id ? { ...r, is_lobby_visible: next } : r)));
   };
 
   const promote = async (story: UgcStory) => {
     setBusyId(story.id);
-    const { data, error } = await rpc("promote_story_to_hall_of_fame", { _story_id: story.id });
+    const { data, error } = await supabase.rpc("promote_story_to_hall_of_fame", {
+      _story_id: story.id,
+    });
     setBusyId(null);
     if (error) {
       toast.error(`승격 실패: ${error.message}`);
@@ -81,7 +81,7 @@ export function UgcReviewPanel() {
   const demote = async (story: UgcStory) => {
     if (!window.confirm(`"${story.title}" 승격을 취소하고 보너스 슬롯을 회수할까요?`)) return;
     setBusyId(story.id);
-    const { error } = await rpc("demote_story_from_hall_of_fame", { _story_id: story.id });
+    const { error } = await supabase.rpc("demote_story_from_hall_of_fame", { _story_id: story.id });
     setBusyId(null);
     if (error) {
       toast.error(`취소 실패: ${error.message}`);
@@ -144,8 +144,8 @@ export function UgcReviewPanel() {
                 {s.summary || "소개가 없습니다."}
               </p>
               <p className="mt-1 text-[10px] text-slate-500">
-                작가 ID: {s.user_id.slice(0, 8)}… · 작가 설정:{" "}
-                {s.is_published ? "공개" : "비공개"} · 로비 노출:{" "}
+                작가 ID: {s.user_id.slice(0, 8)}… · 작가 설정: {s.is_published ? "공개" : "비공개"}{" "}
+                · 로비 노출:{" "}
                 <span className={s.is_lobby_visible ? "text-emerald-300" : "text-slate-400"}>
                   {s.is_lobby_visible ? "ON" : "OFF"}
                 </span>{" "}
@@ -192,7 +192,11 @@ export function UgcReviewPanel() {
               disabled={busyId === s.id}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-400/50 bg-rose-500/10 py-2.5 text-xs font-bold text-rose-200 hover:bg-rose-500/20 disabled:opacity-50"
             >
-              {busyId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldOff className="h-4 w-4" />}
+              {busyId === s.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldOff className="h-4 w-4" />
+              )}
               승격 취소 (보너스 슬롯 회수)
             </button>
           ) : (
@@ -202,7 +206,11 @@ export function UgcReviewPanel() {
               disabled={busyId === s.id}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
             >
-              {busyId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
+              {busyId === s.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Crown className="h-4 w-4" />
+              )}
               👑 명예의 전당 승격
             </button>
           )}

@@ -12,7 +12,7 @@ type PublicStory = {
   is_hall_of_fame: boolean;
 };
 
-const db = () => (supabase as unknown as { from: (t: string) => any }).from("user_stories");
+const db = () => supabase.from("user_stories");
 
 /**
  * Player-facing story picker: Hall of Fame ("official chapter") entries are
@@ -129,7 +129,12 @@ export function HallOfFameStories() {
             </div>
             {open.summary && <p className="mt-1 text-xs text-slate-400">{open.summary}</p>}
             <div className="mt-4">
-              <UgcStoryPlayer title={open.title} body={open.body} storyId={open.id} onExit={() => setOpen(null)} />
+              <UgcStoryPlayer
+                title={open.title}
+                body={open.body}
+                storyId={open.id}
+                onExit={() => setOpen(null)}
+              />
             </div>
           </div>
         </div>

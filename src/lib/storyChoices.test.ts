@@ -50,12 +50,16 @@ describe("dragon_master four-ending gate", () => {
   ];
 
   it("unlocks The Two Masters only for a group run with high affinity", () => {
-    const labels = visibleOptions(endings, { Path_Group: 1, Worm_Affinity: 70 }).map((o) => o.label);
+    const labels = visibleOptions(endings, { Path_Group: 1, Worm_Affinity: 70 }).map(
+      (o) => o.label,
+    );
     expect(labels).toContain("two");
   });
 
   it("hides The Two Masters on a solo run", () => {
-    const labels = visibleOptions(endings, { Path_Alone: 1, Worm_Affinity: 70 }).map((o) => o.label);
+    const labels = visibleOptions(endings, { Path_Alone: 1, Worm_Affinity: 70 }).map(
+      (o) => o.label,
+    );
     expect(labels).not.toContain("two");
     expect(labels).toContain("master");
   });

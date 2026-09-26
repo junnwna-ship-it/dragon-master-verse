@@ -75,9 +75,7 @@ export function CmsTrainingStats({ rows }: { rows?: TrainingStat[] }) {
 
   return (
     <section className="space-y-2">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-        훈련 능력
-      </p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">훈련 능력</p>
       <div className="grid grid-cols-2 gap-2">
         {data.map((s) => (
           <div

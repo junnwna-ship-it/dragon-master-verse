@@ -1,0 +1,6 @@
+# Keep formatter output stable across Windows development and Linux CI.
+* text=auto
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf

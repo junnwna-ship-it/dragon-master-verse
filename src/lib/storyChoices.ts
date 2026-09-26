@@ -17,10 +17,7 @@ export function meetsRequires(
  * - Nothing qualifies -> the unconditional choices act as the fallback,
  *   so a branching ending node can never dead-end.
  */
-export function visibleOptions(
-  options: VnOption[],
-  stats: Record<string, number>,
-): VnOption[] {
+export function visibleOptions(options: VnOption[], stats: Record<string, number>): VnOption[] {
   const gated = options.filter((o) => o.requires && Object.keys(o.requires).length > 0);
   if (gated.length === 0) return options;
   const qualified = gated.filter((o) => meetsRequires(o.requires, stats));

@@ -98,7 +98,9 @@ export function SummonView() {
   return (
     <div className="space-y-4">
       <header className="rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-950/70 via-slate-900 to-slate-950 p-4">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-violet-300/80">{t("summon.kicker")}</p>
+        <p className="text-[10px] uppercase tracking-[0.25em] text-violet-300/80">
+          {t("summon.kicker")}
+        </p>
         <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-slate-100">
           <Sparkles className="h-5 w-5 text-violet-300" /> {t("summon.title")}
         </h2>
@@ -122,14 +124,22 @@ export function SummonView() {
           disabled={busy != null}
           className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-4 text-sm font-bold text-amber-200 transition hover:bg-amber-500/20 active:scale-95 disabled:opacity-50"
         >
-          {busy === "gold-1" ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : t("summon.single", { cost: SUMMON_GOLD_SINGLE.toLocaleString() })}
+          {busy === "gold-1" ? (
+            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+          ) : (
+            t("summon.single", { cost: SUMMON_GOLD_SINGLE.toLocaleString() })
+          )}
         </button>
         <button
           onClick={() => draw(10, "gold")}
           disabled={busy != null}
           className="rounded-2xl border border-violet-500/50 bg-violet-500/15 px-3 py-4 text-sm font-bold text-violet-200 transition hover:bg-violet-500/25 active:scale-95 disabled:opacity-50"
         >
-          {busy === "gold-10" ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : t("summon.ten", { cost: SUMMON_GOLD_TEN.toLocaleString() })}
+          {busy === "gold-10" ? (
+            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+          ) : (
+            t("summon.ten", { cost: SUMMON_GOLD_TEN.toLocaleString() })
+          )}
         </button>
         <button
           onClick={() => draw(1, "ticket")}
@@ -150,11 +160,16 @@ export function SummonView() {
       <p className="text-center text-[11px] text-violet-300/80">{t("summon.guarantee")}</p>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-3">
-        <h3 className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">{t("summon.rates")}</h3>
+        <h3 className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">
+          {t("summon.rates")}
+        </h3>
         <div className="flex flex-wrap gap-2 text-xs">
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-slate-500" />}
           {rates.map((r) => (
-            <span key={r.rarity} className={`rounded-full border px-2.5 py-1 font-semibold ${RARITY_STYLE[r.rarity].ring} ${RARITY_STYLE[r.rarity].text}`}>
+            <span
+              key={r.rarity}
+              className={`rounded-full border px-2.5 py-1 font-semibold ${RARITY_STYLE[r.rarity].ring} ${RARITY_STYLE[r.rarity].text}`}
+            >
               {RARITY_STYLE[r.rarity].label} {r.pct}%
             </span>
           ))}
@@ -163,7 +178,9 @@ export function SummonView() {
 
       {results && (
         <section className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-3">
-          <h3 className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">{t("summon.resultsTitle")}</h3>
+          <h3 className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">
+            {t("summon.resultsTitle")}
+          </h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {results.map((r, i) => {
               const style = RARITY_STYLE[r.rarity];
@@ -172,15 +189,21 @@ export function SummonView() {
                 <div
                   key={`${r.dragon_id}-${i}`}
                   className={`rounded-xl border p-2.5 transition-all duration-300 ${
-                    shown ? `${style.ring} ${style.glow} bg-slate-900/80 opacity-100` : "border-slate-800 bg-slate-900/40 opacity-40"
+                    shown
+                      ? `${style.ring} ${style.glow} bg-slate-900/80 opacity-100`
+                      : "border-slate-800 bg-slate-900/40 opacity-40"
                   }`}
                 >
                   {shown ? (
                     <>
                       <p className={`text-sm font-bold ${style.text}`}>{r.name}</p>
-                      <p className="text-[10px] uppercase tracking-widest text-slate-500">{style.label}</p>
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500">
+                        {style.label}
+                      </p>
                       <p className="mt-1 text-[11px] text-slate-400">
-                        {r.duplicate ? t("summon.duplicate", { n: r.shards }) : t("summon.brandNew")}
+                        {r.duplicate
+                          ? t("summon.duplicate", { n: r.shards })
+                          : t("summon.brandNew")}
                       </p>
                     </>
                   ) : (
@@ -203,9 +226,14 @@ export function SummonView() {
             const style = RARITY_STYLE[p.rarity];
             const owned = ownedNames.has(p.dragon_id);
             return (
-              <div key={p.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-2">
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-2"
+              >
                 <div className="min-w-0">
-                  <p className={`truncate text-sm font-semibold ${style.text}`}>{p.dragon?.name ?? "—"}</p>
+                  <p className={`truncate text-sm font-semibold ${style.text}`}>
+                    {p.dragon?.name ?? "—"}
+                  </p>
                   <p className="text-[10px] uppercase tracking-widest text-slate-500">
                     {style.label} · {t("summon.shardCost", { n: p.shard_cost })}
                   </p>
@@ -215,7 +243,11 @@ export function SummonView() {
                   disabled={busy != null || owned || shards < p.shard_cost}
                   className="shrink-0 rounded-lg border border-fuchsia-500/50 bg-fuchsia-500/15 px-3 py-1.5 text-xs font-semibold text-fuchsia-200 transition hover:bg-fuchsia-500/25 disabled:opacity-40"
                 >
-                  {owned ? t("summon.owned") : busy === `ex-${p.dragon_id}` ? "…" : t("summon.exchange")}
+                  {owned
+                    ? t("summon.owned")
+                    : busy === `ex-${p.dragon_id}`
+                      ? "…"
+                      : t("summon.exchange")}
                 </button>
               </div>
             );

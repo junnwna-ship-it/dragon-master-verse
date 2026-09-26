@@ -43,13 +43,9 @@ export function useAppSettings() {
     try {
       channel = supabase
         .channel(`app-settings-${Math.random().toString(36).slice(2, 8)}`)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "app_settings" },
-          () => {
-            fetchSettings();
-          },
-        )
+        .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, () => {
+          fetchSettings();
+        })
         .subscribe();
     } catch (e) {
       console.error("[app_settings] realtime subscribe failed:", e);
@@ -65,24 +61,21 @@ export function useAppSettings() {
     };
   }, [fetchSettings]);
 
-  const setFlag = useCallback(
-    async (key: keyof AppSettings, value: boolean) => {
-      // Optimistic update for instant feedback
-      setSettings((s) => ({ ...s, [key]: value }));
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({ key, value }, { onConflict: "key" });
-      if (error) {
-        console.error("[app_settings] update failed:", error);
-        toast.error(i18n.t("errors.settingsChangeFailed", { msg: error.message }));
-        // Revert
-        setSettings((s) => ({ ...s, [key]: !value }));
-        throw error;
-      }
-      toast.success(`${key} = ${value ? "ON" : "OFF"}`);
-    },
-    [],
-  );
+  const setFlag = useCallback(async (key: keyof AppSettings, value: boolean) => {
+    // Optimistic update for instant feedback
+    setSettings((s) => ({ ...s, [key]: value }));
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert({ key, value }, { onConflict: "key" });
+    if (error) {
+      console.error("[app_settings] update failed:", error);
+      toast.error(i18n.t("errors.settingsChangeFailed", { msg: error.message }));
+      // Revert
+      setSettings((s) => ({ ...s, [key]: !value }));
+      throw error;
+    }
+    toast.success(`${key} = ${value ? "ON" : "OFF"}`);
+  }, []);
 
   return { settings, loading, setFlag };
 }

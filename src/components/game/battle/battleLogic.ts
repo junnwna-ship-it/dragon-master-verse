@@ -7,13 +7,20 @@ export type BattleElement = "Wood" | "Soil" | "Water" | "Fire" | "Metal";
 
 export function toBattleElement(e: Element | string): BattleElement {
   switch (e) {
-    case "Wood": return "Wood";
-    case "Water": return "Water";
-    case "Fire": return "Fire";
-    case "Earth": return "Soil";
-    case "Light": return "Metal";
-    case "Dark": return "Soil";
-    default: return "Wood";
+    case "Wood":
+      return "Wood";
+    case "Water":
+      return "Water";
+    case "Fire":
+      return "Fire";
+    case "Earth":
+      return "Soil";
+    case "Light":
+      return "Metal";
+    case "Dark":
+      return "Soil";
+    default:
+      return "Wood";
   }
 }
 
@@ -29,7 +36,7 @@ export interface Combatant {
   maxMp: number;
   exhausted: boolean;
   // ===== 상성 스택 =====
-  atkBuffStacks: number;   // 0..3, 스택당 ATK +5%
+  atkBuffStacks: number; // 0..3, 스택당 ATK +5%
   defDebuffStacks: number; // 0..3, 스택당 DEF -10%
   // ===== 패시브 상태 =====
   poisoned: boolean;
@@ -46,19 +53,19 @@ export interface LogEntry {
 }
 
 /** 정률 MP 경제 상수 */
-export const MP_TURN_END_PCT = 0.05;   // 턴 종료 시 MaxMp의 5% 차감 (완화)
-export const MP_PASSIVE_PCT = 0.05;    // 패시브/상성 발동 시 MaxMp의 5% 추가 차감
-export const MP_SKILL_COST_PCT = 0.20; // 특수 스킬 발동 비용 MaxMp의 20%
-export const MP_SKILL_THRESHOLD_PCT = 0.20; // 스킬 사용 가능 최소 MP 비율
-export const MP_BENCH_RECOVER_PCT = 0.15;   // 벤치 턴 종료 시 MaxMp의 15% 회복
-export const SKILL_RAW_MULT = 1.5;          // 특수 스킬 RawDamage 배수
+export const MP_TURN_END_PCT = 0.05; // 턴 종료 시 MaxMp의 5% 차감 (완화)
+export const MP_PASSIVE_PCT = 0.05; // 패시브/상성 발동 시 MaxMp의 5% 추가 차감
+export const MP_SKILL_COST_PCT = 0.2; // 특수 스킬 발동 비용 MaxMp의 20%
+export const MP_SKILL_THRESHOLD_PCT = 0.2; // 스킬 사용 가능 최소 MP 비율
+export const MP_BENCH_RECOVER_PCT = 0.15; // 벤치 턴 종료 시 MaxMp의 15% 회복
+export const SKILL_RAW_MULT = 1.5; // 특수 스킬 RawDamage 배수
 
 /** 자신의 MaxMp의 N% 만큼 정수 차감하고 새 Combatant + 설명 텍스트 반환 */
 function spendPctMp(c: Combatant, pct: number): { next: Combatant; spent: number } {
   const spent = Math.floor(c.maxMp * pct);
   if (spent <= 0) return { next: c, spent: 0 };
   const nextMp = c.mp - spent;
-  let next: Combatant = { ...c, mp: nextMp };
+  const next: Combatant = { ...c, mp: nextMp };
   if (nextMp <= 0 && !next.exhausted) next.exhausted = true;
   return { next, spent };
 }
@@ -334,7 +341,10 @@ export function performAttack(
   if (attacker.base.name === "Caminont" && !defender.poisoned) {
     if (Math.random() < 0.5) {
       defender = { ...defender, poisoned: true };
-      logs.push({ text: i18n.t("battle.log.poisoned", { name: defender.base.name }), tone: "penalty" });
+      logs.push({
+        text: i18n.t("battle.log.poisoned", { name: defender.base.name }),
+        tone: "penalty",
+      });
       // 패시브 발동 비용 (공격자, MaxMp 5%)
       const { next, spent } = spendPctMp(attacker, MP_PASSIVE_PCT);
       attacker = next;
@@ -426,7 +436,10 @@ export function endTurnDrain(
   if (self.poisoned && self.engineHp > 0) {
     const poisonDmg = Math.round(self.engineMaxHp * 0.03);
     self.engineHp = Math.max(0, self.engineHp - poisonDmg);
-    logs.push({ text: i18n.t("battle.log.poisonTick", { name: self.base.name, dmg: poisonDmg }), tone: "penalty" });
+    logs.push({
+      text: i18n.t("battle.log.poisonTick", { name: self.base.name, dmg: poisonDmg }),
+      tone: "penalty",
+    });
   }
 
   // Elia: 매 3턴째 턴 종료 시 적 MP 15% 흡수
@@ -451,7 +464,12 @@ export function endTurnDrain(
   }
 
   // Younigon: 격노 트리거 (HP가 30% 이하 최초 진입)
-  if (self.base.name === "Younigon" && !self.rageUsed && self.engineHp > 0 && self.engineHp <= self.engineMaxHp * 0.3) {
+  if (
+    self.base.name === "Younigon" &&
+    !self.rageUsed &&
+    self.engineHp > 0 &&
+    self.engineHp <= self.engineMaxHp * 0.3
+  ) {
     self.rageUsed = true;
     self.engineAtk = Math.round(self.engineAtk * 1.5);
     logs.push({ text: i18n.t("battle.log.younigonRage"), tone: "penalty" });

@@ -85,7 +85,10 @@ export const grantAdminByEmail = createServerFn({ method: "POST" })
 
     let userId: string | null = null;
     for (let page = 1; page <= 10 && !userId; page++) {
-      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
       if (error) throw new Error(error.message);
       userId = list.users.find((u) => u.email?.toLowerCase() === target)?.id ?? null;
       if (list.users.length < 200) break;
@@ -119,7 +122,10 @@ export const revokeAdminByEmail = createServerFn({ method: "POST" })
 
     let userId: string | null = null;
     for (let page = 1; page <= 10 && !userId; page++) {
-      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
       if (error) throw new Error(error.message);
       userId = list.users.find((u) => u.email?.toLowerCase() === target)?.id ?? null;
       if (list.users.length < 200) break;
@@ -144,7 +150,6 @@ export const revokeAdminByEmail = createServerFn({ method: "POST" })
     });
     return { ok: true, email: target };
   });
-
 
 /* ------------------------------------------------------------------ *
  * Audit log + admin-only gate for admin server endpoints.

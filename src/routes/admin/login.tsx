@@ -9,7 +9,8 @@ export const Route = createFileRoute("/admin/login")({
       { title: "Admin Login — Artiati Dragon Masters" },
       {
         name: "description",
-        content: "Sign in with an admin account to manage store items, story maps and game settings.",
+        content:
+          "Sign in with an admin account to manage store items, story maps and game settings.",
       },
       { name: "robots", content: "noindex, nofollow" },
       { property: "og:title", content: "Admin Login — Artiati Dragon Masters" },

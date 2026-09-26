@@ -62,7 +62,10 @@ export function saveUgcProgress(
 ) {
   if (!storyId || !storage) return;
   try {
-    storage.setItem(ugcProgressKey(storyId), JSON.stringify({ ...progress, updatedAt: Date.now() }));
+    storage.setItem(
+      ugcProgressKey(storyId),
+      JSON.stringify({ ...progress, updatedAt: Date.now() }),
+    );
   } catch {
     /* quota / private mode — progress is best effort */
   }

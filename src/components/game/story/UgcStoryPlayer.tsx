@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, CheckCircle2, HelpCircle, RotateCcw, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  HelpCircle,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 import { parseStudioStory, type UgcNode } from "@/lib/studioStory";
 import {
   deleteUgcProgress,
@@ -98,7 +105,7 @@ export function UgcStoryPlayer({
     });
   }, [storyId, nodes.length, currentKey, finished, stats, picked, quizResult]);
 
-  const node = currentKey ? nodeMap.get(currentKey) ?? null : null;
+  const node = currentKey ? (nodeMap.get(currentKey) ?? null) : null;
 
   const reset = () => {
     setCurrentKey(startKey);
@@ -122,7 +129,6 @@ export function UgcStoryPlayer({
     }
     setCurrentKey(key);
   };
-
 
   const answerQuiz = (index: number) => {
     if (!node?.quiz || quizResult) return;
@@ -240,7 +246,11 @@ export function UgcStoryPlayer({
           <div className="space-y-4 p-4">
             <p className="text-[11px] font-mono text-slate-500">{node.key}</p>
             {node.speaker && <p className="text-xs font-bold text-violet-200">{node.speaker}</p>}
-            {node.body && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-100">{node.body}</p>}
+            {node.body && (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-slate-100">
+                {node.body}
+              </p>
+            )}
 
             {node.quiz ? (
               <section className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
@@ -313,7 +323,8 @@ export function UgcStoryPlayer({
                         if (Object.keys(c.stats).length) {
                           setStats((prev) => {
                             const next = { ...prev };
-                            for (const [k, v] of Object.entries(c.stats)) next[k] = (next[k] ?? 0) + v;
+                            for (const [k, v] of Object.entries(c.stats))
+                              next[k] = (next[k] ?? 0) + v;
                             return next;
                           });
                         }
