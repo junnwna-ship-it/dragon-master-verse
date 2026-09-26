@@ -227,6 +227,7 @@ export function useDragonDraft(ownerId: string) {
     await deleteDragonDraft(ownerId, previous.draftId);
     if (!alive.current) return;
     const next = createEmptyDragonDraft(ownerId);
+    cloudRevision.current = 0;
     await checkpoint(next);
     setRestored(false);
   }, [checkpoint, ownerId]);
