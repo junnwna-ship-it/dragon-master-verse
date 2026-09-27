@@ -7,6 +7,8 @@ import {
   DRAGON_DRAFT_MAX_IMAGE_BYTES,
   dragonArchiveKey,
   dragonDraftKey,
+  listDragonConflictBackups,
+  loadDragonConflictBackup,
   loadDragonArchive,
   loadDragonDraft,
   saveDragonDraft,
@@ -88,6 +90,7 @@ function installDatabaseDouble() {
           }
           return {
             get: (key: string) => request(() => structuredClone(rows.get(key))),
+            getAll: () => request(() => structuredClone(Array.from(rows.values()))),
             put: (value: unknown, key: string) =>
               request(() => rows.set(key, structuredClone(value))),
             add: (value: unknown, key: string) =>
@@ -358,6 +361,9 @@ describe("dragon draft persistence (transaction double)", () => {
     const backup = database.data.get("conflicts")!.get(`${OWNER}:${DRAFT}:1000`) as DragonDraft;
     expect(backup.name).toBe("기기");
     expect(await backup.originalImage?.text()).toBe("local art");
+    expect((await listDragonConflictBackups(OWNER)).map((item) => item.name)).toEqual(["기기"]);
+    expect((await loadDragonConflictBackup(OWNER, DRAFT, 1000))?.name).toBe("기기");
+    expect(await loadDragonConflictBackup(OTHER_OWNER, DRAFT, 1000)).toBeNull();
   });
 
   it("keeps the active draft unchanged when backup-and-replace aborts or is stale", async () => {

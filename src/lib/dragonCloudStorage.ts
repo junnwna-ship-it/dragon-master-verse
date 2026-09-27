@@ -186,6 +186,23 @@ export async function loadCloudDraft(ownerId: string): Promise<DragonDraft | nul
   return hydrateCloudRow(data as unknown as CloudRow, ownerId);
 }
 
+/** Detect a draft completed on another device before trying to upload its old assets. */
+export async function loadCompletedCloudDraft(
+  ownerId: string,
+  draftId: string,
+): Promise<DragonDraft | null> {
+  const { data, error } = await supabase
+    .from("dragon_drafts" as never)
+    .select("draft_id,owner_id,revision,metadata,status,dragon_id")
+    .eq("owner_id", ownerId)
+    .eq("draft_id", draftId)
+    .eq("status", "completed")
+    .maybeSingle();
+  cloudError(error, "등록 완료된 초안을 확인하지 못했습니다");
+  if (!data) return null;
+  return hydrateCloudRow(data as unknown as CloudRow, ownerId);
+}
+
 async function hydrateCloudRow(row: CloudRow, ownerId: string): Promise<DragonDraft> {
   if (row.owner_id !== ownerId) throw new Error("다른 계정의 초안을 거부했습니다.");
   const m = row.metadata as CloudMetadata;

@@ -136,6 +136,8 @@ function DragonOriginEditor({
     conflict,
     conflictingCloudDraft,
     adoptCloudDraft,
+    conflictBackups,
+    restoreConflictBackup,
   } = useDragonDraft(ownerId);
   const step = draft?.step ?? 1;
   const setStep = (value: number) =>
@@ -167,6 +169,7 @@ function DragonOriginEditor({
   const [editingImage, setEditingImage] = useState(false);
   const editButton = useRef<HTMLButtonElement>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const busy = useRef(false);
   const alive = useRef(false);
   useEffect(() => {
@@ -496,6 +499,68 @@ function DragonOriginEditor({
                   </button>
                 </div>
               )}
+            </div>
+          )}
+          {!conflict && conflictBackups.length > 0 && (
+            <div className="mt-3 rounded-lg border border-sky-300/20 p-3 text-xs text-slate-200">
+              <p className="font-semibold text-sky-100">이 기기에 보관된 충돌 사본</p>
+              <p className="mt-1">
+                사본은 이 브라우저에만 있으므로 브라우저 데이터를 지우지 마세요.
+              </p>
+              {conflictBackups.map((backup) => {
+                const key = `${backup.draftId}:${backup.updatedAt}`;
+                const sameDraft = backup.draftId === draft.draftId;
+                return (
+                  <div key={key} className="mt-2 border-t border-white/10 pt-2">
+                    <p>
+                      {backup.name || "이름 미정"} ·{" "}
+                      {new Date(backup.updatedAt).toLocaleString("ko-KR")}
+                    </p>
+                    {sameDraft ? (
+                      <button
+                        type="button"
+                        disabled={status !== "saved" || locked}
+                        onClick={() => setConfirmRestore(key)}
+                        className="mt-1 min-h-11 underline disabled:opacity-50"
+                      >
+                        이 버전 다시 선택
+                      </button>
+                    ) : (
+                      <p>다른 드래곤의 사본은 이 초안에 자동 적용하지 않습니다.</p>
+                    )}
+                    {confirmRestore === key && (
+                      <div role="alert" className="mt-2 rounded-lg border border-amber-200/30 p-2">
+                        <p>
+                          현재 클라우드 버전도 이 기기에 보관한 뒤, 이 사본을 클라우드에 저장할까요?
+                        </p>
+                        <button
+                          type="button"
+                          className="mt-2 min-h-11 rounded-lg bg-amber-200 px-3 text-slate-950"
+                          onClick={() => {
+                            setConfirmRestore(null);
+                            void restoreConflictBackup(backup).catch((cause) =>
+                              toast.error(
+                                cause instanceof Error
+                                  ? cause.message
+                                  : "사본을 복구하지 못했습니다.",
+                              ),
+                            );
+                          }}
+                        >
+                          사본 복구하기
+                        </button>
+                        <button
+                          type="button"
+                          className="ml-2 min-h-11 px-3"
+                          onClick={() => setConfirmRestore(null)}
+                        >
+                          취소
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {confirmDiscard && (

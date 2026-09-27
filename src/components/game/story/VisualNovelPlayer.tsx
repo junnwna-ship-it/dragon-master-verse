@@ -18,6 +18,7 @@ import { RotateCcw, ChevronLeft, Sparkles, Play, Home } from "lucide-react";
 import { resolveResume } from "@/lib/storyResume";
 import { visibleOptions } from "@/lib/storyChoices";
 import { sceneArt, introArtFor, CHAPTER_TITLES, CHAPTER_TAGLINES } from "@/data/storyArt";
+import { withPersonalJourneyFallback } from "@/lib/personalJourneyFallback";
 
 function asStringList(v: unknown): string[] {
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x.trim());
@@ -86,7 +87,7 @@ function useChapterNodes(chapterId: string) {
       const schemaReady = raw.length === 0 || Object.hasOwn(raw[0]!, "chapter_id");
 
       const nodes = raw
-        .filter((row) => String(row.chapter_id ?? "") === chapterId)
+        .filter((row) => String(row.chapter_id ?? "") === chapterId && row.is_published !== false)
         .map((row) => ({
           id: String(row.id),
           chapter_id: String(row.chapter_id ?? chapterId),
@@ -104,7 +105,11 @@ function useChapterNodes(chapterId: string) {
         }))
         .sort((a, b) => a.stage_number - b.stage_number);
 
-      return { nodes, schemaReady };
+      const playableNodes = withPersonalJourneyFallback(chapterId, nodes);
+      return {
+        nodes: playableNodes,
+        schemaReady: schemaReady || playableNodes.length > 0,
+      };
     },
   });
 }

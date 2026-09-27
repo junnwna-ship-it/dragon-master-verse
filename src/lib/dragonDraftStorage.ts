@@ -410,6 +410,48 @@ export function backupAndReplaceDragonDraft(
   );
 }
 
+/** Conflict copies stay in this browser and never replace an active draft on read. */
+export function listDragonConflictBackups(ownerId: string): Promise<DragonDraft[]> {
+  return serial(() => {
+    const owner = dragonDraftKey(ownerId);
+    return transaction([CONFLICT_STORE], "readonly", (tx, done, fail) => {
+      const request = tx.objectStore(CONFLICT_STORE).getAll();
+      request.onsuccess = () => {
+        try {
+          const drafts = (request.result as unknown[])
+            .filter(
+              (value) =>
+                value !== null &&
+                typeof value === "object" &&
+                (value as { ownerId?: unknown }).ownerId === owner,
+            )
+            .map((value) => validateDragonDraft(value, owner))
+            .sort((left, right) => right.updatedAt - left.updatedAt);
+          done(drafts);
+        } catch (error) {
+          fail(error instanceof Error ? error : new Error(INVALID));
+        }
+      };
+      request.onerror = () => fail(new Error(STORAGE_FAILED));
+    });
+  });
+}
+
+export function loadDragonConflictBackup(
+  ownerId: string,
+  draftId: string,
+  updatedAt: number,
+): Promise<DragonDraft | null> {
+  return serial(() => {
+    const owner = dragonDraftKey(ownerId);
+    if (!Number.isSafeInteger(updatedAt) || updatedAt <= 0) throw new Error(INVALID);
+    const key = `${owner}:${uuid(draftId)}:${updatedAt}`;
+    return transaction([CONFLICT_STORE], "readonly", (tx, done, fail) => {
+      readDraft(tx, CONFLICT_STORE, key, owner, done, fail);
+    });
+  });
+}
+
 /** Immutable per-dragon copy. Does not remove the active draft; navigation decides when to do that. */
 export function archiveDragonDraft(draft: DragonDraft, dragonUuid: string): Promise<DragonDraft> {
   let snapshot: DragonDraft;

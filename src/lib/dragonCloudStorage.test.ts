@@ -29,6 +29,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 import {
   abandonCloudDraft,
   cloudSchemaAvailable,
+  loadCompletedCloudDraft,
   loadCloudDragonArchive,
   saveCloudDraft,
 } from "./dragonCloudStorage";
@@ -125,6 +126,11 @@ describe("private cloud drafts", () => {
       },
     };
     await expect(loadCloudDragonArchive(value.ownerId, dragonUuid)).resolves.toMatchObject({
+      draftId: value.draftId,
+      createdDragonUuid: dragonUuid,
+      cloudRevision: 4,
+    });
+    await expect(loadCompletedCloudDraft(value.ownerId, value.draftId)).resolves.toMatchObject({
       draftId: value.draftId,
       createdDragonUuid: dragonUuid,
       cloudRevision: 4,
