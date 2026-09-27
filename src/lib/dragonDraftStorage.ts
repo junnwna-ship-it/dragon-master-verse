@@ -31,6 +31,7 @@ export const DRAGON_DRAFT_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const DATABASE_NAME = "dragon-master-personal-drafts";
 const ACTIVE_STORE = "active";
 const ARCHIVE_STORE = "archive";
+const CONFLICT_STORE = "conflicts";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ELEMENTS: readonly Element[] = ["Wood", "Water", "Fire", "Earth", "Light", "Dark"];
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -206,13 +207,15 @@ function openDatabase(): Promise<IDBDatabase> {
         fail(new Error(UNAVAILABLE));
         return;
       }
-      const request = globalThis.indexedDB.open(DATABASE_NAME, 1);
+      const request = globalThis.indexedDB.open(DATABASE_NAME, 2);
       request.onupgradeneeded = () => {
         const database = request.result;
         if (!database.objectStoreNames.contains(ACTIVE_STORE))
           database.createObjectStore(ACTIVE_STORE);
         if (!database.objectStoreNames.contains(ARCHIVE_STORE))
           database.createObjectStore(ARCHIVE_STORE);
+        if (!database.objectStoreNames.contains(CONFLICT_STORE))
+          database.createObjectStore(CONFLICT_STORE);
       };
       request.onerror = () => fail(new Error(UNAVAILABLE));
       request.onblocked = () => fail(new Error(UNAVAILABLE));
@@ -361,6 +364,50 @@ export function deleteDragonDraft(ownerId: string, draftId: string): Promise<boo
       );
     });
   });
+}
+
+/** Atomically keep the entire local draft, including its blobs, before adopting cloud state. */
+export function backupAndReplaceDragonDraft(
+  previous: DragonDraft,
+  replacement: DragonDraft,
+): Promise<void> {
+  let local: DragonDraft;
+  let cloud: DragonDraft;
+  try {
+    local = validateDragonDraft(previous, previous.ownerId);
+    cloud = validateDragonDraft(replacement, previous.ownerId);
+    if (local.createdDragonUuid || local.creationAttemptedAt || cloud.createdDragonUuid)
+      throw new Error("등록 중인 드래곤 초안은 자동으로 교체하지 않습니다.");
+  } catch (error) {
+    return Promise.reject(error);
+  }
+  return serial(() =>
+    transaction([ACTIVE_STORE, CONFLICT_STORE], "readwrite", (tx, done, fail) => {
+      const activeKey = dragonDraftKey(local.ownerId);
+      readDraft(
+        tx,
+        ACTIVE_STORE,
+        activeKey,
+        local.ownerId,
+        (active) => {
+          if (
+            !active ||
+            active.draftId !== local.draftId ||
+            active.updatedAt !== local.updatedAt ||
+            cloud.updatedAt <= active.updatedAt
+          ) {
+            fail(new Error(STALE));
+            return;
+          }
+          const backupKey = `${activeKey}:${local.draftId}:${local.updatedAt}`;
+          tx.objectStore(CONFLICT_STORE).put(local, backupKey);
+          tx.objectStore(ACTIVE_STORE).put(cloud, activeKey);
+          done(undefined);
+        },
+        fail,
+      );
+    }),
+  );
 }
 
 /** Immutable per-dragon copy. Does not remove the active draft; navigation decides when to do that. */

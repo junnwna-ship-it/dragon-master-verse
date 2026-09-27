@@ -134,6 +134,8 @@ function DragonOriginEditor({
     cloudState,
     cloudEnabled,
     conflict,
+    conflictingCloudDraft,
+    adoptCloudDraft,
   } = useDragonDraft(ownerId);
   const step = draft?.step ?? 1;
   const setStep = (value: number) =>
@@ -156,6 +158,9 @@ function DragonOriginEditor({
       : draft?.selectedImage === "prepared"
         ? preparedUrl
         : originalUrl) ?? defaultDragonArt;
+  const conflictingCloudPreview = useImageUrl(
+    conflictingCloudDraft ? selectedDragonDrawing(conflictingCloudDraft) : null,
+  );
   const [saving, setSaving] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [readingImage, setReadingImage] = useState(false);
@@ -184,6 +189,7 @@ function DragonOriginEditor({
     cleaning ||
     readingImage ||
     editingImage ||
+    conflict ||
     !!draft?.creationAttemptedAt ||
     !!draft?.createdDragonUuid;
 
@@ -420,7 +426,7 @@ function DragonOriginEditor({
           {(status === "error" || cloudState === "error") && (
             <button
               type="button"
-              disabled={saving || cleaning || readingImage || editingImage}
+              disabled={saving || cleaning || readingImage || editingImage || status === "saving"}
               onClick={() => (conflict ? void reload() : void retrySave().catch(() => undefined))}
               className="mt-2 min-h-11 rounded-lg border border-amber-200/40 px-3 text-amber-100"
             >
@@ -437,10 +443,60 @@ function DragonOriginEditor({
             </button>
           )}
           {conflict && (
-            <p className="mt-2 text-xs text-amber-200">
-              두 기기의 변경 사항이 충돌해 초안 삭제를 막았습니다. 이 기기의 그림과 설정은 그대로
-              보관됩니다. 다른 기기의 작업을 확인한 뒤 다시 불러오세요.
-            </p>
+            <div className="mt-2 text-xs text-amber-200">
+              <p>
+                두 기기의 변경 사항이 충돌해 초안 삭제를 막았습니다. 이 기기의 그림과 설정은 그대로
+                보관됩니다.
+              </p>
+              {conflictingCloudDraft && (
+                <div className="mt-3 rounded-lg border border-amber-200/30 p-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={preview}
+                        alt="이 기기의 초안 그림"
+                        className="size-14 rounded-lg object-cover"
+                      />
+                      <p>
+                        이 기기: {draft.name || "이름 미정"} · {draft.step}단계
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {conflictingCloudPreview && (
+                        <img
+                          src={conflictingCloudPreview}
+                          alt="클라우드 초안 그림"
+                          className="size-14 rounded-lg object-cover"
+                        />
+                      )}
+                      <p>
+                        클라우드: {conflictingCloudDraft.name || "이름 미정"} ·{" "}
+                        {conflictingCloudDraft.step}단계
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-1">
+                    클라우드를 선택해도 이 기기의 그림과 설정은 복구용 사본으로 보관합니다.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={
+                      saving || cleaning || readingImage || editingImage || status === "saving"
+                    }
+                    onClick={() =>
+                      void adoptCloudDraft().catch((cause) =>
+                        toast.error(
+                          cause instanceof Error ? cause.message : "초안을 전환하지 못했습니다.",
+                        ),
+                      )
+                    }
+                    className="mt-2 min-h-11 rounded-lg border border-amber-200/50 px-3 font-semibold text-amber-50"
+                  >
+                    기기 초안을 보관하고 클라우드 버전으로 계속
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           {confirmDiscard && (
             <div role="alert" className="mt-3 rounded-lg border border-amber-300/40 p-3">

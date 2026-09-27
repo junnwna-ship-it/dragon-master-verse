@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   archiveDragonDraft,
+  backupAndReplaceDragonDraft,
   createEmptyDragonDraft,
   deleteDragonDraft,
   DRAGON_DRAFT_MAX_IMAGE_BYTES,
@@ -345,6 +346,35 @@ describe("dragon draft persistence (transaction double)", () => {
     database.abortNextCommit();
     await expect(saveDragonDraft(draft())).rejects.toThrow("저장에 실패");
     expect(await loadDragonDraft(OWNER)).toBeNull();
+  });
+
+  it("backs up the full local draft atomically before adopting a cloud draft", async () => {
+    const database = installDatabaseDouble();
+    const local = draft({ name: "기기", originalImage: drawing("local art") });
+    const cloud = draft({ name: "클라우드", updatedAt: 2000 });
+    await saveDragonDraft(local);
+    await backupAndReplaceDragonDraft(local, cloud);
+    expect((await loadDragonDraft(OWNER))?.name).toBe("클라우드");
+    const backup = database.data.get("conflicts")!.get(`${OWNER}:${DRAFT}:1000`) as DragonDraft;
+    expect(backup.name).toBe("기기");
+    expect(await backup.originalImage?.text()).toBe("local art");
+  });
+
+  it("keeps the active draft unchanged when backup-and-replace aborts or is stale", async () => {
+    const database = installDatabaseDouble();
+    const local = draft({ name: "기기" });
+    const cloud = draft({ name: "클라우드", updatedAt: 2000 });
+    await saveDragonDraft(local);
+    database.abortNextCommit();
+    await expect(backupAndReplaceDragonDraft(local, cloud)).rejects.toThrow("저장에 실패");
+    expect((await loadDragonDraft(OWNER))?.name).toBe("기기");
+    expect(database.data.get("conflicts")?.size).toBe(0);
+    await expect(backupAndReplaceDragonDraft(draft({ updatedAt: 900 }), cloud)).rejects.toThrow(
+      "더 최근",
+    );
+    await expect(
+      backupAndReplaceDragonDraft(local, draft({ ownerId: OTHER_OWNER, updatedAt: 2000 })),
+    ).rejects.toThrow("다른 계정");
   });
 
   it("rejects corrupted persisted records and never silently overwrites them", async () => {

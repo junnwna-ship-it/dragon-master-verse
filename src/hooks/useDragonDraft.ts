@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  backupAndReplaceDragonDraft,
   createEmptyDragonDraft,
   deleteDragonDraft,
   loadDragonDraft,
@@ -27,7 +28,9 @@ export function useDragonDraft(ownerId: string) {
   const cloudRevision = useRef(0);
   const conflict = useRef(false);
   const cloudQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const resolving = useRef(false);
   const [cloudState, setCloudState] = useState<"local" | "synced" | "error">("local");
+  const [conflictingCloudDraft, setConflictingCloudDraft] = useState<DragonDraft | null>(null);
 
   const syncCloud = useCallback((snapshot: DragonDraft): Promise<void> => {
     if (!cloudEnabled.current || snapshot.createdDragonUuid) return Promise.resolve();
@@ -83,6 +86,7 @@ export function useDragonDraft(ownerId: string) {
       if (!alive.current || request !== loadRevision.current) return;
       if (saved && remote && saved.draftId !== remote.draftId) {
         conflict.current = true;
+        setConflictingCloudDraft(remote);
         throw new Error(
           "다른 기기의 제작 초안이 있습니다. 이 기기의 초안을 보존했습니다. 충돌 해결 전에는 생성을 진행할 수 없습니다.",
         );
@@ -94,6 +98,7 @@ export function useDragonDraft(ownerId: string) {
         saved.updatedAt > (saved.cloudSyncedAt ?? 0)
       ) {
         conflict.current = true;
+        setConflictingCloudDraft(remote);
         throw new Error("두 기기에서 초안이 동시에 수정되었습니다. 이 기기의 초안을 보존했습니다.");
       }
       const next =
@@ -109,6 +114,7 @@ export function useDragonDraft(ownerId: string) {
       if (!alive.current || request !== loadRevision.current) return;
       cloudEnabled.current = available;
       conflict.current = false;
+      setConflictingCloudDraft(null);
       cloudRevision.current = next.cloudRevision ?? 0;
       current.current = next;
       setDraft(next);
@@ -144,6 +150,54 @@ export function useDragonDraft(ownerId: string) {
       setStatus("error");
     }
   }, [ownerId, syncCloud]);
+
+  const adoptCloudDraft = useCallback(async () => {
+    const local = current.current;
+    const shownCloud = conflictingCloudDraft;
+    if (!conflict.current || !local || !shownCloud)
+      throw new Error("먼저 두 기기의 초안을 다시 확인해 주세요.");
+    if (resolving.current) return;
+    resolving.current = true;
+    setStatus("saving");
+    setError(null);
+    try {
+      await cloudQueue.current.catch(() => undefined);
+      const latestLocal = await loadDragonDraft(ownerId);
+      const latestCloud = await loadCloudDraft(ownerId);
+      if (
+        !latestLocal ||
+        latestLocal.draftId !== local.draftId ||
+        latestLocal.updatedAt !== local.updatedAt ||
+        !latestCloud ||
+        latestCloud.draftId !== shownCloud.draftId ||
+        latestCloud.cloudRevision !== shownCloud.cloudRevision
+      ) {
+        throw new Error("초안이 다시 변경되었습니다. 두 버전을 다시 확인해 주세요.");
+      }
+      const timestamp = Math.max(Date.now(), latestLocal.updatedAt + 1);
+      const replacement = {
+        ...latestCloud,
+        updatedAt: timestamp,
+        cloudSyncedAt: timestamp,
+      };
+      await backupAndReplaceDragonDraft(latestLocal, replacement);
+      current.current = replacement;
+      cloudEnabled.current = true;
+      cloudRevision.current = latestCloud.cloudRevision ?? 0;
+      conflict.current = false;
+      setConflictingCloudDraft(null);
+      setDraft(replacement);
+      setCloudState("synced");
+      setStatus("saved");
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "초안을 전환하지 못했습니다.";
+      setError(message);
+      setStatus("error");
+      throw cause;
+    } finally {
+      resolving.current = false;
+    }
+  }, [conflictingCloudDraft, ownerId]);
 
   useEffect(() => {
     alive.current = true;
@@ -256,5 +310,7 @@ export function useDragonDraft(ownerId: string) {
     cloudState,
     cloudEnabled: cloudEnabled.current,
     conflict: conflict.current,
+    conflictingCloudDraft,
+    adoptCloudDraft,
   };
 }
