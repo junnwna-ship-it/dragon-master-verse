@@ -19,6 +19,7 @@ import { resolveResume } from "@/lib/storyResume";
 import { visibleOptions } from "@/lib/storyChoices";
 import { sceneArt, introArtFor, CHAPTER_TITLES, CHAPTER_TAGLINES } from "@/data/storyArt";
 import { withPersonalJourneyFallback } from "@/lib/personalJourneyFallback";
+import { DRAGON_STORY_VERSION } from "@/lib/dragonStoryProgress";
 
 function asStringList(v: unknown): string[] {
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x.trim());
@@ -164,7 +165,25 @@ export function VisualNovelPlayer({
     dragonJourneyChapter && selectedDragon?.uuid
       ? `${chapterId}:${selectedDragon.uuid}`
       : chapterId;
-  const { remote, loading: saveLoading, saving, persist, clear, signedIn } = useVnSave(runId);
+  const {
+    remote,
+    loading: saveLoading,
+    saving,
+    saveError,
+    backend,
+    persist,
+    clear,
+    signedIn,
+  } = useVnSave(
+    runId,
+    dragonJourneyChapter && selectedDragon?.uuid
+      ? {
+          dragonId: selectedDragon.uuid,
+          chapterId,
+          storyVersion: DRAGON_STORY_VERSION,
+        }
+      : undefined,
+  );
   const hydratedRef = useRef(false);
   const [quizOption, setQuizOption] = useState<VnOption | null>(null);
   const [introDone, setIntroDone] = useState(false);
@@ -347,12 +366,12 @@ export function VisualNovelPlayer({
     void finalizeRun();
   }, [finished, signedIn, finalizeState, finalizeRun]);
 
-  const restart = () => {
+  const restart = async () => {
     if (!startKey) return;
+    if (!(await clear())) return;
     finalizeInFlight.current = false;
     setFinalizeState("idle");
     setFinalizeError(null);
-    void clear();
     setQuizOption(null);
     setIntroDone(false);
     setStaleSave(false);
@@ -435,6 +454,15 @@ export function VisualNovelPlayer({
       </Shell>
     );
   }
+  if (signedIn && !backend) {
+    return (
+      <Shell>
+        <p className="text-slate-100">진행 기록을 불러오지 못했습니다.</p>
+        <p className="mt-2 text-sm text-slate-400">{saveError}</p>
+        <BackLink />
+      </Shell>
+    );
+  }
   if (!schemaReady) {
     return (
       <Shell>
@@ -471,7 +499,7 @@ export function VisualNovelPlayer({
           저장된 진행 지점({remote?.nodeKey})이 관리자에 의해 비공개로 전환되어 이어하기를 할 수
           없습니다. 저장 데이터는 그대로 보관되니, 다시 공개되면 이어서 진행할 수 있습니다.
         </p>
-        <Button variant="secondary" onClick={restart}>
+        <Button variant="secondary" onClick={() => void restart()}>
           <RotateCcw className="mr-2 h-4 w-4" />
           처음부터 새로 시작
         </Button>
@@ -609,18 +637,31 @@ export function VisualNovelPlayer({
           ))}
           <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-slate-300 backdrop-blur">
             {signedIn
-              ? saving
+              ? saveError
                 ? ko
-                  ? "저장 중…"
-                  : "Saving…"
-                : ko
-                  ? "클라우드 저장"
-                  : "Saved to cloud"
+                  ? "저장 실패"
+                  : "Save failed"
+                : saving
+                  ? ko
+                    ? "저장 중…"
+                    : "Saving…"
+                  : backend === "legacy" && dragonJourneyChapter
+                    ? ko
+                      ? "기존 단일 저장"
+                      : "Legacy save"
+                    : ko
+                      ? "클라우드 저장"
+                      : "Saved to cloud"
               : ko
                 ? "로그인하면 진행 기록을 저장해요"
                 : "Sign in to save your progress"}
           </span>
-          <Button size="sm" variant="secondary" onClick={restart}>
+          {saveError && (
+            <span role="alert" className="max-w-xs text-xs text-rose-200">
+              {saveError}
+            </span>
+          )}
+          <Button size="sm" variant="secondary" onClick={() => void restart()}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> {ko ? "다시 시작" : "Restart"}
           </Button>
         </div>
@@ -692,14 +733,15 @@ export function VisualNovelPlayer({
                     <RotateCcw className="mr-1 h-3.5 w-3.5" /> 저장 재시도
                   </Button>
                 )}
-                <Button onClick={restart} disabled={finalizeState === "saving"}>
+                <Button onClick={() => void restart()} disabled={finalizeState === "saving"}>
                   {ko ? "다시 플레이" : "Play again"}
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    void clear();
-                    reset();
+                    void clear().then((cleared) => {
+                      if (cleared) reset();
+                    });
                   }}
                   asChild={false}
                 >
