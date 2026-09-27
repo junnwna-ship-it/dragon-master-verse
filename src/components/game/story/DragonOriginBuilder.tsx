@@ -133,6 +133,7 @@ function DragonOriginEditor({
     discard,
     cloudState,
     cloudEnabled,
+    conflict,
   } = useDragonDraft(ownerId);
   const step = draft?.step ?? 1;
   const setStep = (value: number) =>
@@ -420,13 +421,13 @@ function DragonOriginEditor({
             <button
               type="button"
               disabled={saving || cleaning || readingImage || editingImage}
-              onClick={() => void retrySave().catch(() => undefined)}
+              onClick={() => (conflict ? void reload() : void retrySave().catch(() => undefined))}
               className="mt-2 min-h-11 rounded-lg border border-amber-200/40 px-3 text-amber-100"
             >
-              초안 다시 저장
+              {conflict ? "초안 충돌 다시 확인" : "초안 다시 저장"}
             </button>
           )}
-          {!locked && (
+          {!locked && !conflict && (
             <button
               type="button"
               onClick={() => setConfirmDiscard(true)}
@@ -434,6 +435,12 @@ function DragonOriginEditor({
             >
               초안 버리고 새로 시작
             </button>
+          )}
+          {conflict && (
+            <p className="mt-2 text-xs text-amber-200">
+              두 기기의 변경 사항이 충돌해 초안 삭제를 막았습니다. 이 기기의 그림과 설정은 그대로
+              보관됩니다. 다른 기기의 작업을 확인한 뒤 다시 불러오세요.
+            </p>
           )}
           {confirmDiscard && (
             <div role="alert" className="mt-3 rounded-lg border border-amber-300/40 p-3">

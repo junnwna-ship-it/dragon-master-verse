@@ -41,7 +41,7 @@ export async function cloudSchemaAvailable(): Promise<boolean> {
   throw new Error(`클라우드 저장소 연결을 확인하지 못했습니다: ${error.message}`);
 }
 
-async function imagePath(draft: DragonDraft, kind: DrawingKind, blob: Blob): Promise<string> {
+async function imageDigest(blob: Blob): Promise<string> {
   let digest = digestByBlob.get(blob);
   if (!digest) {
     digest = blob
@@ -52,9 +52,23 @@ async function imagePath(draft: DragonDraft, kind: DrawingKind, blob: Blob): Pro
       );
     digestByBlob.set(blob, digest);
   }
-  const hex = await digest;
+  return digest;
+}
+
+async function imagePath(draft: DragonDraft, kind: DrawingKind, blob: Blob): Promise<string> {
+  const hex = await imageDigest(blob);
   const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
   return `${draft.ownerId}/${draft.draftId}/${kind}/${hex}.${extension}`;
+}
+
+async function matchesExistingImage(path: string, blob: Blob): Promise<boolean> {
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  return (
+    !error &&
+    data !== null &&
+    data.size === blob.size &&
+    (await imageDigest(data)) === (await imageDigest(blob))
+  );
 }
 
 function metadataFromDraft(
@@ -122,8 +136,15 @@ export async function saveCloudDraft(
         contentType: blob.type,
         upsert: false,
       });
-      // A same-content retry is safe; other failures must remain visible.
-      if (uploadError && !/asset already exists/i.test(uploadError.message)) throw uploadError;
+      // A second device may upload the same content-addressed path again. Only
+      // accept a 409 when the existing private object has identical bytes.
+      const alreadyExists =
+        uploadError &&
+        (uploadError.status === 409 ||
+          /(?:asset|resource) already exists/i.test(uploadError.message));
+      if (uploadError && (!alreadyExists || !(await matchesExistingImage(path, blob)))) {
+        throw uploadError;
+      }
       const { error: assetError } = await supabase.rpc(
         "register_dragon_asset" as never,
         {

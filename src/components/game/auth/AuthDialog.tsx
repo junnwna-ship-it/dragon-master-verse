@@ -5,7 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 
-export function AuthDialog({ onClose }: { onClose: () => void }) {
+export function AuthDialog({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess?: () => void;
+}) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -22,7 +28,7 @@ export function AuthDialog({ onClose }: { onClose: () => void }) {
       if (result.error) throw result.error;
       if (result.redirected) return;
       toast.success(t("auth.loggedInToast"));
-      onClose();
+      (onSuccess ?? onClose)();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("auth.errorGeneric"));
     } finally {
@@ -35,19 +41,20 @@ export function AuthDialog({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
         toast.success(t("auth.createdToast"));
+        (data.session ? onSuccess : onClose)?.();
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success(t("auth.loggedInToast"));
+        (onSuccess ?? onClose)();
       }
-      onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("auth.errorGeneric"));
     } finally {

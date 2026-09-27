@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import hatchlingArt from "@/assets/dragons/personal-hatchling.png";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ModeSelect } from "@/components/game/ModeSelect";
+import { AuthDialog } from "@/components/game/auth/AuthDialog";
 import * as Dialog from "@radix-ui/react-dialog";
 
 export const Route = createFileRoute("/")({
@@ -45,6 +46,7 @@ interface ShowcaseDragon {
 function LandingPage() {
   const { t } = useTranslation();
   const [showSignup, setShowSignup] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [showModes, setShowModes] = useState(false);
   // 이미 로그인된 유저는 닉네임 단계를 건너뛰고 바로 모드 선택으로 이동.
   const [signedIn, setSignedIn] = useState(false);
@@ -134,9 +136,19 @@ function LandingPage() {
 
           <p className="mt-4 text-sm text-slate-400">
             {t("landing.loginHint")}{" "}
-            <Link to="/app" className="text-purple-300 underline-offset-2 hover:underline">
-              {t("landing.loginLink")}
-            </Link>
+            {signedIn ? (
+              <Link to="/app" className="text-purple-300 underline-offset-2 hover:underline">
+                {t("landing.loginLink")}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowLogin(true)}
+                className="text-purple-300 underline-offset-2 hover:underline"
+              >
+                {t("landing.loginLink")}
+              </button>
+            )}
           </p>
         </div>
       </section>
@@ -175,6 +187,15 @@ function LandingPage() {
       <AnimatePresence>
         {showModes && <ModeSelect onClose={() => setShowModes(false)} />}
       </AnimatePresence>
+      {showLogin && (
+        <AuthDialog
+          onClose={() => setShowLogin(false)}
+          onSuccess={() => {
+            setShowLogin(false);
+            setShowModes(true);
+          }}
+        />
+      )}
     </div>
   );
 }

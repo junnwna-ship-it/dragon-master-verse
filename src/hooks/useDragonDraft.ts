@@ -25,6 +25,7 @@ export function useDragonDraft(ownerId: string) {
   const loadRevision = useRef(0);
   const cloudEnabled = useRef(false);
   const cloudRevision = useRef(0);
+  const conflict = useRef(false);
   const cloudQueue = useRef<Promise<unknown>>(Promise.resolve());
   const [cloudState, setCloudState] = useState<"local" | "synced" | "error">("local");
 
@@ -80,17 +81,21 @@ export function useDragonDraft(ownerId: string) {
       const available = await cloudSchemaAvailable();
       const remote = available ? await loadCloudDraft(ownerId) : null;
       if (!alive.current || request !== loadRevision.current) return;
-      if (saved && remote && saved.draftId !== remote.draftId)
+      if (saved && remote && saved.draftId !== remote.draftId) {
+        conflict.current = true;
         throw new Error(
           "다른 기기의 제작 초안이 있습니다. 이 기기의 초안을 보존했습니다. 충돌 해결 전에는 생성을 진행할 수 없습니다.",
         );
+      }
       if (
         saved &&
         remote &&
         remote.cloudRevision! > (saved.cloudRevision ?? 0) &&
         saved.updatedAt > (saved.cloudSyncedAt ?? 0)
-      )
+      ) {
+        conflict.current = true;
         throw new Error("두 기기에서 초안이 동시에 수정되었습니다. 이 기기의 초안을 보존했습니다.");
+      }
       const next =
         remote && (!saved || remote.cloudRevision! > (saved.cloudRevision ?? 0))
           ? {
@@ -103,6 +108,7 @@ export function useDragonDraft(ownerId: string) {
       if (!saved || next !== saved) await saveDragonDraft(next);
       if (!alive.current || request !== loadRevision.current) return;
       cloudEnabled.current = available;
+      conflict.current = false;
       cloudRevision.current = next.cloudRevision ?? 0;
       current.current = next;
       setDraft(next);
@@ -167,6 +173,8 @@ export function useDragonDraft(ownerId: string) {
         if (alive.current && request === revision.current) setStatus("saved");
       } catch (cause) {
         if (alive.current && request === revision.current) {
+          if (cause instanceof Error && cause.message.includes("DRAFT_CONFLICT"))
+            conflict.current = true;
           setStatus("error");
           setCloudState("error");
           setError(
@@ -219,6 +227,8 @@ export function useDragonDraft(ownerId: string) {
   );
 
   const discard = useCallback(async () => {
+    if (conflict.current)
+      throw new Error("다른 기기의 초안과 충돌 중입니다. 이 기기의 초안을 삭제하지 않았습니다.");
     const previous = current.current;
     if (!previous || previous.creationAttemptedAt || previous.createdDragonUuid) return;
     await cloudQueue.current.catch(() => undefined);
@@ -245,5 +255,6 @@ export function useDragonDraft(ownerId: string) {
     discard,
     cloudState,
     cloudEnabled: cloudEnabled.current,
+    conflict: conflict.current,
   };
 }
